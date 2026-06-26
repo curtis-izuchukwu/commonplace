@@ -1,0 +1,21 @@
+.app-root {
+    -fx-background-color: #f7f9fb;
+    -fx-font-family: "Segoe UI", "Inter", sans-serif;
+}
+
+.welcome-panel {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8e0ea;
+    -fx-border-width: 1;
+}
+
+.app-title {
+    -fx-font-size: 32px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f2937;
+}
+
+.app-subtitle {
+    -fx-font-size: 16px;
+    -fx-text-fill: #4b5563;
+}
