@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,7 @@ import com.pararepilot.util.DateUtils;
 
 public class ModuleRepository {
 
-    public StudyModule create(String name, String description, String examDate, ImportanceLevel importance)
+    public StudyModule create(String name, String description, LocalDate examDate, ImportanceLevel importance)
             throws SQLException {
 
         String sql = """
@@ -33,7 +34,7 @@ public class ModuleRepository {
 
             stmt.setString(1, name.trim());
             stmt.setString(2, blankToNull(description));
-            stmt.setString(3, blankToNull(examDate));
+            stmt.setString(3, DateUtils.toDatabaseDate(examDate));
             stmt.setString(4, importance.name());
             stmt.setString(5, DateUtils.toDatabaseDateTime(now));
             stmt.setString(6, DateUtils.toDatabaseDateTime(now));
