@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.pararepilot.ui.controller.ModulesController"
+            styleClass="app-root">
+
+    <top>
+        <HBox spacing="12" styleClass="top-bar">
+            <VBox>
+                <Label text="ParārePilot" styleClass="app-title"/>
+                <Label text="Modules and Topics" styleClass="app-subtitle"/>
+            </VBox>
+        </HBox>
+    </top>
+
+    <center>
+        <HBox spacing="18" styleClass="main-content">
+
+            <VBox spacing="14" styleClass="side-panel" prefWidth="390">
+                <Label text="Create Module" styleClass="section-title"/>
+
+                <TextField fx:id="moduleNameField" promptText="Module name, e.g. Algorithms"/>
+                <TextArea fx:id="moduleDescriptionArea"
+                          promptText="Description"
+                          prefRowCount="3"
+                          wrapText="true"/>
+                <DatePicker fx:id="moduleExamDatePicker" promptText="Exam date"/>
+                <ComboBox fx:id="moduleImportanceCombo" promptText="Importance"/>
+
+                <Button text="Add Module"
+                        onAction="#handleAddModule"
+                        maxWidth="Infinity"
+                        styleClass="primary-button"/>
+
+                <Separator/>
+
+                <Label text="Your Modules" styleClass="section-title"/>
+
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <content>
+                        <VBox fx:id="modulesList" spacing="10"/>
+                    </content>
+                </ScrollPane>
+            </VBox>
+
+            <VBox spacing="14" styleClass="content-panel" HBox.hgrow="ALWAYS">
+                <Label fx:id="selectedModuleTitle"
+                       text="Select a module"
+                       styleClass="section-title"/>
+
+                <Label fx:id="selectedModuleMeta"
+                       text="Create or select a module to start adding topics."
+                       styleClass="muted-text"
+                       wrapText="true"/>
+
+                <Separator/>
+
+                <Label text="Create Topic" styleClass="section-title"/>
+
+                <TextField fx:id="topicNameField" promptText="Topic name, e.g. Binary Search Trees"/>
+                <TextArea fx:id="topicDescriptionArea"
+                          promptText="Description"
+                          prefRowCount="3"
+                          wrapText="true"/>
+
+                <HBox spacing="10">
+                    <ComboBox fx:id="topicImportanceCombo" promptText="Importance"/>
+                    <ComboBox fx:id="topicConfidenceCombo" promptText="Confidence"/>
+                </HBox>
+
+                <Button text="Add Topic"
+                        onAction="#handleAddTopic"
+                        maxWidth="Infinity"
+                        styleClass="primary-button"/>
+
+                <Separator/>
+
+                <Label text="Topics" styleClass="section-title"/>
+
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <content>
+                        <VBox fx:id="topicsList" spacing="10"/>
+                    </content>
+                </ScrollPane>
+
+                <Label fx:id="statusLabel" text="" styleClass="status-text"/>
+            </VBox>
+
+        </HBox>
+    </center>
+
+</BorderPane>

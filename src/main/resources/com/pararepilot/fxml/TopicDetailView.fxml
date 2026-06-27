@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.pararepilot.ui.controller.TopicDetailController"
+      spacing="14"
+      styleClass="app-root topic-detail-root">
+
+    <padding>
+        <Insets top="24" right="24" bottom="24" left="24"/>
+    </padding>
+
+    <Label fx:id="topicNameLabel" text="Topic" styleClass="app-title"/>
+    <Label fx:id="moduleNameLabel" text="Parent module" styleClass="app-subtitle"/>
+
+    <Label text="Mastery" styleClass="section-title"/>
+    <ProgressBar fx:id="masteryProgressBar" prefWidth="360"/>
+    <Label fx:id="masteryLabel" text="0%" styleClass="muted-text"/>
+
+    <Label fx:id="importanceLabel" text="Importance" styleClass="muted-text"/>
+    <Label fx:id="confidenceLabel" text="Confidence" styleClass="muted-text"/>
+    <Label fx:id="descriptionLabel" text="Description" wrapText="true" styleClass="muted-text"/>
+
+    <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>
+</VBox>
