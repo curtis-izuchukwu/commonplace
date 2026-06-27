@@ -1,21 +1,104 @@
 .app-root {
-    -fx-background-color: #f7f9fb;
-    -fx-font-family: "Segoe UI", "Inter", sans-serif;
+    -fx-background-color: #f6f4ef;
+    -fx-font-family: "Segoe UI", "Arial";
 }
 
-.welcome-panel {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d8e0ea;
-    -fx-border-width: 1;
+.top-bar {
+    -fx-padding: 20 24 14 24;
+    -fx-background-color: #24232a;
 }
 
 .app-title {
-    -fx-font-size: 32px;
-    -fx-font-weight: 700;
-    -fx-text-fill: #1f2937;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #24232a;
+}
+
+.top-bar .app-title {
+    -fx-text-fill: #f6f4ef;
 }
 
 .app-subtitle {
-    -fx-font-size: 16px;
-    -fx-text-fill: #4b5563;
+    -fx-font-size: 13px;
+    -fx-text-fill: #6d6a75;
+}
+
+.top-bar .app-subtitle {
+    -fx-text-fill: #c7c2d2;
+}
+
+.main-content {
+    -fx-padding: 22;
+}
+
+.side-panel,
+.content-panel {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 18;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 18, 0.1, 0, 6);
+}
+
+.section-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #24232a;
+}
+
+.entity-card {
+    -fx-background-color: #f9f7f2;
+    -fx-background-radius: 14;
+    -fx-padding: 14;
+    -fx-border-color: #e5ded2;
+    -fx-border-radius: 14;
+}
+
+.card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #24232a;
+}
+
+.muted-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6d6a75;
+}
+
+.status-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #4d566b;
+}
+
+.primary-button {
+    -fx-background-color: #4d566b;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-padding: 8 14 8 14;
+}
+
+.primary-button:hover {
+    -fx-background-color: #353d51;
+}
+
+.danger-button {
+    -fx-background-color: #8a3a3a;
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-padding: 7 12 7 12;
+}
+
+.danger-button:hover {
+    -fx-background-color: #6f2c2c;
+}
+
+.text-field,
+.text-area,
+.combo-box,
+.date-picker {
+    -fx-background-radius: 10;
+}
+
+.topic-detail-root {
+    -fx-background-color: #ffffff;
 }
