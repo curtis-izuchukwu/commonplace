@@ -1,47 +1,36 @@
 package com.pararepilot;
 
+import java.io.IOException;
+
 import javafx.application.Application;
-import javafx.geometry.Insets;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class Main extends Application {
-    private static final String APP_TITLE = "PararePilot";
-    private static final int WINDOW_WIDTH = 960;
-    private static final int WINDOW_HEIGHT = 640;
 
     @Override
-    public void start(Stage stage) {
-        Label title = new Label(APP_TITLE);
-        title.getStyleClass().add("app-title");
+    public void start(Stage stage) throws IOException {
+        FXMLLoader loader = new FXMLLoader(
+                Main.class.getResource("/com/pararepilot/fxml/ModulesView.fxml")
+        );
 
-        Label subtitle = new Label("Offline-first study tracking for targeted practice.");
-        subtitle.getStyleClass().add("app-subtitle");
+        Scene scene = new Scene(loader.load(), 1100, 720);
 
-        VBox content = new VBox(12, title, subtitle);
-        content.setPadding(new Insets(32));
-        content.getStyleClass().add("welcome-panel");
-
-        BorderPane root = new BorderPane(content);
-        root.getStyleClass().add("app-root");
-
-        Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
         String stylesheet = Main.class
                 .getResource("/com/pararepilot/css/app.css")
                 .toExternalForm();
+
         scene.getStylesheets().add(stylesheet);
 
-        stage.setTitle(APP_TITLE);
-        stage.setMinWidth(720);
-        stage.setMinHeight(480);
+        stage.setTitle("ParārePilot");
         stage.setScene(scene);
+        stage.setMinWidth(900);
+        stage.setMinHeight(600);
         stage.show();
     }
 
     public static void main(String[] args) {
-        launch(args);
+        launch();
     }
 }
