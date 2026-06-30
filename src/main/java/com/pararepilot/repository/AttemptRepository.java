@@ -136,4 +136,73 @@ public class AttemptRepository {
 
         return value.trim();
     }
+    public void updateReflection(
+            long attemptId,
+            ConfidenceLevel confidenceAfter,
+            String mainWeakness,
+            String nextAction,
+            String reflectionNotes
+    ) throws SQLException {
+
+        String sql = """
+                UPDATE worksheet_attempts
+                SET confidence_after = ?,
+                    main_weakness = ?,
+                    next_action = ?,
+                    reflection_notes = ?
+                WHERE id = ?;
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, confidenceAfter.name());
+            stmt.setString(2, blankToNull(mainWeakness));
+            stmt.setString(3, blankToNull(nextAction));
+            stmt.setString(4, blankToNull(reflectionNotes));
+            stmt.setLong(5, attemptId);
+
+            stmt.executeUpdate();
+        }
+    }
+    public List<WorksheetAttempt> findRecentByWorksheetIds(List<Long> worksheetIds, int limit)
+            throws SQLException {
+
+        if (worksheetIds == null || worksheetIds.isEmpty()) {
+            return List.of();
+        }
+
+        String placeholders = String.join(",", worksheetIds.stream().map(id -> "?").toList());
+
+        String sql = """
+                SELECT id, worksheet_id, started_at, completed_at, score, max_score,
+                    score_percent, confidence_after, main_weakness, next_action, reflection_notes
+                FROM worksheet_attempts
+                WHERE worksheet_id IN (%s)
+                ORDER BY completed_at DESC
+                LIMIT ?;
+                """.formatted(placeholders);
+
+        List<WorksheetAttempt> attempts = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            int index = 1;
+
+            for (Long worksheetId : worksheetIds) {
+                stmt.setLong(index++, worksheetId);
+            }
+
+            stmt.setInt(index, limit);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    attempts.add(mapRow(rs));
+                }
+            }
+        }
+
+        return attempts;
+    }
 }
