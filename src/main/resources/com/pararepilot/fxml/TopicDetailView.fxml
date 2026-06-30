@@ -4,6 +4,10 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
@@ -15,16 +19,37 @@
         <Insets top="24" right="24" bottom="24" left="24"/>
     </padding>
 
-    <Label fx:id="topicNameLabel" text="Topic" styleClass="app-title"/>
-    <Label fx:id="moduleNameLabel" text="Parent module" styleClass="app-subtitle"/>
+    <HBox spacing="12">
+        <VBox HBox.hgrow="ALWAYS">
+            <Label fx:id="topicNameLabel" text="Topic" styleClass="app-title"/>
+            <Label fx:id="moduleNameLabel" text="Parent module" styleClass="app-subtitle"/>
+        </VBox>
+
+        <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>
+    </HBox>
 
     <Label text="Mastery" styleClass="section-title"/>
-    <ProgressBar fx:id="masteryProgressBar" prefWidth="360"/>
+    <ProgressBar fx:id="masteryProgressBar" prefWidth="420"/>
     <Label fx:id="masteryLabel" text="0%" styleClass="muted-text"/>
 
     <Label fx:id="importanceLabel" text="Importance" styleClass="muted-text"/>
     <Label fx:id="confidenceLabel" text="Confidence" styleClass="muted-text"/>
     <Label fx:id="descriptionLabel" text="Description" wrapText="true" styleClass="muted-text"/>
 
-    <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>
+    <Separator/>
+
+    <HBox spacing="12">
+        <Label text="Worksheets" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+        <Button text="Add Worksheet"
+                onAction="#handleAddWorksheet"
+                styleClass="primary-button"/>
+    </HBox>
+
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+        <content>
+            <VBox fx:id="worksheetsList" spacing="10"/>
+        </content>
+    </ScrollPane>
+
+    <Label fx:id="statusLabel" text="" styleClass="status-text"/>
 </VBox>
