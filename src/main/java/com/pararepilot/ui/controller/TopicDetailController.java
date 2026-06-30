@@ -191,6 +191,7 @@ public class TopicDetailController {
 
             stage.setScene(scene);
             stage.showAndWait();
+            loadWorksheets();
 
         } catch (IOException e) {
             showError("Failed to open worksheet detail", e.getMessage());
