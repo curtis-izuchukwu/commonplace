@@ -24,7 +24,12 @@
             <Label fx:id="worksheetMetaLabel" text="Topic / difficulty / importance" styleClass="app-subtitle"/>
         </VBox>
 
-        <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>
+        <Button text="Start Attempt"
+                onAction="#handleStartAttempt"
+                styleClass="primary-button"/>
+
+        <Button text="Close"
+                onAction="#handleClose"/>
     </HBox>
 
     <Label fx:id="worksheetDescriptionLabel" text="Description" wrapText="true" styleClass="muted-text"/>
