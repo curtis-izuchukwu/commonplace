@@ -102,3 +102,24 @@
 .topic-detail-root {
     -fx-background-color: #ffffff;
 }
+.question-card {
+    -fx-background-color: #f9f7f2;
+    -fx-background-radius: 14;
+    -fx-padding: 14;
+    -fx-border-color: #e5ded2;
+    -fx-border-radius: 14;
+}
+
+.small-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4d566b;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}

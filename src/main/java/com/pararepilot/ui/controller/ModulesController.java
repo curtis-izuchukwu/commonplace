@@ -1,10 +1,15 @@
 package com.pararepilot.ui.controller;
 
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
+
 import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.service.ModuleTopicService;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -21,10 +26,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
 
 public class ModulesController {
 
@@ -285,7 +286,12 @@ public class ModulesController {
             Stage stage = new Stage();
             stage.setTitle("Topic Details - " + topic.name());
             stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setScene(new Scene(root, 460, 420));
+            Scene scene = new Scene(root, 760, 680);
+            scene.getStylesheets().add(
+                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
+            );
+
+            stage.setScene(scene);
             stage.showAndWait();
 
         } catch (IOException e) {
