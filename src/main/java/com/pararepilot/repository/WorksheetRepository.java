@@ -164,4 +164,60 @@ public class WorksheetRepository {
 
         return value.trim();
     }
+
+    public void updateStats(
+            long worksheetId,
+            LocalDateTime lastAttemptedAt,
+            int timesAttempted,
+            double latestScorePercent,
+            double averageScorePercent,
+            int failureStreak
+    ) throws SQLException {
+
+        String sql = """
+                UPDATE worksheets
+                SET last_attempted_at = ?,
+                    times_attempted = ?,
+                    latest_score_percent = ?,
+                    average_score_percent = ?,
+                    failure_streak = ?
+                WHERE id = ?;
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, DateUtils.toDatabaseDateTime(lastAttemptedAt));
+            stmt.setInt(2, timesAttempted);
+            stmt.setDouble(3, latestScorePercent);
+            stmt.setDouble(4, averageScorePercent);
+            stmt.setInt(5, failureStreak);
+            stmt.setLong(6, worksheetId);
+
+            stmt.executeUpdate();
+        }
+    }
+
+    public List<Worksheet> findAll() throws SQLException {
+        String sql = """
+                SELECT id, topic_id, title, description, difficulty, importance, source,
+                    created_at, last_attempted_at, times_attempted,
+                    latest_score_percent, average_score_percent, failure_streak
+                FROM worksheets
+                ORDER BY created_at DESC;
+                """;
+
+        List<Worksheet> worksheets = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                worksheets.add(mapRow(rs));
+            }
+        }
+
+        return worksheets;
+    }
 }
