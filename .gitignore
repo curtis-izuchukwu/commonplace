@@ -9,3 +9,35 @@ target/
 
 .DS_Store
 Thumbs.db
+
+# Maven
+target/
+*.class
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local app database
+*.db
+*.sqlite
+*.sqlite3
+
+# JavaFX/native packaging output
+out/
+build/
+dist/
+
+# Environment/config
+.env

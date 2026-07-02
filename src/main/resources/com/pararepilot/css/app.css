@@ -194,3 +194,59 @@
     -fx-border-color: #e5ded2;
     -fx-border-radius: 14;
 }
+.button {
+    -fx-cursor: hand;
+}
+
+.label {
+    -fx-line-spacing: 2px;
+}
+
+.text-area {
+    -fx-focus-color: #4d566b;
+    -fx-faint-focus-color: transparent;
+}
+
+.text-field {
+    -fx-focus-color: #4d566b;
+    -fx-faint-focus-color: transparent;
+}
+
+.combo-box {
+    -fx-focus-color: #4d566b;
+    -fx-faint-focus-color: transparent;
+}
+
+.date-picker {
+    -fx-focus-color: #4d566b;
+    -fx-faint-focus-color: transparent;
+}
+
+.dashboard-card,
+.side-panel,
+.content-panel,
+.entity-card,
+.question-card,
+.mistake-card,
+.mistake-card-resolved {
+    -fx-background-insets: 0;
+}
+
+.empty-state {
+    -fx-background-color: #f9f7f2;
+    -fx-background-radius: 14;
+    -fx-padding: 18;
+    -fx-border-color: #e5ded2;
+    -fx-border-radius: 14;
+}
+
+.empty-state-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #24232a;
+}
+
+.empty-state-body {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6d6a75;
+}
