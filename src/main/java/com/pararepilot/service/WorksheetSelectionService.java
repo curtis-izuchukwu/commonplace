@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.Worksheet;
+import com.pararepilot.repository.MistakeRepository;
 import com.pararepilot.repository.TopicRepository;
 import com.pararepilot.repository.WorksheetRepository;
 import com.pararepilot.util.WeightedRandomPicker;
@@ -17,11 +18,13 @@ public class WorksheetSelectionService {
     private final TopicRepository topicRepository;
     private final PriorityScoreService priorityScoreService;
     private final WeightedRandomPicker<WorksheetRecommendation> picker;
+    private final MistakeRepository mistakeRepository;
 
     public WorksheetSelectionService() {
         this(
                 new WorksheetRepository(),
                 new TopicRepository(),
+                new MistakeRepository(),
                 new PriorityScoreService(),
                 new WeightedRandomPicker<>()
         );
@@ -30,11 +33,13 @@ public class WorksheetSelectionService {
     public WorksheetSelectionService(
             WorksheetRepository worksheetRepository,
             TopicRepository topicRepository,
+            MistakeRepository mistakeRepository,
             PriorityScoreService priorityScoreService,
             WeightedRandomPicker<WorksheetRecommendation> picker
     ) {
         this.worksheetRepository = worksheetRepository;
         this.topicRepository = topicRepository;
+        this.mistakeRepository = mistakeRepository;
         this.priorityScoreService = priorityScoreService;
         this.picker = picker;
     }
@@ -71,12 +76,7 @@ public class WorksheetSelectionService {
                 continue;
             }
 
-            /*
-             * Mistake bank is the next later branch.
-             * For now, unresolved mistake count is treated as 0.
-             * Once MistakeRepository exists, plug the real count in here.
-             */
-            int unresolvedMistakeCount = 0;
+            int unresolvedMistakeCount = mistakeRepository.countUnresolvedByWorksheetId(worksheet.id());
 
             int priorityScore = priorityScoreService.calculatePriority(
                     worksheet,
