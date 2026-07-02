@@ -1,5 +1,6 @@
 package com.pararepilot.ui.controller;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -15,6 +16,9 @@ import com.pararepilot.service.WorksheetCreationService;
 import com.pararepilot.util.DateUtils;
 
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -22,6 +26,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class AttemptWorksheetController {
@@ -80,25 +85,48 @@ public class AttemptWorksheetController {
                             + " (" + String.format("%.0f%%", attempt.scorePercent()) + ")"
             );
 
-            setStatus("Attempt saved.");
+            setStatus("Attempt saved. Complete reflection to update stats.");
 
-            if (onAttemptSaved != null) {
-                onAttemptSaved.run();
-            }
-
-            showInfo(
-                    "Attempt saved",
-                    "Score: " + attempt.score()
-                            + "/" + attempt.maxScore()
-                            + " (" + String.format("%.0f%%", attempt.scorePercent()) + ")"
-            );
-
-            closeWindow();
+            openReflection(attempt);
 
         } catch (IllegalArgumentException e) {
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to save attempt", e.getMessage());
+        }
+    }
+
+    private void openReflection(WorksheetAttempt attempt) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/pararepilot/fxml/ReflectionView.fxml")
+            );
+
+            Parent root = loader.load();
+
+            ReflectionController controller = loader.getController();
+            controller.setContext(worksheet, attempt, () -> {
+                if (onAttemptSaved != null) {
+                    onAttemptSaved.run();
+                }
+            });
+
+            Stage stage = new Stage();
+            stage.setTitle("Reflection - " + worksheet.title());
+            stage.initModality(Modality.APPLICATION_MODAL);
+
+            Scene scene = new Scene(root, 680, 640);
+            scene.getStylesheets().add(
+                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
+            );
+
+            stage.setScene(scene);
+            stage.showAndWait();
+
+            closeWindow();
+
+        } catch (IOException e) {
+            showError("Failed to open reflection screen", e.getMessage());
         }
     }
 

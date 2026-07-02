@@ -199,4 +199,30 @@ public class TopicRepository {
 
         return value.trim();
     }
+
+    public void updateStats(
+            long topicId,
+            ConfidenceLevel confidence,
+            double masteryScore
+    ) throws SQLException {
+
+        String sql = """
+                UPDATE topics
+                SET confidence = ?,
+                    mastery_score = ?,
+                    updated_at = ?
+                WHERE id = ?;
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, confidence.name());
+            stmt.setDouble(2, masteryScore);
+            stmt.setString(3, DateUtils.toDatabaseDateTime(DateUtils.now()));
+            stmt.setLong(4, topicId);
+
+            stmt.executeUpdate();
+        }
+    }
 }
