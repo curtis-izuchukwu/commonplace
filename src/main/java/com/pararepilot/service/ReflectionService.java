@@ -16,19 +16,27 @@ public class ReflectionService {
     private final AttemptRepository attemptRepository;
     private final WorksheetRepository worksheetRepository;
     private final TopicStatsService topicStatsService;
+    private final GamificationService gamificationService;
 
     public ReflectionService() {
-        this(new AttemptRepository(), new WorksheetRepository(), new TopicStatsService());
+        this(
+                new AttemptRepository(),
+                new WorksheetRepository(),
+                new TopicStatsService(),
+                new GamificationService()
+        );
     }
 
     public ReflectionService(
             AttemptRepository attemptRepository,
             WorksheetRepository worksheetRepository,
-            TopicStatsService topicStatsService
+            TopicStatsService topicStatsService,
+            GamificationService gamificationService
     ) {
         this.attemptRepository = attemptRepository;
         this.worksheetRepository = worksheetRepository;
         this.topicStatsService = topicStatsService;
+        this.gamificationService = gamificationService;
     }
 
     public void completeReflection(
@@ -62,6 +70,7 @@ public class ReflectionService {
 
         updateWorksheetStats(worksheet, attempt);
         topicStatsService.updateTopicStats(worksheet.topicId(), resolvedConfidence);
+        gamificationService.awardWorksheetCompletion(attempt);
     }
 
     private void updateWorksheetStats(Worksheet worksheet, WorksheetAttempt latestAttempt)
