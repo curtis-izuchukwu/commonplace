@@ -123,3 +123,14 @@
 .scroll-pane > .viewport {
     -fx-background-color: transparent;
 }
+.recommendation-card {
+    -fx-background-color: #eee8dc;
+    -fx-background-radius: 16;
+    -fx-padding: 16;
+    -fx-border-color: #d8cbb8;
+    -fx-border-radius: 16;
+}
+
+.recommendation-card .card-title {
+    -fx-font-size: 16px;
+}
