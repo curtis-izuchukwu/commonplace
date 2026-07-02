@@ -134,3 +134,18 @@
 .recommendation-card .card-title {
     -fx-font-size: 16px;
 }
+.mistake-card {
+    -fx-background-color: #fff7ef;
+    -fx-background-radius: 14;
+    -fx-padding: 14;
+    -fx-border-color: #d8a36f;
+    -fx-border-radius: 14;
+}
+
+.mistake-card-resolved {
+    -fx-background-color: #f1f4ee;
+    -fx-background-radius: 14;
+    -fx-padding: 14;
+    -fx-border-color: #aeb9a8;
+    -fx-border-radius: 14;
+}

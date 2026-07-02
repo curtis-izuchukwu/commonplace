@@ -79,6 +79,8 @@
                                 text="Open"
                                 onAction="#handleOpenRecommendedWorksheet"
                                 styleClass="primary-button"/>
+                        <Button text="Mistake Bank"
+                                onAction="#handleOpenMistakeBank"/>
                     </HBox>
 
                     <Label fx:id="recommendationReasonLabel"

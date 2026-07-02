@@ -466,4 +466,31 @@ public class ModulesController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+    @FXML
+    private void handleOpenMistakeBank() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/pararepilot/fxml/MistakeBankView.fxml")
+            );
+
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Mistake Bank");
+            stage.initModality(Modality.APPLICATION_MODAL);
+
+            Scene scene = new Scene(root, 860, 740);
+            scene.getStylesheets().add(
+                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
+            );
+
+            stage.setScene(scene);
+            stage.showAndWait();
+
+            loadRecommendation();
+
+        } catch (IOException e) {
+            showError("Failed to open mistake bank", e.getMessage());
+        }
+    }
 }
