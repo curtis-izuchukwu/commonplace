@@ -58,6 +58,36 @@
             </VBox>
 
             <VBox spacing="14" styleClass="content-panel" HBox.hgrow="ALWAYS">
+                <VBox spacing="8" styleClass="recommendation-card">
+                    <HBox spacing="12">
+                        <VBox HBox.hgrow="ALWAYS">
+                            <Label text="Recommended Worksheet" styleClass="section-title"/>
+                            <Label fx:id="recommendationTitleLabel"
+                                   text="No recommendation yet"
+                                   styleClass="card-title"
+                                   wrapText="true"/>
+                            <Label fx:id="recommendationMetaLabel"
+                                   text="Create worksheets to unlock adaptive recommendations."
+                                   styleClass="muted-text"
+                                   wrapText="true"/>
+                        </VBox>
+
+                        <Button text="Refresh"
+                                onAction="#handleRefreshRecommendation"/>
+
+                        <Button fx:id="openRecommendationButton"
+                                text="Open"
+                                onAction="#handleOpenRecommendedWorksheet"
+                                styleClass="primary-button"/>
+                    </HBox>
+
+                    <Label fx:id="recommendationReasonLabel"
+                           text=""
+                           styleClass="muted-text"
+                           wrapText="true"/>
+                </VBox>
+
+                <Separator/>
                 <Label fx:id="selectedModuleTitle"
                        text="Select a module"
                        styleClass="section-title"/>

@@ -8,7 +8,10 @@ import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
+import com.pararepilot.model.Worksheet;
 import com.pararepilot.service.ModuleTopicService;
+import com.pararepilot.service.WorksheetRecommendation;
+import com.pararepilot.service.WorksheetSelectionService;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -36,6 +39,11 @@ public class ModulesController {
 
     @FXML private VBox modulesList;
 
+    @FXML private Label recommendationTitleLabel;
+    @FXML private Label recommendationMetaLabel;
+    @FXML private Label recommendationReasonLabel;
+    @FXML private Button openRecommendationButton;
+
     @FXML private Label selectedModuleTitle;
     @FXML private Label selectedModuleMeta;
 
@@ -48,8 +56,10 @@ public class ModulesController {
     @FXML private Label statusLabel;
 
     private final ModuleTopicService service = new ModuleTopicService();
+    private final WorksheetSelectionService worksheetSelectionService = new WorksheetSelectionService();
 
     private StudyModule selectedModule;
+    private WorksheetRecommendation currentRecommendation;
 
     @FXML
     private void initialize() {
@@ -63,6 +73,7 @@ public class ModulesController {
         topicConfidenceCombo.setValue(ConfidenceLevel.MEDIUM);
 
         loadModules();
+        loadRecommendation();
     }
 
     @FXML
@@ -116,6 +127,65 @@ public class ModulesController {
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to create topic", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleRefreshRecommendation() {
+        loadRecommendation();
+    }
+
+    @FXML
+    private void handleOpenRecommendedWorksheet() {
+        if (currentRecommendation == null) {
+            setStatus("No recommended worksheet is available yet.");
+            return;
+        }
+
+        openWorksheetDetail(
+                currentRecommendation.worksheet(),
+                currentRecommendation.topic()
+        );
+    }
+
+    private void loadRecommendation() {
+        try {
+            var recommendation = worksheetSelectionService.recommendWorksheet();
+
+            if (recommendation.isEmpty()) {
+                currentRecommendation = null;
+
+                recommendationTitleLabel.setText("No recommendation yet");
+                recommendationMetaLabel.setText("Create worksheets to unlock adaptive recommendations.");
+                recommendationReasonLabel.setText("");
+                openRecommendationButton.setDisable(true);
+
+                return;
+            }
+
+            currentRecommendation = recommendation.get();
+
+            Worksheet worksheet = currentRecommendation.worksheet();
+
+            recommendationTitleLabel.setText(worksheet.title());
+
+            recommendationMetaLabel.setText(
+                    "Topic: " + currentRecommendation.topic().name()
+                            + " • Difficulty: " + worksheet.difficulty()
+                            + " • Importance: " + worksheet.importance()
+                            + " • Latest score: " + formatScore(worksheet.latestScorePercent())
+            );
+
+            recommendationReasonLabel.setText(currentRecommendation.explanation());
+            openRecommendationButton.setDisable(false);
+
+        } catch (SQLException e) {
+            currentRecommendation = null;
+
+            recommendationTitleLabel.setText("Recommendation failed");
+            recommendationMetaLabel.setText(e.getMessage());
+            recommendationReasonLabel.setText("");
+            openRecommendationButton.setDisable(true);
         }
     }
 
@@ -293,9 +363,40 @@ public class ModulesController {
 
             stage.setScene(scene);
             stage.showAndWait();
+            loadRecommendation();
 
         } catch (IOException e) {
             showError("Failed to open topic detail", e.getMessage());
+        }
+    }
+
+    private void openWorksheetDetail(Worksheet worksheet, Topic topic) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/pararepilot/fxml/WorksheetDetailView.fxml")
+            );
+
+            Parent root = loader.load();
+
+            WorksheetDetailController controller = loader.getController();
+            controller.setWorksheet(worksheet, topic);
+
+            Stage stage = new Stage();
+            stage.setTitle("Worksheet Details - " + worksheet.title());
+            stage.initModality(Modality.APPLICATION_MODAL);
+
+            Scene scene = new Scene(root, 760, 680);
+            scene.getStylesheets().add(
+                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
+            );
+
+            stage.setScene(scene);
+            stage.showAndWait();
+
+            loadRecommendation();
+
+        } catch (IOException e) {
+            showError("Failed to open worksheet detail", e.getMessage());
         }
     }
 
@@ -344,6 +445,14 @@ public class ModulesController {
         topicDescriptionArea.clear();
         topicImportanceCombo.setValue(ImportanceLevel.MEDIUM);
         topicConfidenceCombo.setValue(ConfidenceLevel.MEDIUM);
+    }
+
+    private String formatScore(Double score) {
+        if (score == null) {
+            return "Not attempted";
+        }
+
+        return String.format("%.0f%%", score);
     }
 
     private void setStatus(String message) {
