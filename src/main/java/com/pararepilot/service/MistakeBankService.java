@@ -8,13 +8,22 @@ import com.pararepilot.repository.MistakeRepository;
 public class MistakeBankService {
 
     private final MistakeRepository mistakeRepository;
+    private final GamificationService gamificationService;
 
     public MistakeBankService() {
-        this(new MistakeRepository());
+        this(new MistakeRepository(), new GamificationService());
     }
 
     public MistakeBankService(MistakeRepository mistakeRepository) {
+        this(mistakeRepository, new GamificationService());
+    }
+
+    public MistakeBankService(
+            MistakeRepository mistakeRepository,
+            GamificationService gamificationService
+    ) {
         this.mistakeRepository = mistakeRepository;
+        this.gamificationService = gamificationService;
     }
 
     public int createMistakesFromAttempt(long attemptId) throws SQLException {
@@ -47,6 +56,7 @@ public class MistakeBankService {
     }
 
     public void markRevisited(long mistakeId) throws SQLException {
-        mistakeRepository.incrementRevisitCount(mistakeId);
+    mistakeRepository.incrementRevisitCount(mistakeId);
+    gamificationService.awardMistakeReview();
     }
 }
