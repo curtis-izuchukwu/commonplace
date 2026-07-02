@@ -149,3 +149,48 @@
     -fx-border-color: #aeb9a8;
     -fx-border-radius: 14;
 }
+.dashboard-root {
+    -fx-background-color: #f6f4ef;
+}
+
+.dashboard-content {
+    -fx-padding: 22;
+}
+
+.dashboard-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 18;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 18, 0.1, 0, 6);
+}
+
+.hero-card {
+    -fx-background-color: #fffaf0;
+    -fx-border-color: #e0cfae;
+    -fx-border-radius: 18;
+    -fx-background-radius: 18;
+}
+
+.stat-card {
+    -fx-background-color: #f9f7f2;
+}
+
+.dashboard-hero-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #24232a;
+}
+
+.dashboard-stat-main {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #24232a;
+}
+
+.dashboard-mini-card {
+    -fx-background-color: #f9f7f2;
+    -fx-background-radius: 14;
+    -fx-padding: 12;
+    -fx-border-color: #e5ded2;
+    -fx-border-radius: 14;
+}
