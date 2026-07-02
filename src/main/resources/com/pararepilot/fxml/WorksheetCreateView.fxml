@@ -37,8 +37,18 @@
               wrapText="true"/>
 
     <HBox spacing="10">
-        <ComboBox fx:id="difficultyCombo" promptText="Difficulty"/>
-        <ComboBox fx:id="importanceCombo" promptText="Importance"/>
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Difficulty" styleClass="small-label"/>
+            <ComboBox fx:id="difficultyCombo"
+                      promptText="Difficulty"
+                      maxWidth="Infinity"/>
+        </VBox>
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Worksheet priority" styleClass="small-label"/>
+            <ComboBox fx:id="importanceCombo"
+                      promptText="Priority"
+                      maxWidth="Infinity"/>
+        </VBox>
     </HBox>
 
     <Separator/>

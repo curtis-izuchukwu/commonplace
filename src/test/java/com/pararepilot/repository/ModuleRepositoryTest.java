@@ -14,23 +14,31 @@ class ModuleRepositoryTest {
     @Test
     void canCreateAndReadModule() throws Exception {
         ModuleRepository repository = new ModuleRepository();
+        StudyModule created = null;
 
-        StudyModule created = repository.create(
-                "Algorithms",
-                "Sorting, graphs, dynamic programming",
-                null,
-                ImportanceLevel.HIGH
-        );
+        try {
+            created = repository.create(
+                    "Algorithms",
+                    "Sorting, graphs, dynamic programming",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
-        assertTrue(created.id() > 0);
-        assertEquals("Algorithms", created.name());
-        assertEquals(ImportanceLevel.HIGH, created.importance());
+            assertTrue(created.id() > 0);
+            assertEquals("Algorithms", created.name());
+            assertEquals(ImportanceLevel.HIGH, created.importance());
 
-        List<StudyModule> modules = repository.findAll();
+            List<StudyModule> modules = repository.findAll();
+            long createdId = created.id();
 
-        assertTrue(
-                modules.stream().anyMatch(module -> module.id() == created.id()),
-                "Created module should appear in findAll()"
-        );
+            assertTrue(
+                    modules.stream().anyMatch(module -> module.id() == createdId),
+                    "Created module should appear in findAll()"
+            );
+        } finally {
+            if (created != null) {
+                repository.deleteById(created.id());
+            }
+        }
     }
 }

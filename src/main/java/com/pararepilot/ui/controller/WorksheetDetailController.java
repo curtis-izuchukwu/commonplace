@@ -3,33 +3,40 @@ package com.pararepilot.ui.controller;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import com.pararepilot.model.Question;
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.Worksheet;
+import com.pararepilot.service.WorksheetRecommendation;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 public class WorksheetDetailController {
 
     @FXML private Label worksheetTitleLabel;
     @FXML private Label worksheetMetaLabel;
     @FXML private Label worksheetDescriptionLabel;
+    @FXML private VBox recommendationDetailsPanel;
+    @FXML private Label recommendationDetailsLabel;
     @FXML private VBox questionsList;
 
     private final WorksheetCreationService service = new WorksheetCreationService();
 
     private Worksheet worksheet;
     private Topic topic;
+    private Runnable onWorksheetUpdated;
+
+    public void setOnWorksheetUpdated(Runnable onWorksheetUpdated) {
+        this.onWorksheetUpdated = onWorksheetUpdated;
+    }
 
     public void setWorksheet(Worksheet worksheet, Topic topic) {
         this.worksheet = worksheet;
@@ -41,9 +48,9 @@ public class WorksheetDetailController {
 
         worksheetMetaLabel.setText(
                 "Topic: " + topicText
-                        + " • Difficulty: " + worksheet.difficulty()
-                        + " • Importance: " + worksheet.importance()
-                        + " • Questions: loading..."
+                        + " - Difficulty: " + worksheet.difficulty()
+                        + " - Importance: " + worksheet.importance()
+                        + " - Questions: loading..."
         );
 
         worksheetDescriptionLabel.setText(
@@ -55,34 +62,58 @@ public class WorksheetDetailController {
         loadQuestions();
     }
 
+    public void setRecommendationDetails(WorksheetRecommendation recommendation) {
+        if (recommendation == null) {
+            recommendationDetailsPanel.setVisible(false);
+            recommendationDetailsPanel.setManaged(false);
+            recommendationDetailsLabel.setText("");
+            return;
+        }
+
+        Worksheet recommendedWorksheet = recommendation.worksheet();
+        Topic recommendedTopic = recommendation.topic();
+
+        recommendationDetailsLabel.setText(
+                "Priority score: " + recommendation.priorityScore() + "/100"
+                        + "\nLast attempt: " + lastAttemptText(recommendedWorksheet)
+                        + "\nLatest score: " + formatScore(recommendedWorksheet.latestScorePercent())
+                        + "\nTopic confidence: " + recommendedTopic.confidence()
+                        + "\nDifficulty: " + recommendedWorksheet.difficulty()
+                        + "\nWorksheet priority: " + recommendedWorksheet.importance()
+                        + "\nTopic priority: " + recommendedTopic.importance()
+                        + "\nFailure streak: " + recommendedWorksheet.failureStreak()
+                        + "\n\nRecommendation breakdown: " + recommendation.explanation()
+        );
+
+        recommendationDetailsPanel.setVisible(true);
+        recommendationDetailsPanel.setManaged(true);
+        UiAnimations.popIn(recommendationDetailsPanel);
+    }
+
     @FXML
     private void handleStartAttempt() {
         if (worksheet == null) {
+            UiAnimations.validationError(worksheetTitleLabel);
             showError("Cannot start attempt", "No worksheet is loaded.");
             return;
         }
 
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/AttemptWorksheetView.fxml")
+            var handle = OverlayService.<AttemptWorksheetController>open(
+                    worksheetTitleLabel,
+                    "/com/pararepilot/fxml/AttemptWorksheetView.fxml",
+                    900,
+                    780
             );
 
-            Parent root = loader.load();
+            AttemptWorksheetController controller = handle.controller();
+            controller.setWorksheet(worksheet, topic, () -> {
+                loadQuestions();
 
-            AttemptWorksheetController controller = loader.getController();
-            controller.setWorksheet(worksheet, topic, this::loadQuestions);
-
-            Stage stage = new Stage();
-            stage.setTitle("Attempt - " + worksheet.title());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 840, 760);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
+                if (onWorksheetUpdated != null) {
+                    onWorksheetUpdated.run();
+                }
+            });
 
         } catch (IOException e) {
             showError("Failed to open attempt screen", e.getMessage());
@@ -99,9 +130,9 @@ public class WorksheetDetailController {
 
             worksheetMetaLabel.setText(
                     "Topic: " + topicText
-                            + " • Difficulty: " + worksheet.difficulty()
-                            + " • Importance: " + worksheet.importance()
-                            + " • Questions: " + questions.size()
+                            + " - Difficulty: " + worksheet.difficulty()
+                            + " - Importance: " + worksheet.importance()
+                            + " - Questions: " + questions.size()
             );
 
             if (questions.isEmpty()) {
@@ -126,7 +157,7 @@ public class WorksheetDetailController {
         VBox card = new VBox(8);
         card.getStyleClass().add("question-card");
 
-        Label heading = new Label("Question " + question.questionOrder() + " • " + question.maxMarks() + " marks");
+        Label heading = new Label("Question " + question.questionOrder() + " - " + question.maxMarks() + " marks");
         heading.getStyleClass().add("card-title");
 
         Label prompt = new Label(question.prompt());
@@ -140,14 +171,39 @@ public class WorksheetDetailController {
         markScheme.getStyleClass().add("muted-text");
 
         card.getChildren().addAll(heading, prompt, markSchemeHeading, markScheme);
+        UiAnimations.animateCardEntry(card);
 
         return card;
     }
 
     @FXML
     private void handleClose() {
-        Stage stage = (Stage) worksheetTitleLabel.getScene().getWindow();
-        stage.close();
+        OverlayService.closeFrom(worksheetTitleLabel);
+    }
+
+    private String lastAttemptText(Worksheet worksheet) {
+        if (worksheet.lastAttemptedAt() == null) {
+            return "Never attempted";
+        }
+
+        long days = ChronoUnit.DAYS.between(
+                worksheet.lastAttemptedAt().toLocalDate(),
+                LocalDate.now()
+        );
+
+        if (days <= 0) {
+            return "Today";
+        }
+
+        return days + " day" + (days == 1 ? "" : "s") + " ago";
+    }
+
+    private String formatScore(Double score) {
+        if (score == null) {
+            return "Not attempted";
+        }
+
+        return String.format("%.0f%%", score);
     }
 
     private void showError(String title, String message) {

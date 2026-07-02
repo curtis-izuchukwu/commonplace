@@ -2,21 +2,30 @@ package com.pararepilot.ui.controller;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
+import com.pararepilot.model.UserStats;
 import com.pararepilot.model.Worksheet;
+import com.pararepilot.service.DashboardService;
+import com.pararepilot.service.DashboardSummary;
 import com.pararepilot.service.ModuleTopicService;
+import com.pararepilot.service.UserSettingsService;
 import com.pararepilot.service.WorksheetRecommendation;
-import com.pararepilot.service.WorksheetSelectionService;
+import com.pararepilot.ui.LevelUi;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -25,10 +34,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 public class ModulesController {
 
@@ -41,6 +48,7 @@ public class ModulesController {
 
     @FXML private Label recommendationTitleLabel;
     @FXML private Label recommendationMetaLabel;
+    @FXML private HBox recommendationVisualMeta;
     @FXML private Label recommendationReasonLabel;
     @FXML private Button openRecommendationButton;
 
@@ -56,7 +64,8 @@ public class ModulesController {
     @FXML private Label statusLabel;
 
     private final ModuleTopicService service = new ModuleTopicService();
-    private final WorksheetSelectionService worksheetSelectionService = new WorksheetSelectionService();
+    private final DashboardService dashboardService = new DashboardService();
+    private final UserSettingsService userSettingsService = new UserSettingsService();
 
     private StudyModule selectedModule;
     private WorksheetRecommendation currentRecommendation;
@@ -64,13 +73,16 @@ public class ModulesController {
     @FXML
     private void initialize() {
         moduleImportanceCombo.getItems().setAll(ImportanceLevel.values());
-        moduleImportanceCombo.setValue(ImportanceLevel.MEDIUM);
+        moduleImportanceCombo.setValue(defaultModulePriority());
+        LevelUi.applyLevelBarStyling(moduleImportanceCombo);
 
         topicImportanceCombo.getItems().setAll(ImportanceLevel.values());
         topicImportanceCombo.setValue(ImportanceLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(topicImportanceCombo);
 
         topicConfidenceCombo.getItems().setAll(ConfidenceLevel.values());
         topicConfidenceCombo.setValue(ConfidenceLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(topicConfidenceCombo);
 
         loadModules();
         loadRecommendation();
@@ -86,15 +98,18 @@ public class ModulesController {
                     moduleImportanceCombo.getValue()
             );
 
+            UiAnimations.validationSuccess(moduleNameField, moduleDescriptionArea, moduleExamDatePicker);
             clearModuleForm();
             selectedModule = createdModule;
 
             loadModules();
             selectModule(createdModule);
+            loadRecommendation();
 
             setStatus("Module created: " + createdModule.name());
 
         } catch (IllegalArgumentException e) {
+            UiAnimations.validationError(moduleNameField);
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to create module", e.getMessage());
@@ -104,6 +119,7 @@ public class ModulesController {
     @FXML
     private void handleAddTopic() {
         if (selectedModule == null) {
+            UiAnimations.validationError(modulesList);
             setStatus("Select a module before adding a topic.");
             return;
         }
@@ -117,13 +133,16 @@ public class ModulesController {
                     topicConfidenceCombo.getValue()
             );
 
+            UiAnimations.validationSuccess(topicNameField, topicDescriptionArea);
             clearTopicForm();
             loadTopicsForSelectedModule();
             loadModules();
+            loadRecommendation();
 
             setStatus("Topic created: " + createdTopic.name());
 
         } catch (IllegalArgumentException e) {
+            UiAnimations.validationError(topicNameField);
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to create topic", e.getMessage());
@@ -132,7 +151,7 @@ public class ModulesController {
 
     @FXML
     private void handleRefreshRecommendation() {
-        loadRecommendation();
+        UiAnimations.animateRecommendationRefresh(recommendationTitleLabel.getParent(), this::refreshRecommendation);
     }
 
     @FXML
@@ -148,45 +167,138 @@ public class ModulesController {
         );
     }
 
+    @FXML
+    private void handleOpenMistakeBank() {
+        try {
+            var handle = OverlayService.<MistakeBankController>open(
+                    statusLabel,
+                    "/com/pararepilot/fxml/MistakeBankView.fxml",
+                    920,
+                    760
+            );
+            handle.controller().setOnMistakesChanged(this::refreshSelectedModuleData);
+
+        } catch (IOException e) {
+            showError("Failed to open mistake bank", e.getMessage());
+        }
+    }
+
     private void loadRecommendation() {
         try {
-            var recommendation = worksheetSelectionService.recommendWorksheet();
-
-            if (recommendation.isEmpty()) {
-                currentRecommendation = null;
-
-                recommendationTitleLabel.setText("No recommendation yet");
-                recommendationMetaLabel.setText("Create worksheets to unlock adaptive recommendations.");
-                recommendationReasonLabel.setText("");
-                openRecommendationButton.setDisable(true);
-
-                return;
-            }
-
-            currentRecommendation = recommendation.get();
-
-            Worksheet worksheet = currentRecommendation.worksheet();
-
-            recommendationTitleLabel.setText(worksheet.title());
-
-            recommendationMetaLabel.setText(
-                    "Topic: " + currentRecommendation.topic().name()
-                            + " • Difficulty: " + worksheet.difficulty()
-                            + " • Importance: " + worksheet.importance()
-                            + " • Latest score: " + formatScore(worksheet.latestScorePercent())
-            );
-
-            recommendationReasonLabel.setText(currentRecommendation.explanation());
-            openRecommendationButton.setDisable(false);
+            updateRecommendation(dashboardService.loadDashboard());
 
         } catch (SQLException e) {
             currentRecommendation = null;
+            recommendationVisualMeta.getChildren().clear();
 
-            recommendationTitleLabel.setText("Recommendation failed");
-            recommendationMetaLabel.setText(e.getMessage());
-            recommendationReasonLabel.setText("");
+            UiAnimations.fadeTextChange(recommendationTitleLabel, "Recommendation failed");
+            UiAnimations.fadeTextChange(recommendationMetaLabel, e.getMessage());
+            setRecommendationReason("");
             openRecommendationButton.setDisable(true);
         }
+    }
+
+    private void refreshRecommendation() {
+        try {
+            updateRecommendation(dashboardService.refreshRecommendation());
+        } catch (SQLException e) {
+            currentRecommendation = null;
+            recommendationVisualMeta.getChildren().clear();
+            UiAnimations.fadeTextChange(recommendationTitleLabel, "Recommendation failed");
+            UiAnimations.fadeTextChange(recommendationMetaLabel, e.getMessage());
+            setRecommendationReason("");
+            openRecommendationButton.setDisable(true);
+        }
+    }
+
+    private void updateRecommendation(DashboardSummary summary) {
+        if (summary.worksheetWindowLocked()) {
+            currentRecommendation = null;
+            recommendationVisualMeta.getChildren().clear();
+
+            Label completionBadge = new Label("Completed");
+            completionBadge.getStyleClass().add("completion-badge");
+            recommendationVisualMeta.getChildren().add(completionBadge);
+            UiAnimations.popIn(completionBadge);
+
+            UiAnimations.fadeTextChange(recommendationTitleLabel, "Today's worksheet is complete");
+            UiAnimations.fadeTextChange(
+                    recommendationMetaLabel,
+                    "Next recommendation unlocks in "
+                            + countdownUntilNextWorksheet(summary.userStats()) + "."
+            );
+            setRecommendationReason("");
+            openRecommendationButton.setDisable(true);
+            return;
+        }
+
+        if (summary.recommendation().isEmpty()) {
+            currentRecommendation = null;
+            recommendationVisualMeta.getChildren().clear();
+
+            UiAnimations.fadeTextChange(recommendationTitleLabel, "No recommendation yet");
+            UiAnimations.fadeTextChange(
+                    recommendationMetaLabel,
+                    "Create worksheets to unlock adaptive recommendations."
+            );
+            setRecommendationReason("");
+            openRecommendationButton.setDisable(true);
+            return;
+        }
+
+        currentRecommendation = summary.recommendation().get();
+
+        Worksheet worksheet = currentRecommendation.worksheet();
+
+        UiAnimations.fadeTextChange(recommendationTitleLabel, worksheet.title());
+
+        UiAnimations.fadeTextChange(
+                recommendationMetaLabel,
+                "Topic: " + currentRecommendation.topic().name()
+        );
+
+        recommendationVisualMeta.getChildren().setAll(
+                LevelUi.createDifficultyIndicator(worksheet.difficulty()),
+                LevelUi.createPriorityChip(worksheet.importance())
+        );
+
+        setRecommendationReason("");
+        openRecommendationButton.setDisable(false);
+        UiAnimations.softPulse(openRecommendationButton);
+    }
+
+    private String countdownUntilNextWorksheet(UserStats stats) {
+        if (stats.lastCompletionDate() == null) {
+            return "a moment";
+        }
+
+        LocalDate nextWorksheetDate = stats.lastCompletionDate()
+                .plusDays(stats.worksheetIntervalDays());
+
+        LocalDateTime unlockTime = nextWorksheetDate.atStartOfDay();
+        Duration duration = Duration.between(LocalDateTime.now(), unlockTime);
+
+        if (duration.isNegative() || duration.isZero()) {
+            return "a moment";
+        }
+
+        long hours = duration.toHours();
+        long minutes = duration.minusHours(hours).toMinutes();
+
+        if (hours <= 0) {
+            return minutes + " minute" + (minutes == 1 ? "" : "s");
+        }
+
+        return hours + " hour" + (hours == 1 ? "" : "s")
+                + " " + minutes + " minute" + (minutes == 1 ? "" : "s");
+    }
+
+    private String dailyProgressText(DashboardSummary summary) {
+        int dailyGoal = summary.userSettings().dailyWorksheetGoal();
+        int completed = Math.min(summary.completedWorksheetsToday(), dailyGoal);
+
+        return completed + "/" + dailyGoal
+                + " worksheet" + (dailyGoal == 1 ? "" : "s");
     }
 
     private void loadModules() {
@@ -226,9 +338,9 @@ public class ModulesController {
 
             selectedModuleMeta.setText(
                     examText
-                            + " • Importance: " + module.importance()
-                            + " • Topics: " + topicCount
-                            + " • Average mastery: " + String.format("%.0f%%", averageMastery)
+                            + " - Importance: " + module.importance()
+                            + " - Topics: " + topicCount
+                            + " - Average mastery: " + String.format("%.0f%%", averageMastery)
             );
 
             loadTopicsForSelectedModule();
@@ -267,27 +379,34 @@ public class ModulesController {
         }
     }
 
-    private VBox createModuleCard(StudyModule module) {
-        VBox card = new VBox(8);
-        card.getStyleClass().add("entity-card");
+    private StackPane createModuleCard(StudyModule module) {
+        StackPane card = new StackPane();
+        card.getStyleClass().addAll("entity-card", "clickable-card");
+        card.setOnMouseClicked(event -> selectModule(module));
+
+        VBox content = new VBox(8);
+        content.setPadding(new Insets(0, 34, 0, 0));
 
         Label title = new Label(module.name());
         title.getStyleClass().add("card-title");
+        title.setWrapText(true);
 
         Label meta = new Label(buildModuleMeta(module));
         meta.getStyleClass().add("muted-text");
         meta.setWrapText(true);
 
-        Button openButton = new Button("Open");
-        openButton.setOnAction(event -> selectModule(module));
+        Button deleteButton = createDeleteButton();
+        deleteButton.setOnMouseClicked(event -> event.consume());
+        deleteButton.setOnAction(event -> {
+            event.consume();
+            deleteModule(module, card);
+        });
 
-        Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
-        deleteButton.setOnAction(event -> deleteModule(module));
+        content.getChildren().addAll(title, meta);
+        card.getChildren().addAll(content, deleteButton);
+        StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        HBox actions = new HBox(8, openButton, deleteButton);
-
-        card.getChildren().addAll(title, meta, actions);
+        UiAnimations.animateCardEntry(card);
         return card;
     }
 
@@ -301,69 +420,70 @@ public class ModulesController {
                     : "Exam: " + module.examDate();
 
             return examText
-                    + " • " + module.importance()
-                    + " • " + topicCount + " topics"
-                    + " • " + String.format("%.0f%% mastery", averageMastery);
+                    + " - " + module.importance()
+                    + " - " + topicCount + " topics"
+                    + " - " + String.format("%.0f%% mastery", averageMastery);
 
         } catch (SQLException e) {
             return module.importance().toString();
         }
     }
 
-    private HBox createTopicCard(Topic topic) {
-        HBox card = new HBox(12);
-        card.getStyleClass().add("entity-card");
+    private StackPane createTopicCard(Topic topic) {
+        StackPane card = new StackPane();
+        card.getStyleClass().addAll("entity-card", "clickable-card");
+        card.setOnMouseClicked(event -> openTopicDetail(topic));
 
         VBox textBox = new VBox(4);
-        HBox.setHgrow(textBox, Priority.ALWAYS);
+        textBox.setPadding(new Insets(0, 34, 0, 0));
 
         Label title = new Label(topic.name());
         title.getStyleClass().add("card-title");
+        title.setWrapText(true);
 
         Label meta = new Label(
                 "Importance: " + topic.importance()
-                        + " • Confidence: " + topic.confidence()
-                        + " • Mastery: " + String.format("%.0f%%", topic.masteryScore())
+                        + " - Confidence: " + topic.confidence()
+                        + " - Mastery: " + String.format("%.0f%%", topic.masteryScore())
         );
         meta.getStyleClass().add("muted-text");
         meta.setWrapText(true);
 
         textBox.getChildren().addAll(title, meta);
 
-        Button viewButton = new Button("View");
-        viewButton.setOnAction(event -> openTopicDetail(topic));
+        Button deleteButton = createDeleteButton();
+        deleteButton.setOnMouseClicked(event -> event.consume());
+        deleteButton.setOnAction(event -> {
+            event.consume();
+            deleteTopic(topic, card);
+        });
 
-        Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
-        deleteButton.setOnAction(event -> deleteTopic(topic));
+        card.getChildren().addAll(textBox, deleteButton);
+        StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        card.getChildren().addAll(textBox, viewButton, deleteButton);
-
+        UiAnimations.animateCardEntry(card);
         return card;
+    }
+
+    private Button createDeleteButton() {
+        Button button = new Button("X");
+        button.getStyleClass().add("icon-danger-button");
+        button.setFocusTraversable(false);
+        return button;
     }
 
     private void openTopicDetail(Topic topic) {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/TopicDetailView.fxml")
+            var handle = OverlayService.<TopicDetailController>open(
+                    statusLabel,
+                    "/com/pararepilot/fxml/TopicDetailView.fxml",
+                    840,
+                    720
             );
 
-            Parent root = loader.load();
-
-            TopicDetailController controller = loader.getController();
+            TopicDetailController controller = handle.controller();
             controller.setTopic(topic, selectedModule);
-
-            Stage stage = new Stage();
-            stage.setTitle("Topic Details - " + topic.name());
-            stage.initModality(Modality.APPLICATION_MODAL);
-            Scene scene = new Scene(root, 760, 680);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-            loadRecommendation();
+            controller.setOnDataChanged(this::refreshSelectedModuleData);
 
         } catch (IOException e) {
             showError("Failed to open topic detail", e.getMessage());
@@ -372,72 +492,76 @@ public class ModulesController {
 
     private void openWorksheetDetail(Worksheet worksheet, Topic topic) {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/WorksheetDetailView.fxml")
+            var handle = OverlayService.<WorksheetDetailController>open(
+                    statusLabel,
+                    "/com/pararepilot/fxml/WorksheetDetailView.fxml",
+                    840,
+                    720
             );
 
-            Parent root = loader.load();
-
-            WorksheetDetailController controller = loader.getController();
+            WorksheetDetailController controller = handle.controller();
             controller.setWorksheet(worksheet, topic);
-
-            Stage stage = new Stage();
-            stage.setTitle("Worksheet Details - " + worksheet.title());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 760, 680);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            loadRecommendation();
+            controller.setRecommendationDetails(currentRecommendation);
+            controller.setOnWorksheetUpdated(this::refreshSelectedModuleData);
 
         } catch (IOException e) {
             showError("Failed to open worksheet detail", e.getMessage());
         }
     }
 
-    private void deleteModule(StudyModule module) {
+    private void deleteModule(StudyModule module, Node card) {
         try {
             service.deleteModule(module.id());
 
-            if (selectedModule != null && selectedModule.id() == module.id()) {
-                selectedModule = null;
-                selectedModuleTitle.setText("Select a module");
-                selectedModuleMeta.setText("Create or select a module to start adding topics.");
-                topicsList.getChildren().clear();
-            }
+            UiAnimations.animateCardRemoval(card, () -> {
+                if (selectedModule != null && selectedModule.id() == module.id()) {
+                    selectedModule = null;
+                    selectedModuleTitle.setText("Select a module");
+                    selectedModuleMeta.setText("Create or select a module to start adding topics.");
+                    topicsList.getChildren().clear();
+                }
 
-            loadModules();
-            setStatus("Module deleted: " + module.name());
+                loadModules();
+                loadRecommendation();
+                setStatus("Module deleted: " + module.name());
+            });
 
         } catch (SQLException e) {
             showError("Failed to delete module", e.getMessage());
         }
     }
 
-    private void deleteTopic(Topic topic) {
+    private void deleteTopic(Topic topic, Node card) {
         try {
             service.deleteTopic(topic.id());
 
-            loadTopicsForSelectedModule();
-            loadModules();
+            UiAnimations.animateCardRemoval(card, () -> {
+                loadTopicsForSelectedModule();
+                loadModules();
+                loadRecommendation();
 
-            setStatus("Topic deleted: " + topic.name());
+                setStatus("Topic deleted: " + topic.name());
+            });
 
         } catch (SQLException e) {
             showError("Failed to delete topic", e.getMessage());
         }
     }
 
+    private void refreshSelectedModuleData() {
+        if (selectedModule != null) {
+            selectModule(selectedModule);
+        }
+
+        loadModules();
+        loadRecommendation();
+    }
+
     private void clearModuleForm() {
         moduleNameField.clear();
         moduleDescriptionArea.clear();
         moduleExamDatePicker.setValue(null);
-        moduleImportanceCombo.setValue(ImportanceLevel.MEDIUM);
+        moduleImportanceCombo.setValue(defaultModulePriority());
     }
 
     private void clearTopicForm() {
@@ -459,6 +583,13 @@ public class ModulesController {
         statusLabel.setText(message);
     }
 
+    private void setRecommendationReason(String message) {
+        boolean hasMessage = message != null && !message.isBlank();
+        recommendationReasonLabel.setText(hasMessage ? message : "");
+        recommendationReasonLabel.setVisible(hasMessage);
+        recommendationReasonLabel.setManaged(hasMessage);
+    }
+
     private void showError(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
@@ -466,31 +597,12 @@ public class ModulesController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-    @FXML
-    private void handleOpenMistakeBank() {
+
+    private ImportanceLevel defaultModulePriority() {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/MistakeBankView.fxml")
-            );
-
-            Parent root = loader.load();
-
-            Stage stage = new Stage();
-            stage.setTitle("Mistake Bank");
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 860, 740);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            loadRecommendation();
-
-        } catch (IOException e) {
-            showError("Failed to open mistake bank", e.getMessage());
+            return ImportanceLevel.valueOf(userSettingsService.load().defaultModulePriority());
+        } catch (SQLException | IllegalArgumentException e) {
+            return ImportanceLevel.MEDIUM;
         }
     }
 }

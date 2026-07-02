@@ -39,7 +39,7 @@ public class ReflectionService {
         this.gamificationService = gamificationService;
     }
 
-    public void completeReflection(
+    public GamificationResult completeReflection(
             Worksheet worksheet,
             WorksheetAttempt attempt,
             ConfidenceLevel confidenceAfter,
@@ -70,7 +70,7 @@ public class ReflectionService {
 
         updateWorksheetStats(worksheet, attempt);
         topicStatsService.updateTopicStats(worksheet.topicId(), resolvedConfidence);
-        gamificationService.awardWorksheetCompletion(attempt);
+        return gamificationService.awardWorksheetCompletion(attempt);
     }
 
     private void updateWorksheetStats(Worksheet worksheet, WorksheetAttempt latestAttempt)

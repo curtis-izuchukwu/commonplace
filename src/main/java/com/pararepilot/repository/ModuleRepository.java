@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.StudyModule;
+import com.pararepilot.service.AccountSession;
 import com.pararepilot.util.DateUtils;
 
 public class ModuleRepository {
@@ -22,9 +23,9 @@ public class ModuleRepository {
 
         String sql = """
                 INSERT INTO modules
-                    (name, description, exam_date, importance, created_at, updated_at)
+                    (user_id, name, description, exam_date, importance, created_at, updated_at)
                 VALUES
-                    (?, ?, ?, ?, ?, ?);
+                    (?, ?, ?, ?, ?, ?, ?);
                 """;
 
         LocalDateTime now = DateUtils.now();
@@ -32,12 +33,13 @@ public class ModuleRepository {
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setString(1, name.trim());
-            stmt.setString(2, blankToNull(description));
-            stmt.setString(3, DateUtils.toDatabaseDate(examDate));
-            stmt.setString(4, importance.name());
-            stmt.setString(5, DateUtils.toDatabaseDateTime(now));
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.setString(2, name.trim());
+            stmt.setString(3, blankToNull(description));
+            stmt.setString(4, DateUtils.toDatabaseDate(examDate));
+            stmt.setString(5, importance.name());
             stmt.setString(6, DateUtils.toDatabaseDateTime(now));
+            stmt.setString(7, DateUtils.toDatabaseDateTime(now));
 
             stmt.executeUpdate();
 
@@ -56,17 +58,21 @@ public class ModuleRepository {
         String sql = """
                 SELECT id, name, description, exam_date, importance, created_at, updated_at
                 FROM modules
+                WHERE user_id = ?
                 ORDER BY created_at DESC;
                 """;
 
         List<StudyModule> modules = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                modules.add(mapRow(rs));
+            stmt.setLong(1, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    modules.add(mapRow(rs));
+                }
             }
         }
 
@@ -77,13 +83,15 @@ public class ModuleRepository {
         String sql = """
                 SELECT id, name, description, exam_date, importance, created_at, updated_at
                 FROM modules
-                WHERE id = ?;
+                WHERE id = ?
+                  AND user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -103,7 +111,8 @@ public class ModuleRepository {
                     exam_date = ?,
                     importance = ?,
                     updated_at = ?
-                WHERE id = ?;
+                WHERE id = ?
+                  AND user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -115,18 +124,20 @@ public class ModuleRepository {
             stmt.setString(4, module.importance().name());
             stmt.setString(5, DateUtils.toDatabaseDateTime(DateUtils.now()));
             stmt.setLong(6, module.id());
+            stmt.setLong(7, AccountSession.currentUserId());
 
             stmt.executeUpdate();
         }
     }
 
     public void deleteById(long id) throws SQLException {
-        String sql = "DELETE FROM modules WHERE id = ?;";
+        String sql = "DELETE FROM modules WHERE id = ? AND user_id = ?;";
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
     }

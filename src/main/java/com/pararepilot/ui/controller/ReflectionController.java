@@ -5,14 +5,18 @@ import java.sql.SQLException;
 import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.Worksheet;
 import com.pararepilot.model.WorksheetAttempt;
+import com.pararepilot.service.GamificationResult;
 import com.pararepilot.service.ReflectionService;
+import com.pararepilot.service.UserSettingsService;
+import com.pararepilot.ui.LevelUi;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.stage.Stage;
 
 public class ReflectionController {
 
@@ -24,6 +28,7 @@ public class ReflectionController {
     @FXML private Label statusLabel;
 
     private final ReflectionService reflectionService = new ReflectionService();
+    private final UserSettingsService userSettingsService = new UserSettingsService();
 
     private Worksheet worksheet;
     private WorksheetAttempt attempt;
@@ -33,6 +38,7 @@ public class ReflectionController {
     private void initialize() {
         confidenceCombo.getItems().setAll(ConfidenceLevel.values());
         confidenceCombo.setValue(ConfidenceLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(confidenceCombo);
     }
 
     public void setContext(
@@ -46,7 +52,7 @@ public class ReflectionController {
 
         summaryLabel.setText(
                 worksheet.title()
-                        + " • Score: "
+                        + " - Score: "
                         + attempt.score()
                         + "/"
                         + attempt.maxScore()
@@ -59,7 +65,7 @@ public class ReflectionController {
     @FXML
     private void handleSaveReflection() {
         try {
-            reflectionService.completeReflection(
+            GamificationResult result = reflectionService.completeReflection(
                     worksheet,
                     attempt,
                     confidenceCombo.getValue(),
@@ -68,6 +74,8 @@ public class ReflectionController {
                     reflectionNotesArea.getText()
             );
 
+            showCompletionCelebration(result);
+
             if (onReflectionSaved != null) {
                 onReflectionSaved.run();
             }
@@ -75,6 +83,7 @@ public class ReflectionController {
             closeWindow();
 
         } catch (IllegalArgumentException e) {
+            UiAnimations.validationError(mainWeaknessArea, nextActionArea, reflectionNotesArea);
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to save reflection", e.getMessage());
@@ -84,7 +93,7 @@ public class ReflectionController {
     @FXML
     private void handleSkipReflection() {
         try {
-            reflectionService.completeReflection(
+            GamificationResult result = reflectionService.completeReflection(
                     worksheet,
                     attempt,
                     ConfidenceLevel.MEDIUM,
@@ -92,6 +101,8 @@ public class ReflectionController {
                     null,
                     "Reflection skipped."
             );
+
+            showCompletionCelebration(result);
 
             if (onReflectionSaved != null) {
                 onReflectionSaved.run();
@@ -109,8 +120,20 @@ public class ReflectionController {
     }
 
     private void closeWindow() {
-        Stage stage = (Stage) summaryLabel.getScene().getWindow();
-        stage.close();
+        OverlayService.closeFrom(summaryLabel);
+    }
+
+    private void showCompletionCelebration(GamificationResult result) throws SQLException {
+        if (!userSettingsService.load().completionCelebrationsEnabled()) {
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Worksheet Complete");
+        alert.setHeaderText("Worksheet complete");
+        alert.setContentText("XP awarded: " + result.xpAwarded()
+                + "\nRank: " + result.rank());
+        alert.showAndWait();
     }
 
     private void showError(String title, String message) {

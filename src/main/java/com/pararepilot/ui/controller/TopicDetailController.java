@@ -8,20 +8,19 @@ import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.Worksheet;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 public class TopicDetailController {
 
@@ -39,6 +38,11 @@ public class TopicDetailController {
 
     private Topic topic;
     private StudyModule parentModule;
+    private Runnable onDataChanged;
+
+    public void setOnDataChanged(Runnable onDataChanged) {
+        this.onDataChanged = onDataChanged;
+    }
 
     public void setTopic(Topic topic, StudyModule parentModule) {
         this.topic = topic;
@@ -54,7 +58,7 @@ public class TopicDetailController {
 
         double mastery = Math.max(0, Math.min(topic.masteryScore(), 100));
 
-        masteryProgressBar.setProgress(mastery / 100.0);
+        UiAnimations.animateProgress(masteryProgressBar, mastery / 100.0);
         masteryLabel.setText(String.format("%.0f%% mastery", mastery));
 
         importanceLabel.setText("Importance: " + topic.importance());
@@ -74,33 +78,24 @@ public class TopicDetailController {
     @FXML
     private void handleAddWorksheet() {
         if (topic == null) {
+            UiAnimations.validationError(topicNameLabel);
             setStatus("No topic selected.");
             return;
         }
 
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/WorksheetCreateView.fxml")
+            var handle = OverlayService.<WorksheetCreateController>open(
+                    topicNameLabel,
+                    "/com/pararepilot/fxml/WorksheetCreateView.fxml",
+                    820,
+                    760
             );
 
-            Parent root = loader.load();
-
-            WorksheetCreateController controller = loader.getController();
-            controller.setTopic(topic, parentModule, this::loadWorksheets);
-
-            Stage stage = new Stage();
-            stage.setTitle("Create Worksheet - " + topic.name());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 760, 720);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            loadWorksheets();
+            WorksheetCreateController controller = handle.controller();
+            controller.setTopic(topic, parentModule, () -> {
+                loadWorksheets();
+                notifyDataChanged();
+            });
 
         } catch (IOException e) {
             showError("Failed to open worksheet creation", e.getMessage());
@@ -136,74 +131,79 @@ public class TopicDetailController {
         }
     }
 
-    private HBox createWorksheetCard(Worksheet worksheet) {
-        HBox card = new HBox(12);
-        card.getStyleClass().add("entity-card");
+    private StackPane createWorksheetCard(Worksheet worksheet) {
+        StackPane card = new StackPane();
+        card.getStyleClass().addAll("entity-card", "clickable-card");
+        card.setOnMouseClicked(event -> openWorksheetDetail(worksheet));
 
         VBox textBox = new VBox(4);
-        HBox.setHgrow(textBox, Priority.ALWAYS);
+        textBox.setPadding(new Insets(0, 34, 0, 0));
 
         Label title = new Label(worksheet.title());
         title.getStyleClass().add("card-title");
+        title.setWrapText(true);
 
         Label meta = new Label(
                 "Difficulty: " + worksheet.difficulty()
-                        + " • Importance: " + worksheet.importance()
-                        + " • Attempts: " + worksheet.timesAttempted()
-                        + " • Latest score: " + formatScore(worksheet.latestScorePercent())
+                        + " - Importance: " + worksheet.importance()
+                        + " - Attempts: " + worksheet.timesAttempted()
+                        + " - Latest score: " + formatScore(worksheet.latestScorePercent())
         );
         meta.getStyleClass().add("muted-text");
         meta.setWrapText(true);
 
         textBox.getChildren().addAll(title, meta);
 
-        Button viewButton = new Button("View");
-        viewButton.setOnAction(event -> openWorksheetDetail(worksheet));
+        Button deleteButton = createDeleteButton();
+        deleteButton.setOnMouseClicked(event -> event.consume());
+        deleteButton.setOnAction(event -> {
+            event.consume();
+            deleteWorksheet(worksheet, card);
+        });
 
-        Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
-        deleteButton.setOnAction(event -> deleteWorksheet(worksheet));
+        card.getChildren().addAll(textBox, deleteButton);
+        StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        card.getChildren().addAll(textBox, viewButton, deleteButton);
-
+        UiAnimations.animateCardEntry(card);
         return card;
+    }
+
+    private Button createDeleteButton() {
+        Button button = new Button("x");
+        button.getStyleClass().add("icon-danger-button");
+        button.setFocusTraversable(false);
+        return button;
     }
 
     private void openWorksheetDetail(Worksheet worksheet) {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/WorksheetDetailView.fxml")
+            var handle = OverlayService.<WorksheetDetailController>open(
+                    topicNameLabel,
+                    "/com/pararepilot/fxml/WorksheetDetailView.fxml",
+                    840,
+                    720
             );
 
-            Parent root = loader.load();
-
-            WorksheetDetailController controller = loader.getController();
+            WorksheetDetailController controller = handle.controller();
             controller.setWorksheet(worksheet, topic);
-
-            Stage stage = new Stage();
-            stage.setTitle("Worksheet Details - " + worksheet.title());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 760, 680);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-            
-            loadWorksheets();
+            controller.setOnWorksheetUpdated(() -> {
+                loadWorksheets();
+                notifyDataChanged();
+            });
 
         } catch (IOException e) {
             showError("Failed to open worksheet detail", e.getMessage());
         }
     }
 
-    private void deleteWorksheet(Worksheet worksheet) {
+    private void deleteWorksheet(Worksheet worksheet, Node card) {
         try {
             worksheetService.deleteWorksheet(worksheet.id());
-            loadWorksheets();
-            setStatus("Worksheet deleted: " + worksheet.title());
+            UiAnimations.animateCardRemoval(card, () -> {
+                loadWorksheets();
+                notifyDataChanged();
+                setStatus("Worksheet deleted: " + worksheet.title());
+            });
 
         } catch (SQLException e) {
             showError("Failed to delete worksheet", e.getMessage());
@@ -216,6 +216,12 @@ public class TopicDetailController {
         }
 
         return String.format("%.0f%%", score);
+    }
+
+    private void notifyDataChanged() {
+        if (onDataChanged != null) {
+            onDataChanged.run();
+        }
     }
 
     private void setStatus(String message) {
@@ -232,7 +238,6 @@ public class TopicDetailController {
 
     @FXML
     private void handleClose() {
-        Stage stage = (Stage) topicNameLabel.getScene().getWindow();
-        stage.close();
+        OverlayService.closeFrom(topicNameLabel);
     }
 }

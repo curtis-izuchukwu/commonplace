@@ -15,14 +15,24 @@ public class ModuleTopicService {
 
     private final ModuleRepository moduleRepository;
     private final TopicRepository topicRepository;
+    private final UserSettingsService userSettingsService;
 
     public ModuleTopicService() {
-        this(new ModuleRepository(), new TopicRepository());
+        this(new ModuleRepository(), new TopicRepository(), new UserSettingsService());
     }
 
     public ModuleTopicService(ModuleRepository moduleRepository, TopicRepository topicRepository) {
+        this(moduleRepository, topicRepository, new UserSettingsService());
+    }
+
+    public ModuleTopicService(
+            ModuleRepository moduleRepository,
+            TopicRepository topicRepository,
+            UserSettingsService userSettingsService
+    ) {
         this.moduleRepository = moduleRepository;
         this.topicRepository = topicRepository;
+        this.userSettingsService = userSettingsService;
     }
 
     public StudyModule createModule(
@@ -38,12 +48,22 @@ public class ModuleTopicService {
                 name,
                 description,
                 examDate,
-                importance == null ? ImportanceLevel.MEDIUM : importance
+                importance == null ? defaultModulePriority() : importance
         );
     }
 
     public List<StudyModule> getAllModules() throws SQLException {
-        return moduleRepository.findAll();
+        List<StudyModule> modules = moduleRepository.findAll();
+
+        if (!userSettingsService.load().archiveCompletedModules()) {
+            return modules;
+        }
+
+        LocalDate today = LocalDate.now();
+
+        return modules.stream()
+                .filter(module -> module.examDate() == null || !module.examDate().isBefore(today))
+                .toList();
     }
 
     public void deleteModule(long moduleId) throws SQLException {
@@ -93,5 +113,9 @@ public class ModuleTopicService {
         if (value.trim().length() > 120) {
             throw new IllegalArgumentException(fieldName + " must be 120 characters or fewer.");
         }
+    }
+
+    private ImportanceLevel defaultModulePriority() throws SQLException {
+        return ImportanceLevel.valueOf(userSettingsService.load().defaultModulePriority());
     }
 }

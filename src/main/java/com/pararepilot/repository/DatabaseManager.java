@@ -3,6 +3,8 @@ package com.pararepilot.repository;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -50,14 +52,27 @@ public final class DatabaseManager {
     public static void initialiseTables(Connection conn) throws SQLException {
         String[] schemaQueries = {
                 """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    password_hash TEXT NOT NULL,
+                    password_salt TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                """,
+
+                """
                 CREATE TABLE IF NOT EXISTS modules (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
                     name TEXT NOT NULL,
                     description TEXT,
                     exam_date TEXT,
                     importance TEXT NOT NULL DEFAULT 'MEDIUM',
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 );
                 """,
 
@@ -121,6 +136,7 @@ public final class DatabaseManager {
                     main_weakness TEXT,
                     next_action TEXT,
                     reflection_notes TEXT,
+                    xp_awarded_at TEXT,
                     FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
                 );
                 """,
@@ -162,11 +178,65 @@ public final class DatabaseManager {
 
                 """
                 CREATE TABLE IF NOT EXISTS user_stats (
-                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    user_id INTEGER PRIMARY KEY,
                     xp INTEGER NOT NULL DEFAULT 0,
                     streak_count INTEGER NOT NULL DEFAULT 0,
                     last_completion_date TEXT,
                     worksheet_interval_days INTEGER NOT NULL DEFAULT 1
+                );
+                """,
+
+                """
+                CREATE TABLE IF NOT EXISTS user_settings (
+                    user_id INTEGER PRIMARY KEY,
+                    theme TEXT NOT NULL DEFAULT 'DARK',
+                    accent_color TEXT NOT NULL DEFAULT 'CYAN',
+                    reduce_motion INTEGER NOT NULL DEFAULT 0,
+                    compact_layout INTEGER NOT NULL DEFAULT 0,
+                    font_size TEXT NOT NULL DEFAULT 'DEFAULT',
+                    daily_worksheet_goal INTEGER NOT NULL DEFAULT 1,
+                    daily_reminder_time TEXT NOT NULL DEFAULT '18:00',
+                    preferred_min_difficulty TEXT NOT NULL DEFAULT 'EASY',
+                    preferred_max_difficulty TEXT NOT NULL DEFAULT 'HARD',
+                    recommendation_focus TEXT NOT NULL DEFAULT 'BALANCED',
+                    include_resolved_mistakes_in_recommendations INTEGER NOT NULL DEFAULT 0,
+                    daily_reminder_enabled INTEGER NOT NULL DEFAULT 0,
+                    exam_reminder_enabled INTEGER NOT NULL DEFAULT 1,
+                    mistake_reminder_enabled INTEGER NOT NULL DEFAULT 1,
+                    streak_reminder_enabled INTEGER NOT NULL DEFAULT 1,
+                    quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
+                    quiet_hours_start TEXT NOT NULL DEFAULT '22:00',
+                    quiet_hours_end TEXT NOT NULL DEFAULT '07:00',
+                    show_xp_and_rank INTEGER NOT NULL DEFAULT 1,
+                    streak_tracking_enabled INTEGER NOT NULL DEFAULT 1,
+                    completion_celebrations_enabled INTEGER NOT NULL DEFAULT 1,
+                    default_module_priority TEXT NOT NULL DEFAULT 'MEDIUM',
+                    archive_completed_modules INTEGER NOT NULL DEFAULT 0,
+                    higher_contrast INTEGER NOT NULL DEFAULT 0,
+                    larger_controls INTEGER NOT NULL DEFAULT 0,
+                    keyboard_hints_enabled INTEGER NOT NULL DEFAULT 0,
+                    screen_reader_labels_enabled INTEGER NOT NULL DEFAULT 1,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                """,
+
+                """
+                CREATE TABLE IF NOT EXISTS remembered_session (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    user_id INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                """,
+
+                """
+                CREATE TABLE IF NOT EXISTS daily_recommendations (
+                    user_id INTEGER PRIMARY KEY,
+                    recommendation_date TEXT NOT NULL,
+                    worksheet_id INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
                 );
                 """
         };
@@ -176,12 +246,147 @@ public final class DatabaseManager {
                 stmt.executeUpdate(sql);
             }
 
-            stmt.executeUpdate("""
-                INSERT OR IGNORE INTO user_stats
-                    (id, xp, streak_count, worksheet_interval_days)
-                VALUES
-                    (1, 0, 0, 1);
-            """);
+            migrateExistingSchema(conn);
         }
+    }
+
+    private static void migrateExistingSchema(Connection conn) throws SQLException {
+        addColumnIfMissing(conn, "modules", "user_id", "INTEGER");
+        addColumnIfMissing(conn, "worksheet_attempts", "xp_awarded_at", "TEXT");
+        addColumnIfMissing(conn, "user_settings", "compact_layout", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "font_size", "TEXT NOT NULL DEFAULT 'DEFAULT'");
+        addColumnIfMissing(conn, "user_settings", "preferred_min_difficulty", "TEXT NOT NULL DEFAULT 'EASY'");
+        addColumnIfMissing(conn, "user_settings", "preferred_max_difficulty", "TEXT NOT NULL DEFAULT 'HARD'");
+        addColumnIfMissing(conn, "user_settings", "recommendation_focus", "TEXT NOT NULL DEFAULT 'BALANCED'");
+        addColumnIfMissing(conn, "user_settings", "include_resolved_mistakes_in_recommendations", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "quiet_hours_enabled", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "quiet_hours_start", "TEXT NOT NULL DEFAULT '22:00'");
+        addColumnIfMissing(conn, "user_settings", "quiet_hours_end", "TEXT NOT NULL DEFAULT '07:00'");
+        addColumnIfMissing(conn, "user_settings", "show_xp_and_rank", "INTEGER NOT NULL DEFAULT 1");
+        addColumnIfMissing(conn, "user_settings", "streak_tracking_enabled", "INTEGER NOT NULL DEFAULT 1");
+        addColumnIfMissing(conn, "user_settings", "completion_celebrations_enabled", "INTEGER NOT NULL DEFAULT 1");
+        addColumnIfMissing(conn, "user_settings", "default_module_priority", "TEXT NOT NULL DEFAULT 'MEDIUM'");
+        addColumnIfMissing(conn, "user_settings", "archive_completed_modules", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "higher_contrast", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "larger_controls", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "keyboard_hints_enabled", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(conn, "user_settings", "screen_reader_labels_enabled", "INTEGER NOT NULL DEFAULT 1");
+        migrateUserStatsTableIfNeeded(conn);
+    }
+
+    private static void addColumnIfMissing(
+            Connection conn,
+            String tableName,
+            String columnName,
+            String definition
+    ) throws SQLException {
+
+        if (columnExists(conn, tableName, columnName)) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(
+                    "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + definition + ";"
+            );
+        }
+    }
+
+    private static void migrateUserStatsTableIfNeeded(Connection conn) throws SQLException {
+        if (columnExists(conn, "user_stats", "user_id")) {
+            return;
+        }
+
+        int xp = 0;
+        int streakCount = 0;
+        String lastCompletionDate = null;
+        int worksheetIntervalDays = 1;
+
+        if (tableExists(conn, "user_stats")) {
+            String sql = """
+                    SELECT xp, streak_count, last_completion_date, worksheet_interval_days
+                    FROM user_stats
+                    WHERE id = 1;
+                    """;
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+
+                if (rs.next()) {
+                    xp = rs.getInt("xp");
+                    streakCount = rs.getInt("streak_count");
+                    lastCompletionDate = rs.getString("last_completion_date");
+                    worksheetIntervalDays = rs.getInt("worksheet_interval_days");
+                }
+            }
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE user_stats RENAME TO user_stats_legacy;");
+            stmt.executeUpdate("""
+                    CREATE TABLE user_stats (
+                        user_id INTEGER PRIMARY KEY,
+                        xp INTEGER NOT NULL DEFAULT 0,
+                        streak_count INTEGER NOT NULL DEFAULT 0,
+                        last_completion_date TEXT,
+                        worksheet_interval_days INTEGER NOT NULL DEFAULT 1
+                    );
+                    """);
+        }
+
+        String insertLegacySql = """
+                INSERT INTO user_stats
+                    (user_id, xp, streak_count, last_completion_date, worksheet_interval_days)
+                VALUES
+                    (0, ?, ?, ?, ?);
+                """;
+
+        try (PreparedStatement stmt = conn.prepareStatement(insertLegacySql)) {
+            stmt.setInt(1, xp);
+            stmt.setInt(2, streakCount);
+            stmt.setString(3, lastCompletionDate);
+            stmt.setInt(4, worksheetIntervalDays);
+            stmt.executeUpdate();
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("DROP TABLE user_stats_legacy;");
+        }
+    }
+
+    private static boolean tableExists(Connection conn, String tableName) throws SQLException {
+        String sql = """
+                SELECT 1
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = ?;
+                """;
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, tableName);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private static boolean columnExists(
+            Connection conn,
+            String tableName,
+            String columnName
+    ) throws SQLException {
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ");")) {
+
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

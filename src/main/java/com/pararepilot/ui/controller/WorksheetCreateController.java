@@ -10,6 +10,9 @@ import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.repository.QuestionRepository;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.LevelUi;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -20,7 +23,6 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
 public class WorksheetCreateController {
 
@@ -42,9 +44,11 @@ public class WorksheetCreateController {
     private void initialize() {
         difficultyCombo.getItems().setAll(DifficultyLevel.values());
         difficultyCombo.setValue(DifficultyLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(difficultyCombo);
 
         importanceCombo.getItems().setAll(ImportanceLevel.values());
         importanceCombo.setValue(ImportanceLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(importanceCombo);
 
         addQuestionRow();
     }
@@ -55,7 +59,7 @@ public class WorksheetCreateController {
         this.onWorksheetSaved = onWorksheetSaved;
 
         String moduleText = module == null ? "Unknown module" : module.name();
-        parentTopicLabel.setText("Module: " + moduleText + " • Topic: " + topic.name());
+        parentTopicLabel.setText("Module: " + moduleText + " - Topic: " + topic.name());
     }
 
     @FXML
@@ -82,6 +86,8 @@ public class WorksheetCreateController {
                     drafts
             );
 
+            UiAnimations.validationSuccess(titleField, descriptionArea);
+
             if (onWorksheetSaved != null) {
                 onWorksheetSaved.run();
             }
@@ -89,6 +95,7 @@ public class WorksheetCreateController {
             closeWindow();
 
         } catch (IllegalArgumentException e) {
+            UiAnimations.validationError(titleField, questionsContainer);
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to save worksheet", e.getMessage());
@@ -124,24 +131,31 @@ public class WorksheetCreateController {
         Spinner<Integer> maxMarksSpinner = new Spinner<>(1, 100, 3);
         maxMarksSpinner.setEditable(true);
         maxMarksSpinner.setUserData("maxMarks");
+        maxMarksSpinner.setMaxWidth(220);
 
         Button removeButton = new Button("Remove Question");
         removeButton.getStyleClass().add("danger-button");
         removeButton.setOnAction(event -> {
-            questionsContainer.getChildren().remove(row);
-            renumberQuestionRows();
+            UiAnimations.animateCardRemoval(row, () -> {
+                questionsContainer.getChildren().remove(row);
+                renumberQuestionRows();
+            });
         });
+
+        Label maxMarksLabel = new Label("Max marks");
+        maxMarksLabel.getStyleClass().add("small-label");
 
         row.getChildren().addAll(
                 heading,
                 promptArea,
                 markSchemeArea,
-                new Label("Max marks"),
+                maxMarksLabel,
                 maxMarksSpinner,
                 removeButton
         );
 
         questionsContainer.getChildren().add(row);
+        UiAnimations.animateCardEntry(row);
     }
 
     private List<QuestionRepository.QuestionDraft> collectQuestionDrafts() {
@@ -200,8 +214,7 @@ public class WorksheetCreateController {
     }
 
     private void closeWindow() {
-        Stage stage = (Stage) titleField.getScene().getWindow();
-        stage.close();
+        OverlayService.closeFrom(titleField);
     }
 
     private void showError(String title, String message) {

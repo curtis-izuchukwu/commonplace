@@ -31,12 +31,15 @@ class TopicStatsServiceTest {
         AttemptService attemptService = new AttemptService();
         TopicStatsService topicStatsService = new TopicStatsService();
 
-        StudyModule module = moduleRepository.create(
-                "Module " + UUID.randomUUID(),
-                "Temporary test module",
-                null,
-                ImportanceLevel.HIGH
-        );
+        StudyModule module = null;
+
+        try {
+            module = moduleRepository.create(
+                    "Module " + UUID.randomUUID(),
+                    "Temporary test module",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
         Topic topic = topicRepository.create(
                 module.id(),
@@ -91,6 +94,10 @@ class TopicStatsServiceTest {
         // 80 * 0.7 + 65 * 0.3 = 75.5
         assertEquals(75.5, mastery, 0.001);
 
-        moduleRepository.deleteById(module.id());
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
     }
 }

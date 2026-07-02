@@ -13,6 +13,7 @@ import java.util.Optional;
 import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.Topic;
+import com.pararepilot.service.AccountSession;
 import com.pararepilot.util.DateUtils;
 
 public class TopicRepository {
@@ -64,13 +65,20 @@ public class TopicRepository {
                 SELECT id, module_id, name, description, importance, confidence,
                        mastery_score, created_at, updated_at
                 FROM topics
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -88,6 +96,12 @@ public class TopicRepository {
                        mastery_score, created_at, updated_at
                 FROM topics
                 WHERE module_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  )
                 ORDER BY created_at DESC;
                 """;
 
@@ -97,6 +111,7 @@ public class TopicRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, moduleId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -109,12 +124,23 @@ public class TopicRepository {
     }
 
     public int countByModuleId(long moduleId) throws SQLException {
-        String sql = "SELECT COUNT(*) AS topic_count FROM topics WHERE module_id = ?;";
+        String sql = """
+                SELECT COUNT(*) AS topic_count
+                FROM topics
+                WHERE module_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  );
+                """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, moduleId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.getInt("topic_count");
@@ -126,13 +152,20 @@ public class TopicRepository {
         String sql = """
                 SELECT COALESCE(AVG(mastery_score), 0) AS average_mastery
                 FROM topics
-                WHERE module_id = ?;
+                WHERE module_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, moduleId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.getDouble("average_mastery");
@@ -149,7 +182,13 @@ public class TopicRepository {
                     confidence = ?,
                     mastery_score = ?,
                     updated_at = ?
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -162,18 +201,29 @@ public class TopicRepository {
             stmt.setDouble(5, topic.masteryScore());
             stmt.setString(6, DateUtils.toDatabaseDateTime(DateUtils.now()));
             stmt.setLong(7, topic.id());
+            stmt.setLong(8, AccountSession.currentUserId());
 
             stmt.executeUpdate();
         }
     }
 
     public void deleteById(long id) throws SQLException {
-        String sql = "DELETE FROM topics WHERE id = ?;";
+        String sql = """
+                DELETE FROM topics
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  );
+                """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
     }
@@ -211,7 +261,13 @@ public class TopicRepository {
                 SET confidence = ?,
                     mastery_score = ?,
                     updated_at = ?
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      WHERE m.id = topics.module_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -221,6 +277,7 @@ public class TopicRepository {
             stmt.setDouble(2, masteryScore);
             stmt.setString(3, DateUtils.toDatabaseDateTime(DateUtils.now()));
             stmt.setLong(4, topicId);
+            stmt.setLong(5, AccountSession.currentUserId());
 
             stmt.executeUpdate();
         }
@@ -231,6 +288,12 @@ public class TopicRepository {
                 SELECT id, module_id, name, description, importance, confidence,
                     mastery_score, created_at, updated_at
                 FROM topics
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM modules m
+                    WHERE m.id = topics.module_id
+                      AND m.user_id = ?
+                )
                 ORDER BY mastery_score ASC, confidence ASC, updated_at DESC
                 LIMIT ?;
                 """;
@@ -240,7 +303,8 @@ public class TopicRepository {
         try (Connection conn = DatabaseManager.connect();
             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, limit);
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.setInt(2, limit);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.pararepilot.model.MistakeBankItem;
+import com.pararepilot.service.AccountSession;
 import com.pararepilot.util.DateUtils;
 
 public class MistakeRepository {
@@ -58,17 +59,27 @@ public class MistakeRepository {
                        user_answer, mark_scheme, mistake_note, created_at,
                        resolved, times_revisited
                 FROM mistake_bank
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM modules m
+                    JOIN topics t ON t.module_id = m.id
+                    WHERE t.id = mistake_bank.topic_id
+                      AND m.user_id = ?
+                )
                 ORDER BY resolved ASC, created_at DESC;
                 """;
 
         List<MistakeBankItem> mistakes = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                mistakes.add(mapRow(rs));
+            stmt.setLong(1, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    mistakes.add(mapRow(rs));
+                }
             }
         }
 
@@ -82,6 +93,13 @@ public class MistakeRepository {
                        resolved, times_revisited
                 FROM mistake_bank
                 WHERE topic_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  )
                 ORDER BY resolved ASC, created_at DESC;
                 """;
 
@@ -91,6 +109,7 @@ public class MistakeRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, topicId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -123,17 +142,22 @@ public class MistakeRepository {
                 JOIN topics t ON t.id = mb.topic_id
                 JOIN worksheets w ON w.id = mb.worksheet_id
                 JOIN questions q ON q.id = mb.question_id
+                JOIN modules m ON m.id = t.module_id
+                WHERE m.user_id = ?
                 ORDER BY mb.resolved ASC, mb.created_at DESC;
                 """;
 
         List<MistakeDisplayItem> mistakes = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                mistakes.add(mapDisplayRow(rs));
+            stmt.setLong(1, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    mistakes.add(mapDisplayRow(rs));
+                }
             }
         }
 
@@ -161,7 +185,9 @@ public class MistakeRepository {
                 JOIN topics t ON t.id = mb.topic_id
                 JOIN worksheets w ON w.id = mb.worksheet_id
                 JOIN questions q ON q.id = mb.question_id
+                JOIN modules m ON m.id = t.module_id
                 WHERE mb.topic_id = ?
+                  AND m.user_id = ?
                 ORDER BY mb.resolved ASC, mb.created_at DESC;
                 """;
 
@@ -171,6 +197,7 @@ public class MistakeRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, topicId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -187,13 +214,21 @@ public class MistakeRepository {
                 SELECT COUNT(*) AS unresolved_count
                 FROM mistake_bank
                 WHERE worksheet_id = ?
-                  AND resolved = 0;
+                  AND resolved = 0
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, worksheetId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.getInt("unresolved_count");
@@ -206,13 +241,21 @@ public class MistakeRepository {
                 SELECT COUNT(*) AS unresolved_count
                 FROM mistake_bank
                 WHERE topic_id = ?
-                  AND resolved = 0;
+                  AND resolved = 0
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, topicId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.getInt("unresolved_count");
@@ -224,14 +267,50 @@ public class MistakeRepository {
         String sql = """
                 SELECT COUNT(*) AS unresolved_count
                 FROM mistake_bank
-                WHERE resolved = 0;
+                WHERE resolved = 0
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            return rs.getInt("unresolved_count");
+            stmt.setLong(1, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.getInt("unresolved_count");
+            }
+        }
+    }
+
+    public int countByWorksheetId(long worksheetId) throws SQLException {
+        String sql = """
+                SELECT COUNT(*) AS mistake_count
+                FROM mistake_bank
+                WHERE worksheet_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  );
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, worksheetId);
+            stmt.setLong(2, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.getInt("mistake_count");
+            }
         }
     }
 
@@ -239,7 +318,14 @@ public class MistakeRepository {
         String sql = """
                 UPDATE mistake_bank
                 SET resolved = ?
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -247,6 +333,7 @@ public class MistakeRepository {
 
             stmt.setInt(1, resolved ? 1 : 0);
             stmt.setLong(2, mistakeId);
+            stmt.setLong(3, AccountSession.currentUserId());
 
             stmt.executeUpdate();
         }
@@ -256,13 +343,21 @@ public class MistakeRepository {
         String sql = """
                 UPDATE mistake_bank
                 SET times_revisited = times_revisited + 1
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM modules m
+                      JOIN topics t ON t.module_id = m.id
+                      WHERE t.id = mistake_bank.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, mistakeId);
+            stmt.setLong(2, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
     }

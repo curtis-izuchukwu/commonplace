@@ -13,7 +13,7 @@
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.pararepilot.ui.controller.TopicDetailController"
       spacing="14"
-      styleClass="app-root topic-detail-root">
+      styleClass="app-root">
 
     <padding>
         <Insets top="24" right="24" bottom="24" left="24"/>
@@ -22,7 +22,10 @@
     <HBox spacing="12">
         <VBox HBox.hgrow="ALWAYS">
             <Label fx:id="topicNameLabel" text="Topic" styleClass="app-title"/>
-            <Label fx:id="moduleNameLabel" text="Parent module" styleClass="app-subtitle"/>
+            <Label fx:id="moduleNameLabel"
+                   text="Parent module"
+                   styleClass="app-subtitle"
+                   wrapText="true"/>
         </VBox>
 
         <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>

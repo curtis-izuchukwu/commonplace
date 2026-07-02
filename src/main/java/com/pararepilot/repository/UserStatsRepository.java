@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 import com.pararepilot.model.UserStats;
+import com.pararepilot.service.AccountSession;
 import com.pararepilot.util.DateUtils;
 
 public class UserStatsRepository {
@@ -16,18 +17,38 @@ public class UserStatsRepository {
         String sql = """
                 SELECT xp, streak_count, last_completion_date, worksheet_interval_days
                 FROM user_stats
-                WHERE id = 1;
+                WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            if (rs.next()) {
-                return mapRow(rs);
+            stmt.setLong(1, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
             }
+        }
 
-            throw new SQLException("User stats row was not found.");
+        ensureStatsRow();
+        return find();
+    }
+
+    private void ensureStatsRow() throws SQLException {
+        String sql = """
+                INSERT OR IGNORE INTO user_stats
+                    (user_id, xp, streak_count, worksheet_interval_days)
+                VALUES
+                    (?, 0, 0, 1);
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.executeUpdate();
         }
     }
 
@@ -35,13 +56,14 @@ public class UserStatsRepository {
         String sql = """
                 UPDATE user_stats
                 SET xp = xp + ?
-                WHERE id = 1;
+                WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, Math.max(0, xpToAdd));
+            stmt.setLong(2, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
 
@@ -77,7 +99,7 @@ public class UserStatsRepository {
                 UPDATE user_stats
                 SET streak_count = ?,
                     last_completion_date = ?
-                WHERE id = 1;
+                WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -85,6 +107,7 @@ public class UserStatsRepository {
 
             stmt.setInt(1, newStreak);
             stmt.setString(2, DateUtils.toDatabaseDate(resolvedCompletionDate));
+            stmt.setLong(3, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
 
@@ -99,13 +122,52 @@ public class UserStatsRepository {
         String sql = """
                 UPDATE user_stats
                 SET worksheet_interval_days = ?
-                WHERE id = 1;
+                WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, intervalDays);
+            stmt.setLong(2, AccountSession.currentUserId());
+            stmt.executeUpdate();
+        }
+
+        return find();
+    }
+
+    public UserStats resetGamificationProgress() throws SQLException {
+        String sql = """
+                UPDATE user_stats
+                SET xp = 0,
+                    streak_count = 0,
+                    last_completion_date = NULL
+                WHERE user_id = ?;
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.executeUpdate();
+        }
+
+        return find();
+    }
+
+    public UserStats resetTodaysRecommendationWindow() throws SQLException {
+        new DailyRecommendationRepository().clear();
+
+        String sql = """
+                UPDATE user_stats
+                SET last_completion_date = NULL
+                WHERE user_id = ?;
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
 

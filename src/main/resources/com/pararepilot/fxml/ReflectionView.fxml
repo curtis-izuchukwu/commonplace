@@ -30,7 +30,10 @@
     <Separator/>
 
     <Label text="How confident do you feel now?" styleClass="section-title"/>
-    <ComboBox fx:id="confidenceCombo" promptText="Confidence"/>
+    <Label text="Confidence" styleClass="small-label"/>
+    <ComboBox fx:id="confidenceCombo"
+              promptText="Confidence"
+              maxWidth="Infinity"/>
 
     <Label text="Main weakness" styleClass="section-title"/>
     <TextArea fx:id="mainWeaknessArea"

@@ -4,7 +4,9 @@ import java.sql.SQLException;
 
 import com.pararepilot.model.UserStats;
 import com.pararepilot.model.WorksheetAttempt;
+import com.pararepilot.repository.AttemptRepository;
 import com.pararepilot.repository.UserStatsRepository;
+import com.pararepilot.util.DateUtils;
 
 public class GamificationService {
 
@@ -15,25 +17,53 @@ public class GamificationService {
     private static final int XP_MISTAKE_REVISITED = 15;
 
     private final UserStatsRepository userStatsRepository;
+    private final AttemptRepository attemptRepository;
+    private final UserSettingsService userSettingsService;
 
     public GamificationService() {
-        this(new UserStatsRepository());
+        this(new UserStatsRepository(), new AttemptRepository(), new UserSettingsService());
     }
 
     public GamificationService(UserStatsRepository userStatsRepository) {
+        this(userStatsRepository, new AttemptRepository(), new UserSettingsService());
+    }
+
+    public GamificationService(
+            UserStatsRepository userStatsRepository,
+            AttemptRepository attemptRepository
+    ) {
+        this(userStatsRepository, attemptRepository, new UserSettingsService());
+    }
+
+    public GamificationService(
+            UserStatsRepository userStatsRepository,
+            AttemptRepository attemptRepository,
+            UserSettingsService userSettingsService
+    ) {
         this.userStatsRepository = userStatsRepository;
+        this.attemptRepository = attemptRepository;
+        this.userSettingsService = userSettingsService;
     }
 
     public GamificationResult awardWorksheetCompletion(WorksheetAttempt attempt)
             throws SQLException {
 
+        if (!attemptRepository.markXpAwardedIfPending(attempt.id(), DateUtils.now())) {
+            UserStats existingStats = userStatsRepository.find();
+            return new GamificationResult(
+                    0,
+                    calculateRank(existingStats.xp()),
+                    existingStats
+            );
+        }
+
         int xpAwarded = calculateXpForAttempt(attempt);
 
         userStatsRepository.addXp(xpAwarded);
 
-        UserStats updatedStats = userStatsRepository.updateStreakForCompletion(
-                attempt.completedAt().toLocalDate()
-        );
+        UserStats updatedStats = userSettingsService.load().streakTrackingEnabled()
+                ? userStatsRepository.updateStreakForCompletion(attempt.completedAt().toLocalDate())
+                : userStatsRepository.find();
 
         return new GamificationResult(
                 xpAwarded,

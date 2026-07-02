@@ -29,12 +29,15 @@ class AttemptRepositoryTest {
         AnswerRepository answerRepository = new AnswerRepository();
         AttemptService attemptService = new AttemptService();
 
-        StudyModule module = moduleRepository.create(
-                "Module " + UUID.randomUUID(),
-                "Temporary test module",
-                null,
-                ImportanceLevel.HIGH
-        );
+        StudyModule module = null;
+
+        try {
+            module = moduleRepository.create(
+                    "Module " + UUID.randomUUID(),
+                    "Temporary test module",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
         Topic topic = topicRepository.create(
                 module.id(),
@@ -107,6 +110,10 @@ class AttemptRepositoryTest {
         assertEquals(2, answers.get(1).awardedMarks());
         assertTrue(answers.get(1).markedAsMistake());
 
-        moduleRepository.deleteById(module.id());
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
     }
 }

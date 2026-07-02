@@ -21,28 +21,36 @@ class TopicRepositoryTest {
 
         String uniqueName = "Algorithms " + UUID.randomUUID();
 
-        StudyModule module = moduleRepository.create(
-                uniqueName,
-                "Test module",
-                null,
-                ImportanceLevel.HIGH
-        );
+        StudyModule module = null;
 
-        Topic topic = topicRepository.create(
-                module.id(),
-                "Binary Search Trees",
-                "Traversal, insertion, deletion",
-                ImportanceLevel.HIGH,
-                ConfidenceLevel.LOW
-        );
+        try {
+            module = moduleRepository.create(
+                    uniqueName,
+                    "Test module",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
-        List<Topic> topics = topicRepository.findByModuleId(module.id());
+            Topic topic = topicRepository.create(
+                    module.id(),
+                    "Binary Search Trees",
+                    "Traversal, insertion, deletion",
+                    ImportanceLevel.HIGH,
+                    ConfidenceLevel.LOW
+            );
 
-        assertTrue(topic.id() > 0);
-        assertEquals(module.id(), topic.moduleId());
-        assertTrue(topics.stream().anyMatch(savedTopic -> savedTopic.id() == topic.id()));
-        assertEquals(1, topicRepository.countByModuleId(module.id()));
+            List<Topic> topics = topicRepository.findByModuleId(module.id());
+            long moduleId = module.id();
+            long topicId = topic.id();
 
-        moduleRepository.deleteById(module.id());
+            assertTrue(topic.id() > 0);
+            assertEquals(moduleId, topic.moduleId());
+            assertTrue(topics.stream().anyMatch(savedTopic -> savedTopic.id() == topicId));
+            assertEquals(1, topicRepository.countByModuleId(moduleId));
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
     }
 }

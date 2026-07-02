@@ -53,14 +53,14 @@ public class PriorityScoreService {
         int score = calculatePriority(worksheet, topic, unresolvedMistakeCount);
 
         return "Priority " + score + "/100"
-                + " • " + ageExplanation(worksheet)
-                + " • " + scoreExplanation(worksheet)
-                + " • Topic confidence: " + topic.confidence()
-                + " • Difficulty: " + worksheet.difficulty()
-                + " • Worksheet importance: " + worksheet.importance()
-                + " • Topic importance: " + topic.importance()
-                + " • Failure streak: " + worksheet.failureStreak()
-                + " • Unresolved mistakes: " + unresolvedMistakeCount;
+                + " - " + ageExplanation(worksheet)
+                + " - " + scoreExplanation(worksheet)
+                + " - Topic confidence: " + topic.confidence()
+                + " - Difficulty: " + worksheet.difficulty()
+                + " - Worksheet importance: " + worksheet.importance()
+                + " - Topic importance: " + topic.importance()
+                + " - Failure streak: " + worksheet.failureStreak()
+                + " - Unresolved mistakes: " + unresolvedMistakeCount;
     }
 
     private int ageScore(Worksheet worksheet) {

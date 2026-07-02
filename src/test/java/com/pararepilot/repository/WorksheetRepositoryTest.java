@@ -24,12 +24,15 @@ class WorksheetRepositoryTest {
         WorksheetRepository worksheetRepository = new WorksheetRepository();
         QuestionRepository questionRepository = new QuestionRepository();
 
-        StudyModule module = moduleRepository.create(
-                "Module " + UUID.randomUUID(),
-                "Temporary test module",
-                null,
-                ImportanceLevel.HIGH
-        );
+        StudyModule module = null;
+
+        try {
+            module = moduleRepository.create(
+                    "Module " + UUID.randomUUID(),
+                    "Temporary test module",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
         Topic topic = topicRepository.create(
                 module.id(),
@@ -77,6 +80,10 @@ class WorksheetRepositoryTest {
 
         assertTrue(worksheetRepository.countByTopicId(topic.id()) >= 1);
 
-        moduleRepository.deleteById(module.id());
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
     }
 }

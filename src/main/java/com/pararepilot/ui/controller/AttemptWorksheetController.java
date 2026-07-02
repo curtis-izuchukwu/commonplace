@@ -13,12 +13,11 @@ import com.pararepilot.model.WorksheetAttempt;
 import com.pararepilot.repository.AnswerRepository;
 import com.pararepilot.service.AttemptService;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 import com.pararepilot.util.DateUtils;
 
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -26,8 +25,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 public class AttemptWorksheetController {
 
@@ -61,8 +58,8 @@ public class AttemptWorksheetController {
 
         worksheetMetaLabel.setText(
                 "Topic: " + topicText
-                        + " • Difficulty: " + worksheet.difficulty()
-                        + " • Importance: " + worksheet.importance()
+                        + " - Difficulty: " + worksheet.difficulty()
+                        + " - Importance: " + worksheet.importance()
         );
 
         loadQuestions();
@@ -79,7 +76,8 @@ public class AttemptWorksheetController {
                     drafts
             );
 
-            scorePreviewLabel.setText(
+            UiAnimations.fadeTextChange(
+                    scorePreviewLabel,
                     "Score: " + attempt.score()
                             + "/" + attempt.maxScore()
                             + " (" + String.format("%.0f%%", attempt.scorePercent()) + ")"
@@ -90,6 +88,7 @@ public class AttemptWorksheetController {
             openReflection(attempt);
 
         } catch (IllegalArgumentException e) {
+            UiAnimations.validationError(questionsContainer);
             setStatus(e.getMessage());
         } catch (SQLException e) {
             showError("Failed to save attempt", e.getMessage());
@@ -98,32 +97,21 @@ public class AttemptWorksheetController {
 
     private void openReflection(WorksheetAttempt attempt) {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/ReflectionView.fxml")
+            var handle = OverlayService.<ReflectionController>open(
+                    worksheetTitleLabel,
+                    "/com/pararepilot/fxml/ReflectionView.fxml",
+                    720,
+                    680
             );
 
-            Parent root = loader.load();
-
-            ReflectionController controller = loader.getController();
+            ReflectionController controller = handle.controller();
             controller.setContext(worksheet, attempt, () -> {
                 if (onAttemptSaved != null) {
                     onAttemptSaved.run();
                 }
+
+                closeWindow();
             });
-
-            Stage stage = new Stage();
-            stage.setTitle("Reflection - " + worksheet.title());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 680, 640);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            closeWindow();
 
         } catch (IOException e) {
             showError("Failed to open reflection screen", e.getMessage());
@@ -164,7 +152,7 @@ public class AttemptWorksheetController {
 
         Label heading = new Label(
                 "Question " + question.questionOrder()
-                        + " • " + question.maxMarks() + " marks"
+                        + " - " + question.maxMarks() + " marks"
         );
         heading.getStyleClass().add("card-title");
 
@@ -195,6 +183,8 @@ public class AttemptWorksheetController {
             markSchemeHeading.setManaged(true);
             markSchemeLabel.setVisible(true);
             markSchemeLabel.setManaged(true);
+            UiAnimations.popIn(markSchemeHeading);
+            UiAnimations.popIn(markSchemeLabel);
             revealButton.setDisable(true);
         });
 
@@ -204,6 +194,7 @@ public class AttemptWorksheetController {
         Spinner<Integer> awardedMarksSpinner = new Spinner<>(0, question.maxMarks(), 0);
         awardedMarksSpinner.setEditable(true);
         awardedMarksSpinner.setUserData("marks");
+        awardedMarksSpinner.setMaxWidth(220);
 
         CheckBox mistakeCheckBox = new CheckBox("Add to mistake review later");
         mistakeCheckBox.setUserData("mistake");
@@ -227,6 +218,7 @@ public class AttemptWorksheetController {
                 mistakeNoteArea
         );
 
+        UiAnimations.animateCardEntry(card);
         return card;
     }
 
@@ -287,16 +279,7 @@ public class AttemptWorksheetController {
     }
 
     private void closeWindow() {
-        Stage stage = (Stage) worksheetTitleLabel.getScene().getWindow();
-        stage.close();
-    }
-
-    private void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+        OverlayService.closeFrom(worksheetTitleLabel);
     }
 
     private void showError(String title, String message) {

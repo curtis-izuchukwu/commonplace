@@ -21,7 +21,10 @@
     <HBox spacing="12">
         <VBox HBox.hgrow="ALWAYS">
             <Label fx:id="worksheetTitleLabel" text="Attempt Worksheet" styleClass="app-title"/>
-            <Label fx:id="worksheetMetaLabel" text="Worksheet details" styleClass="app-subtitle"/>
+            <Label fx:id="worksheetMetaLabel"
+                   text="Worksheet details"
+                   styleClass="app-subtitle"
+                   wrapText="true"/>
         </VBox>
 
         <Button text="Cancel"

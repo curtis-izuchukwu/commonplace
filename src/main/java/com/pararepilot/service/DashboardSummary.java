@@ -5,15 +5,20 @@ import java.util.Optional;
 
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.UserStats;
+import com.pararepilot.model.UserSettings;
 import com.pararepilot.repository.AttemptRepository;
 
 public record DashboardSummary(
         UserStats userStats,
+        UserSettings userSettings,
         String rank,
         int nextRankXp,
         Optional<WorksheetRecommendation> recommendation,
         List<Topic> weakestTopics,
         List<AttemptRepository.RecentAttemptDisplayItem> recentAttempts,
-        int unresolvedMistakeCount
+        int unresolvedMistakeCount,
+        int completedWorksheetsToday,
+        boolean worksheetWindowLocked,
+        List<DashboardReminder> reminders
 ) {
 }

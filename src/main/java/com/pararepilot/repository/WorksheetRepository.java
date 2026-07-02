@@ -13,6 +13,7 @@ import java.util.Optional;
 import com.pararepilot.model.DifficultyLevel;
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.Worksheet;
+import com.pararepilot.service.AccountSession;
 import com.pararepilot.util.DateUtils;
 
 public class WorksheetRepository {
@@ -64,13 +65,21 @@ public class WorksheetRepository {
                        created_at, last_attempted_at, times_attempted,
                        latest_score_percent, average_score_percent, failure_streak
                 FROM worksheets
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM topics t
+                      JOIN modules m ON m.id = t.module_id
+                      WHERE t.id = worksheets.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -89,6 +98,13 @@ public class WorksheetRepository {
                        latest_score_percent, average_score_percent, failure_streak
                 FROM worksheets
                 WHERE topic_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM topics t
+                      JOIN modules m ON m.id = t.module_id
+                      WHERE t.id = worksheets.topic_id
+                        AND m.user_id = ?
+                  )
                 ORDER BY created_at DESC;
                 """;
 
@@ -98,6 +114,7 @@ public class WorksheetRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, topicId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -110,12 +127,24 @@ public class WorksheetRepository {
     }
 
     public int countByTopicId(long topicId) throws SQLException {
-        String sql = "SELECT COUNT(*) AS worksheet_count FROM worksheets WHERE topic_id = ?;";
+        String sql = """
+                SELECT COUNT(*) AS worksheet_count
+                FROM worksheets
+                WHERE topic_id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM topics t
+                      JOIN modules m ON m.id = t.module_id
+                      WHERE t.id = worksheets.topic_id
+                        AND m.user_id = ?
+                  );
+                """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, topicId);
+            stmt.setLong(2, AccountSession.currentUserId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.getInt("worksheet_count");
@@ -124,12 +153,23 @@ public class WorksheetRepository {
     }
 
     public void deleteById(long id) throws SQLException {
-        String sql = "DELETE FROM worksheets WHERE id = ?;";
+        String sql = """
+                DELETE FROM worksheets
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM topics t
+                      JOIN modules m ON m.id = t.module_id
+                      WHERE t.id = worksheets.topic_id
+                        AND m.user_id = ?
+                  );
+                """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
             stmt.executeUpdate();
         }
     }
@@ -181,7 +221,14 @@ public class WorksheetRepository {
                     latest_score_percent = ?,
                     average_score_percent = ?,
                     failure_streak = ?
-                WHERE id = ?;
+                WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM topics t
+                      JOIN modules m ON m.id = t.module_id
+                      WHERE t.id = worksheets.topic_id
+                        AND m.user_id = ?
+                  );
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -193,6 +240,7 @@ public class WorksheetRepository {
             stmt.setDouble(4, averageScorePercent);
             stmt.setInt(5, failureStreak);
             stmt.setLong(6, worksheetId);
+            stmt.setLong(7, AccountSession.currentUserId());
 
             stmt.executeUpdate();
         }
@@ -204,17 +252,27 @@ public class WorksheetRepository {
                     created_at, last_attempted_at, times_attempted,
                     latest_score_percent, average_score_percent, failure_streak
                 FROM worksheets
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM topics t
+                    JOIN modules m ON m.id = t.module_id
+                    WHERE t.id = worksheets.topic_id
+                      AND m.user_id = ?
+                )
                 ORDER BY created_at DESC;
                 """;
 
         List<Worksheet> worksheets = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery()) {
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                worksheets.add(mapRow(rs));
+            stmt.setLong(1, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    worksheets.add(mapRow(rs));
+                }
             }
         }
 

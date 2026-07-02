@@ -33,12 +33,15 @@ class ReflectionServiceTest {
         AttemptService attemptService = new AttemptService();
         ReflectionService reflectionService = new ReflectionService();
 
-        StudyModule module = moduleRepository.create(
-                "Module " + UUID.randomUUID(),
-                "Temporary test module",
-                null,
-                ImportanceLevel.HIGH
-        );
+        StudyModule module = null;
+
+        try {
+            module = moduleRepository.create(
+                    "Module " + UUID.randomUUID(),
+                    "Temporary test module",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
         Topic topic = topicRepository.create(
                 module.id(),
@@ -106,6 +109,10 @@ class ReflectionServiceTest {
         assertEquals(ConfidenceLevel.HIGH, updatedTopic.confidence());
         assertEquals(97.0, updatedTopic.masteryScore(), 0.001);
 
-        moduleRepository.deleteById(module.id());
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
     }
 }

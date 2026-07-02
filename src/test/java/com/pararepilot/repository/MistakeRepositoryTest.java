@@ -28,12 +28,15 @@ class MistakeRepositoryTest {
         MistakeRepository mistakeRepository = new MistakeRepository();
         AttemptService attemptService = new AttemptService();
 
-        StudyModule module = moduleRepository.create(
-                "Module " + UUID.randomUUID(),
-                "Temporary test module",
-                null,
-                ImportanceLevel.HIGH
-        );
+        StudyModule module = null;
+
+        try {
+            module = moduleRepository.create(
+                    "Module " + UUID.randomUUID(),
+                    "Temporary test module",
+                    null,
+                    ImportanceLevel.HIGH
+            );
 
         Topic topic = topicRepository.create(
                 module.id(),
@@ -107,6 +110,10 @@ class MistakeRepositoryTest {
 
         assertEquals(0, mistakeRepository.countUnresolvedByWorksheetId(worksheet.id()));
 
-        moduleRepository.deleteById(module.id());
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
     }
 }

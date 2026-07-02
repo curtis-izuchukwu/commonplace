@@ -2,34 +2,62 @@ package com.pararepilot.ui.controller;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.UserStats;
 import com.pararepilot.model.Worksheet;
 import com.pararepilot.repository.AttemptRepository;
+import com.pararepilot.service.AccountSession;
+import com.pararepilot.service.AccountService;
+import com.pararepilot.service.DashboardReminder;
 import com.pararepilot.service.DashboardService;
 import com.pararepilot.service.DashboardSummary;
+import com.pararepilot.service.UserSettingsService;
 import com.pararepilot.service.WorksheetRecommendation;
+import com.pararepilot.ui.AppPreferences;
+import com.pararepilot.ui.LevelUi;
+import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.UiAnimations;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 public class DashboardController {
 
+    @FXML private Button dashboardButton;
+    @FXML private Button manageModulesButton;
+    @FXML private MenuButton accountMenuButton;
+    @FXML private MenuItem accountNameItem;
+    @FXML private StackPane contentHost;
+    @FXML private ScrollPane dashboardPane;
+
     @FXML private Label recommendationTitleLabel;
     @FXML private Label recommendationMetaLabel;
+    @FXML private HBox recommendationVisualMeta;
     @FXML private Label recommendationReasonLabel;
     @FXML private Button openRecommendationButton;
+    @FXML private Button pickAnotherButton;
 
     @FXML private Label rankLabel;
     @FXML private Label xpLabel;
@@ -37,22 +65,33 @@ public class DashboardController {
     @FXML private Label streakLabel;
     @FXML private Label mistakeCountLabel;
 
+    @FXML private VBox notificationList;
     @FXML private VBox weakTopicsList;
     @FXML private VBox recentAttemptsList;
     @FXML private Label statusLabel;
 
     private final DashboardService dashboardService = new DashboardService();
+    private final UserSettingsService userSettingsService = new UserSettingsService();
+    private final AccountService accountService = new AccountService();
 
     private WorksheetRecommendation currentRecommendation;
+    private Timeline dashboardRefreshTimer;
+    private boolean modulesPageActive;
+    private Integer lastDisplayedXp;
+    private String lastDisplayedRank;
 
     @FXML
     private void initialize() {
+        updateAccountMenu();
+        Platform.runLater(this::applySavedPreferences);
+        showDashboardPage();
         loadDashboard();
+        startDashboardRefreshTimer();
     }
 
     @FXML
     private void handleRefresh() {
-        loadDashboard();
+        UiAnimations.animateRecommendationRefresh(recommendationPanel(), this::refreshRecommendation);
     }
 
     @FXML
@@ -69,6 +108,12 @@ public class DashboardController {
     }
 
     @FXML
+    private void handleOpenDashboard() {
+        showDashboardPage();
+        loadDashboard();
+    }
+
+    @FXML
     private void handleOpenModules() {
         try {
             FXMLLoader loader = new FXMLLoader(
@@ -76,20 +121,10 @@ public class DashboardController {
             );
 
             Parent root = loader.load();
-
-            Stage stage = new Stage();
-            stage.setTitle("Manage Modules");
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 1100, 720);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            loadDashboard();
+            UiAnimations.transitionContent(contentHost, root, UiAnimations.SlideDirection.FROM_RIGHT);
+            setActivePage(manageModulesButton);
+            modulesPageActive = true;
+            setStatus("Manage modules");
 
         } catch (IOException e) {
             showError("Failed to open modules", e.getMessage());
@@ -99,55 +134,125 @@ public class DashboardController {
     @FXML
     private void handleOpenMistakeBank() {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/MistakeBankView.fxml")
+            var handle = OverlayService.<MistakeBankController>open(
+                    accountMenuButton,
+                    "/com/pararepilot/fxml/MistakeBankView.fxml",
+                    920,
+                    760
             );
-
-            Parent root = loader.load();
-
-            Stage stage = new Stage();
-            stage.setTitle("Mistake Bank");
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 860, 740);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            loadDashboard();
+            handle.controller().setOnMistakesChanged(this::loadDashboard);
 
         } catch (IOException e) {
             showError("Failed to open mistake bank", e.getMessage());
         }
     }
 
+    @FXML
+    private void handleSwitchAccount() {
+        switchToLogin();
+    }
+
+    @FXML
+    private void handleOpenSettings() {
+        try {
+            var handle = OverlayService.<SettingsController>open(
+                    accountMenuButton,
+                    "/com/pararepilot/fxml/SettingsView.fxml",
+                    880,
+                    720
+            );
+
+            handle.controller().setOnSettingsSaved(() -> {
+                applySavedPreferences();
+                refreshActivePage();
+            });
+            handle.controller().setOnSwitchAccount(this::switchToLogin);
+
+        } catch (IOException e) {
+            showError("Failed to open settings", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleChangePassword() {
+        try {
+            OverlayService.open(accountMenuButton, "/com/pararepilot/fxml/ChangePasswordView.fxml", 520, 430);
+
+        } catch (IOException e) {
+            showError("Failed to open password settings", e.getMessage());
+        }
+    }
+
     private void loadDashboard() {
         try {
             DashboardSummary summary = dashboardService.loadDashboard();
-
-            updateRecommendation(summary);
-            updateStats(summary);
-            updateWeakTopics(summary);
-            updateRecentAttempts(summary);
-
-            setStatus("");
+            updateDashboard(summary);
 
         } catch (SQLException e) {
             showError("Failed to load dashboard", e.getMessage());
         }
     }
 
+    private void refreshRecommendation() {
+        try {
+            DashboardSummary summary = dashboardService.refreshRecommendation();
+            updateDashboard(summary);
+
+        } catch (SQLException e) {
+            showError("Failed to refresh recommendation", e.getMessage());
+        }
+    }
+
+    private void updateDashboard(DashboardSummary summary) {
+        updateRecommendation(summary);
+        updateStats(summary);
+        updateReminders(summary);
+        updateWeakTopics(summary);
+        updateRecentAttempts(summary);
+
+        setStatus("");
+    }
+
     private void updateRecommendation(DashboardSummary summary) {
+        if (summary.worksheetWindowLocked()) {
+            currentRecommendation = null;
+            recommendationVisualMeta.getChildren().clear();
+            Label completionBadge = new Label("Completed");
+            completionBadge.getStyleClass().add("completion-badge");
+            recommendationVisualMeta.getChildren().add(completionBadge);
+            UiAnimations.popIn(completionBadge);
+
+            UiAnimations.fadeTextChange(recommendationTitleLabel, "Today's worksheet is complete");
+            UiAnimations.fadeTextChange(
+                    recommendationMetaLabel,
+                    "Nice work. Your next recommendation unlocks in "
+                            + countdownUntilNextWorksheet(summary.userStats()) + "."
+            );
+            setRecommendationReason(
+                    "Daily progress: " + dailyProgressText(summary)
+                            + " - Streak: " + summary.userStats().streakCount()
+                            + " day" + (summary.userStats().streakCount() == 1 ? "" : "s")
+            );
+            openRecommendationButton.setDisable(true);
+            pickAnotherButton.setDisable(true);
+
+            return;
+        }
+
+        pickAnotherButton.setDisable(false);
+
         if (summary.recommendation().isEmpty()) {
             currentRecommendation = null;
+            recommendationVisualMeta.getChildren().clear();
 
-            recommendationTitleLabel.setText("No recommendation yet");
-            recommendationMetaLabel.setText("Create modules, topics, and worksheets to unlock recommendations.");
-            recommendationReasonLabel.setText("");
+            UiAnimations.fadeTextChange(recommendationTitleLabel, "No recommendation yet");
+            UiAnimations.fadeTextChange(
+                    recommendationMetaLabel,
+                    "Create modules, topics, and worksheets to unlock recommendations."
+            );
+            setRecommendationReason("");
             openRecommendationButton.setDisable(true);
+            pickAnotherButton.setDisable(true);
 
             return;
         }
@@ -156,32 +261,78 @@ public class DashboardController {
 
         Worksheet worksheet = currentRecommendation.worksheet();
 
-        recommendationTitleLabel.setText(worksheet.title());
+        UiAnimations.fadeTextChange(recommendationTitleLabel, worksheet.title());
 
-        recommendationMetaLabel.setText(
+        UiAnimations.fadeTextChange(
+                recommendationMetaLabel,
                 "Topic: " + currentRecommendation.topic().name()
-                        + " • Difficulty: " + worksheet.difficulty()
-                        + " • Importance: " + worksheet.importance()
-                        + " • Latest score: " + formatScore(worksheet.latestScorePercent())
         );
 
-        recommendationReasonLabel.setText(currentRecommendation.explanation());
+        recommendationVisualMeta.getChildren().setAll(
+                LevelUi.createDifficultyIndicator(worksheet.difficulty()),
+                LevelUi.createPriorityChip(worksheet.importance())
+        );
+
+        setRecommendationReason("Daily progress: " + dailyProgressText(summary));
         openRecommendationButton.setDisable(false);
+        UiAnimations.softPulse(openRecommendationButton);
+    }
+
+    private String countdownUntilNextWorksheet(UserStats stats) {
+        LocalDate nextWorksheetDate = stats.lastCompletionDate()
+                .plusDays(stats.worksheetIntervalDays());
+
+        LocalDateTime unlockTime = nextWorksheetDate.atStartOfDay();
+        Duration duration = Duration.between(LocalDateTime.now(), unlockTime);
+
+        if (duration.isNegative() || duration.isZero()) {
+            return "a moment";
+        }
+
+        long hours = duration.toHours();
+        long minutes = duration.minusHours(hours).toMinutes();
+
+        if (hours <= 0) {
+            return minutes + " minute" + (minutes == 1 ? "" : "s");
+        }
+
+        return hours + " hour" + (hours == 1 ? "" : "s")
+                + " " + minutes + " minute" + (minutes == 1 ? "" : "s");
+    }
+
+    private String dailyProgressText(DashboardSummary summary) {
+        int dailyGoal = summary.userSettings().dailyWorksheetGoal();
+        int completed = Math.min(summary.completedWorksheetsToday(), dailyGoal);
+
+        return completed + "/" + dailyGoal
+                + " worksheet" + (dailyGoal == 1 ? "" : "s");
     }
 
     private void updateStats(DashboardSummary summary) {
         UserStats stats = summary.userStats();
 
-        rankLabel.setText("Rank: " + summary.rank());
+        String rank = summary.rank();
+        rankLabel.setText("Rank: " + rank);
         xpLabel.setText(stats.xp() + " XP");
 
         int nextRankXp = summary.nextRankXp();
 
-        if (nextRankXp <= stats.xp()) {
-            rankProgressBar.setProgress(1.0);
-        } else {
-            rankProgressBar.setProgress((double) stats.xp() / nextRankXp);
+        double targetProgress = nextRankXp <= stats.xp()
+                ? 1.0
+                : (double) stats.xp() / nextRankXp;
+        UiAnimations.animateProgress(rankProgressBar, targetProgress);
+
+        if (lastDisplayedXp != null && stats.xp() > lastDisplayedXp) {
+            UiAnimations.showFloatingXp(rankProgressBar, stats.xp() - lastDisplayedXp);
         }
+
+        if (lastDisplayedRank != null && !lastDisplayedRank.equals(rank)) {
+            UiAnimations.flashGlow(rankProgressBar.getParent(), "rank-glow");
+            UiAnimations.softPulse(rankLabel);
+        }
+
+        lastDisplayedXp = stats.xp();
+        lastDisplayedRank = rank;
 
         streakLabel.setText(
                 stats.streakCount()
@@ -195,6 +346,51 @@ public class DashboardController {
                         + " unresolved mistake"
                         + (summary.unresolvedMistakeCount() == 1 ? "" : "s")
         );
+
+        boolean showXpAndRank = summary.userSettings().showXpAndRank();
+        rankLabel.setVisible(showXpAndRank);
+        rankLabel.setManaged(showXpAndRank);
+        xpLabel.setVisible(showXpAndRank);
+        xpLabel.setManaged(showXpAndRank);
+        rankProgressBar.setVisible(showXpAndRank);
+        rankProgressBar.setManaged(showXpAndRank);
+
+        boolean showStreak = summary.userSettings().streakTrackingEnabled();
+        streakLabel.setVisible(showStreak);
+        streakLabel.setManaged(showStreak);
+    }
+
+    private void updateReminders(DashboardSummary summary) {
+        notificationList.getChildren().clear();
+        boolean hasReminders = !summary.reminders().isEmpty();
+
+        notificationList.setVisible(hasReminders);
+        notificationList.setManaged(hasReminders);
+
+        if (!hasReminders) {
+            return;
+        }
+
+        for (DashboardReminder reminder : summary.reminders()) {
+            notificationList.getChildren().add(createReminderCard(reminder));
+        }
+    }
+
+    private VBox createReminderCard(DashboardReminder reminder) {
+        VBox card = new VBox(3);
+        card.getStyleClass().addAll("notification-card", reminder.styleClass());
+
+        Label title = new Label(reminder.title());
+        title.getStyleClass().add("card-title");
+        title.setWrapText(true);
+
+        Label message = new Label(reminder.message());
+        message.getStyleClass().add("muted-text");
+        message.setWrapText(true);
+
+        card.getChildren().addAll(title, message);
+        UiAnimations.animateCardEntry(card);
+        return card;
     }
 
     private void updateWeakTopics(DashboardSummary summary) {
@@ -222,13 +418,14 @@ public class DashboardController {
 
         Label meta = new Label(
                 "Mastery: " + String.format("%.0f%%", topic.masteryScore())
-                        + " • Confidence: " + topic.confidence()
-                        + " • Importance: " + topic.importance()
+                        + " - Confidence: " + topic.confidence()
+                        + " - Importance: " + topic.importance()
         );
         meta.getStyleClass().add("muted-text");
         meta.setWrapText(true);
 
         card.getChildren().addAll(title, meta);
+        UiAnimations.animateCardEntry(card);
         return card;
     }
 
@@ -257,7 +454,7 @@ public class DashboardController {
 
         Label meta = new Label(
                 "Topic: " + attempt.topicName()
-                        + " • Score: " + attempt.score()
+                        + " - Score: " + attempt.score()
                         + "/" + attempt.maxScore()
                         + " (" + String.format("%.0f%%", attempt.scorePercent()) + ")"
         );
@@ -272,33 +469,23 @@ public class DashboardController {
         date.getStyleClass().add("muted-text");
 
         card.getChildren().addAll(title, meta, date);
+        UiAnimations.animateCardEntry(card);
         return card;
     }
 
     private void openWorksheetDetail(Worksheet worksheet, Topic topic) {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/pararepilot/fxml/WorksheetDetailView.fxml")
+            var handle = OverlayService.<WorksheetDetailController>open(
+                    openRecommendationButton,
+                    "/com/pararepilot/fxml/WorksheetDetailView.fxml",
+                    840,
+                    720
             );
 
-            Parent root = loader.load();
-
-            WorksheetDetailController controller = loader.getController();
+            WorksheetDetailController controller = handle.controller();
             controller.setWorksheet(worksheet, topic);
-
-            Stage stage = new Stage();
-            stage.setTitle("Worksheet Details - " + worksheet.title());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 760, 680);
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/pararepilot/css/app.css").toExternalForm()
-            );
-
-            stage.setScene(scene);
-            stage.showAndWait();
-
-            loadDashboard();
+            controller.setRecommendationDetails(currentRecommendation);
+            controller.setOnWorksheetUpdated(this::loadDashboard);
 
         } catch (IOException e) {
             showError("Failed to open worksheet detail", e.getMessage());
@@ -315,6 +502,110 @@ public class DashboardController {
 
     private void setStatus(String message) {
         statusLabel.setText(message);
+    }
+
+    private void setRecommendationReason(String message) {
+        boolean hasMessage = message != null && !message.isBlank();
+        recommendationReasonLabel.setText(hasMessage ? message : "");
+        recommendationReasonLabel.setVisible(hasMessage);
+        recommendationReasonLabel.setManaged(hasMessage);
+    }
+
+    private void showDashboardPage() {
+        UiAnimations.transitionContent(contentHost, dashboardPane, UiAnimations.SlideDirection.FROM_LEFT);
+        setActivePage(dashboardButton);
+        modulesPageActive = false;
+    }
+
+    private void setActivePage(Button activeButton) {
+        dashboardButton.getStyleClass().remove("primary-button");
+        manageModulesButton.getStyleClass().remove("primary-button");
+
+        if (!activeButton.getStyleClass().contains("primary-button")) {
+            activeButton.getStyleClass().add("primary-button");
+        }
+    }
+
+    private void updateAccountMenu() {
+        String accountText = AccountSession.currentUser()
+                .map(user -> user.username())
+                .orElse("Account");
+
+        accountMenuButton.setText(null);
+        accountMenuButton.setGraphic(createAccountMenuIcon());
+        accountMenuButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        accountMenuButton.setAccessibleText("Account menu");
+        accountNameItem.setText("Signed in as " + accountText);
+        accountNameItem.setDisable(true);
+    }
+
+    private VBox createAccountMenuIcon() {
+        VBox icon = new VBox(4);
+        icon.getStyleClass().add("account-menu-icon");
+        icon.setMouseTransparent(true);
+
+        for (int i = 0; i < 3; i++) {
+            Region line = new Region();
+            line.getStyleClass().add("account-menu-line");
+            icon.getChildren().add(line);
+        }
+
+        return icon;
+    }
+
+    private void applySavedPreferences() {
+        try {
+            AppPreferences.apply(accountMenuButton.getScene(), userSettingsService.load());
+        } catch (SQLException e) {
+            setStatus("Settings failed to load: " + e.getMessage());
+        }
+    }
+
+    private Node recommendationPanel() {
+        return recommendationTitleLabel.getParent();
+    }
+
+    private void switchToLogin() {
+        try {
+            stopDashboardRefreshTimer();
+            accountService.signOut();
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/pararepilot/fxml/LoginView.fxml")
+            );
+
+            Parent root = loader.load();
+            UiAnimations.installGlobalAnimations(root);
+            accountMenuButton.getScene().setRoot(root);
+
+        } catch (IOException e) {
+            showError("Failed to switch account", e.getMessage());
+        } catch (SQLException e) {
+            showError("Failed to sign out", e.getMessage());
+        }
+    }
+
+    private void refreshActivePage() {
+        if (modulesPageActive) {
+            handleOpenModules();
+            return;
+        }
+
+        loadDashboard();
+    }
+
+    private void startDashboardRefreshTimer() {
+        dashboardRefreshTimer = new Timeline(
+                new KeyFrame(javafx.util.Duration.minutes(1), event -> loadDashboard())
+        );
+        dashboardRefreshTimer.setCycleCount(Timeline.INDEFINITE);
+        dashboardRefreshTimer.play();
+    }
+
+    private void stopDashboardRefreshTimer() {
+        if (dashboardRefreshTimer != null) {
+            dashboardRefreshTimer.stop();
+        }
     }
 
     private void showError(String title, String message) {
