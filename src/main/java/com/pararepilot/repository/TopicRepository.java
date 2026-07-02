@@ -225,4 +225,30 @@ public class TopicRepository {
             stmt.executeUpdate();
         }
     }
+
+    public List<Topic> findWeakestTopics(int limit) throws SQLException {
+        String sql = """
+                SELECT id, module_id, name, description, importance, confidence,
+                    mastery_score, created_at, updated_at
+                FROM topics
+                ORDER BY mastery_score ASC, confidence ASC, updated_at DESC
+                LIMIT ?;
+                """;
+
+        List<Topic> topics = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, limit);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    topics.add(mapRow(rs));
+                }
+            }
+        }
+
+        return topics;
+    }
 }

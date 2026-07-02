@@ -205,4 +205,66 @@ public class AttemptRepository {
 
         return attempts;
     }
+
+    public List<RecentAttemptDisplayItem> findRecentDisplayItems(int limit) throws SQLException {
+        String sql = """
+                SELECT
+                    wa.id AS attempt_id,
+                    wa.worksheet_id,
+                    w.topic_id,
+                    w.title AS worksheet_title,
+                    t.name AS topic_name,
+                    wa.completed_at,
+                    wa.score,
+                    wa.max_score,
+                    wa.score_percent,
+                    wa.confidence_after
+                FROM worksheet_attempts wa
+                JOIN worksheets w ON w.id = wa.worksheet_id
+                JOIN topics t ON t.id = w.topic_id
+                ORDER BY wa.completed_at DESC
+                LIMIT ?;
+                """;
+
+        List<RecentAttemptDisplayItem> attempts = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, limit);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    attempts.add(new RecentAttemptDisplayItem(
+                            rs.getLong("attempt_id"),
+                            rs.getLong("worksheet_id"),
+                            rs.getLong("topic_id"),
+                            rs.getString("worksheet_title"),
+                            rs.getString("topic_name"),
+                            DateUtils.fromDatabaseDateTime(rs.getString("completed_at")),
+                            rs.getInt("score"),
+                            rs.getInt("max_score"),
+                            rs.getDouble("score_percent"),
+                            ConfidenceLevel.valueOf(rs.getString("confidence_after"))
+                    ));
+                }
+            }
+        }
+
+        return attempts;
+    }
+    
+    public record RecentAttemptDisplayItem(
+            long attemptId,
+            long worksheetId,
+            long topicId,
+            String worksheetTitle,
+            String topicName,
+            java.time.LocalDateTime completedAt,
+            int score,
+            int maxScore,
+            double scorePercent,
+            ConfidenceLevel confidenceAfter
+    ) {
+    }
 }

@@ -12,10 +12,10 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader loader = new FXMLLoader(
-                Main.class.getResource("/com/pararepilot/fxml/ModulesView.fxml")
+                Main.class.getResource("/com/pararepilot/fxml/DashboardView.fxml")
         );
 
-        Scene scene = new Scene(loader.load(), 1100, 720);
+        Scene scene = new Scene(loader.load(), 1480, 760);
 
         String stylesheet = Main.class
                 .getResource("/com/pararepilot/css/app.css")
@@ -25,8 +25,8 @@ public class Main extends Application {
 
         stage.setTitle("ParārePilot");
         stage.setScene(scene);
-        stage.setMinWidth(900);
-        stage.setMinHeight(600);
+        stage.setMinWidth(1000);
+        stage.setMinHeight(680);
         stage.show();
     }
 
