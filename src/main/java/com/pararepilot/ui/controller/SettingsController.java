@@ -13,6 +13,7 @@ import com.pararepilot.model.UserSettings;
 import com.pararepilot.repository.UserStatsRepository;
 import com.pararepilot.service.DataManagementService;
 import com.pararepilot.service.UserSettingsService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.AppPreferences;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
@@ -347,6 +348,7 @@ public class SettingsController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
 
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;

@@ -18,6 +18,7 @@ import com.pararepilot.service.DashboardService;
 import com.pararepilot.service.DashboardSummary;
 import com.pararepilot.service.UserSettingsService;
 import com.pararepilot.service.WorksheetRecommendation;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.AppPreferences;
 import com.pararepilot.ui.LevelUi;
 import com.pararepilot.ui.OverlayService;
@@ -189,6 +190,7 @@ public class DashboardController {
             updateDashboard(summary);
 
         } catch (SQLException e) {
+            e.printStackTrace();
             showError("Failed to load dashboard", e.getMessage());
         }
     }
@@ -609,10 +611,15 @@ public class DashboardController {
     }
 
     private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle(title);
+            alert.setHeaderText(title);
+            alert.setContentText(message == null || message.isBlank()
+                    ? "No additional details were provided."
+                    : message);
+            AppIcon.applyTo(alert);
+            alert.show();
+        });
     }
 }

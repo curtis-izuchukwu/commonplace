@@ -20,6 +20,8 @@ public class DailyRecommendationRepository {
                 """;
 
         LocalDate today = LocalDate.now();
+        Long worksheetId = null;
+        boolean staleRecommendation = false;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -32,15 +34,24 @@ public class DailyRecommendationRepository {
                 }
 
                 LocalDate recommendationDate = DateUtils.fromDatabaseDate(rs.getString("recommendation_date"));
+                worksheetId = rs.getLong("worksheet_id");
 
                 if (recommendationDate == null || !recommendationDate.isEqual(today)) {
-                    clear();
-                    return Optional.empty();
+                    staleRecommendation = true;
                 }
-
-                return Optional.of(rs.getLong("worksheet_id"));
             }
         }
+
+        if (worksheetId == null) {
+            return Optional.empty();
+        }
+
+        if (staleRecommendation) {
+            clear();
+            return Optional.empty();
+        }
+
+        return Optional.of(worksheetId);
     }
 
     public void saveTodayWorksheetId(long worksheetId) throws SQLException {

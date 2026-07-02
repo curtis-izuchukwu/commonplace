@@ -10,6 +10,7 @@ import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.repository.QuestionRepository;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.LevelUi;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
@@ -222,6 +223,7 @@ public class WorksheetCreateController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 }

@@ -27,6 +27,7 @@ public final class DatabaseManager {
         ensureDatabaseDirectoryExists();
 
         Connection conn = DriverManager.getConnection(CONNECTION_URL);
+        setBusyTimeout(conn);
         enableForeignKeys(conn);
         initialiseTables(conn);
 
@@ -46,6 +47,12 @@ public final class DatabaseManager {
     private static void enableForeignKeys(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("PRAGMA foreign_keys = ON;");
+        }
+    }
+
+    private static void setBusyTimeout(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA busy_timeout = 5000;");
         }
     }
 

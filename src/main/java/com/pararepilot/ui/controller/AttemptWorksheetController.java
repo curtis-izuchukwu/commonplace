@@ -13,6 +13,7 @@ import com.pararepilot.model.WorksheetAttempt;
 import com.pararepilot.repository.AnswerRepository;
 import com.pararepilot.service.AttemptService;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
 import com.pararepilot.util.DateUtils;
@@ -287,6 +288,7 @@ public class AttemptWorksheetController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 }

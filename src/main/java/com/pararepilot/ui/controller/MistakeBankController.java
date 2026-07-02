@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.pararepilot.repository.MistakeRepository;
 import com.pararepilot.service.MistakeBankService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
 
@@ -220,6 +221,7 @@ public class MistakeBankController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 }

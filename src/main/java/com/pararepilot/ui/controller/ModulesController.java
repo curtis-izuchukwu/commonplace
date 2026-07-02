@@ -18,6 +18,7 @@ import com.pararepilot.service.DashboardSummary;
 import com.pararepilot.service.ModuleTopicService;
 import com.pararepilot.service.UserSettingsService;
 import com.pararepilot.service.WorksheetRecommendation;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.LevelUi;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
@@ -595,6 +596,7 @@ public class ModulesController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 

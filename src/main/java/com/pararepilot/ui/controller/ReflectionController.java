@@ -8,6 +8,7 @@ import com.pararepilot.model.WorksheetAttempt;
 import com.pararepilot.service.GamificationResult;
 import com.pararepilot.service.ReflectionService;
 import com.pararepilot.service.UserSettingsService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.LevelUi;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
@@ -133,6 +134,7 @@ public class ReflectionController {
         alert.setHeaderText("Worksheet complete");
         alert.setContentText("XP awarded: " + result.xpAwarded()
                 + "\nRank: " + result.rank());
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 
@@ -141,6 +143,7 @@ public class ReflectionController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 }

@@ -11,6 +11,7 @@ import com.pararepilot.model.Topic;
 import com.pararepilot.model.Worksheet;
 import com.pararepilot.service.WorksheetRecommendation;
 import com.pararepilot.service.WorksheetCreationService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.UiAnimations;
 
@@ -211,6 +212,7 @@ public class WorksheetDetailController {
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(message);
+        AppIcon.applyTo(alert);
         alert.showAndWait();
     }
 }

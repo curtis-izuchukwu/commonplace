@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import com.pararepilot.service.AccountService;
+import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.UiAnimations;
 
 import javafx.application.Application;
@@ -28,6 +29,7 @@ public class Main extends Application {
         stage.setScene(scene);
         stage.setMinWidth(1000);
         stage.setMinHeight(680);
+        AppIcon.applyRuntimeIcons(stage);
         stage.show();
     }
 
