@@ -1,30 +1,34 @@
 package com.pararepilot.service;
 
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.WorksheetAttempt;
 import com.pararepilot.repository.AnswerRepository;
 import com.pararepilot.repository.AttemptRepository;
+import com.pararepilot.repository.MistakeRepository;
 import com.pararepilot.util.DateUtils;
-
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.List;
 
 public class AttemptService {
 
     private final AttemptRepository attemptRepository;
     private final AnswerRepository answerRepository;
+    private final MistakeRepository mistakeRepository;
 
     public AttemptService() {
-        this(new AttemptRepository(), new AnswerRepository());
+        this(new AttemptRepository(), new AnswerRepository(), new MistakeRepository());
     }
 
     public AttemptService(
             AttemptRepository attemptRepository,
-            AnswerRepository answerRepository
+            AnswerRepository answerRepository,
+            MistakeRepository mistakeRepository
     ) {
         this.attemptRepository = attemptRepository;
         this.answerRepository = answerRepository;
+        this.mistakeRepository = mistakeRepository;
     }
 
     public WorksheetAttempt submitAttempt(
@@ -69,11 +73,10 @@ public class AttemptService {
 
         try {
             answerRepository.createMany(attempt.id(), answerDrafts);
+            mistakeRepository.createFromAttempt(attempt.id());
             return attempt;
         } catch (SQLException e) {
-            // Later we can add transaction handling.
-            // For V1 branch scope, report the failure clearly.
-            throw new SQLException("Attempt was created but answers failed to save.", e);
+            throw new SQLException("Attempt was created but answers or mistakes failed to save.", e);
         }
     }
 
