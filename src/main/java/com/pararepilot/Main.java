@@ -15,7 +15,7 @@ public class Main extends Application {
                 Main.class.getResource("/com/pararepilot/fxml/DashboardView.fxml")
         );
 
-        Scene scene = new Scene(loader.load(), 1180, 760);
+        Scene scene = new Scene(loader.load(), 1480, 760);
 
         String stylesheet = Main.class
                 .getResource("/com/pararepilot/css/app.css")
