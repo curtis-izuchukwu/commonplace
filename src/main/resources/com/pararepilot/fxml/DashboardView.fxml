@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.pararepilot.ui.controller.DashboardController"
+            styleClass="app-root dashboard-root">
+
+    <top>
+        <HBox spacing="12" styleClass="top-bar">
+            <VBox HBox.hgrow="ALWAYS">
+                <Label text="ParārePilot" styleClass="app-title"/>
+                <Label text="Adaptive study tracker" styleClass="app-subtitle"/>
+            </VBox>
+
+            <Button text="Refresh"
+                    onAction="#handleRefresh"/>
+
+            <Button text="Manage Modules"
+                    onAction="#handleOpenModules"
+                    styleClass="primary-button"/>
+
+            <Button text="Mistake Bank"
+                    onAction="#handleOpenMistakeBank"/>
+        </HBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true">
+            <content>
+                <VBox spacing="18" styleClass="dashboard-content">
+
+                    <HBox spacing="18">
+                        <VBox spacing="12" styleClass="dashboard-card hero-card" HBox.hgrow="ALWAYS">
+                            <Label text="Today’s Recommended Worksheet" styleClass="section-title"/>
+                            <Label fx:id="recommendationTitleLabel"
+                                   text="No recommendation yet"
+                                   styleClass="dashboard-hero-title"
+                                   wrapText="true"/>
+                            <Label fx:id="recommendationMetaLabel"
+                                   text="Create worksheets to unlock adaptive recommendations."
+                                   styleClass="muted-text"
+                                   wrapText="true"/>
+                            <Label fx:id="recommendationReasonLabel"
+                                   text=""
+                                   styleClass="muted-text"
+                                   wrapText="true"/>
+
+                            <HBox spacing="10">
+                                <Button text="Open Recommendation"
+                                        onAction="#handleOpenRecommendation"
+                                        fx:id="openRecommendationButton"
+                                        styleClass="primary-button"/>
+                                <Button text="Pick Another"
+                                        onAction="#handleRefresh"/>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="12" styleClass="dashboard-card stat-card" prefWidth="300">
+                            <Label text="Progress" styleClass="section-title"/>
+
+                            <Label fx:id="rankLabel"
+                                   text="Rank: Novice"
+                                   styleClass="dashboard-stat-main"/>
+
+                            <Label fx:id="xpLabel"
+                                   text="0 XP"
+                                   styleClass="muted-text"/>
+
+                            <ProgressBar fx:id="rankProgressBar"
+                                         prefWidth="260"/>
+
+                            <Label fx:id="streakLabel"
+                                   text="0 day streak"
+                                   styleClass="dashboard-stat-main"/>
+
+                            <Label fx:id="mistakeCountLabel"
+                                   text="0 unresolved mistakes"
+                                   styleClass="muted-text"/>
+                        </VBox>
+                    </HBox>
+
+                    <HBox spacing="18">
+                        <VBox spacing="12" styleClass="dashboard-card" HBox.hgrow="ALWAYS">
+                            <Label text="Weakest Topics" styleClass="section-title"/>
+                            <VBox fx:id="weakTopicsList" spacing="10"/>
+                        </VBox>
+
+                        <VBox spacing="12" styleClass="dashboard-card" HBox.hgrow="ALWAYS">
+                            <Label text="Recent Attempts" styleClass="section-title"/>
+                            <VBox fx:id="recentAttemptsList" spacing="10"/>
+                        </VBox>
+                    </HBox>
+
+                    <Label fx:id="statusLabel"
+                           text=""
+                           styleClass="status-text"/>
+
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+
+</BorderPane>
