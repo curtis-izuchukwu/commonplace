@@ -905,6 +905,24 @@
     -fx-text-fill: #475569;
 }
 
+.theme-light .question-card .label,
+.theme-light .mistake-card .label,
+.theme-light .mistake-card-resolved .label {
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .question-card .muted-text,
+.theme-light .mistake-card .muted-text,
+.theme-light .mistake-card-resolved .muted-text {
+    -fx-text-fill: #475569;
+}
+
+.theme-light .question-card .small-label,
+.theme-light .mistake-card .small-label,
+.theme-light .mistake-card-resolved .small-label {
+    -fx-text-fill: #334155;
+}
+
 .theme-light .text-field,
 .theme-light .text-area,
 .theme-light .combo-box,
@@ -969,6 +987,23 @@
 }
 
 .theme-light .date-picker .arrow-button .arrow {
+    -fx-background-color: #475569;
+}
+
+.theme-light .spinner .increment-arrow-button,
+.theme-light .spinner .decrement-arrow-button {
+    -fx-background-color: rgba(241, 245, 249, 0.96);
+    -fx-border-color: -app-accent-border-faint;
+}
+
+.theme-light .spinner .increment-arrow-button:hover,
+.theme-light .spinner .decrement-arrow-button:hover {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+}
+
+.theme-light .spinner .increment-arrow,
+.theme-light .spinner .decrement-arrow {
     -fx-background-color: #475569;
 }
 
