@@ -21,11 +21,32 @@ public class QuestionRepository {
             String tags
     ) throws SQLException {
 
+        return create(
+                worksheetId,
+                prompt,
+                markScheme,
+                maxMarks,
+                questionOrder,
+                tags,
+                null
+        );
+    }
+
+    public Question create(
+            long worksheetId,
+            String prompt,
+            String markScheme,
+            int maxMarks,
+            int questionOrder,
+            String tags,
+            String imagePath
+    ) throws SQLException {
+
         String sql = """
                 INSERT INTO questions
-                    (worksheet_id, prompt, mark_scheme, max_marks, question_order, tags)
+                    (worksheet_id, prompt, mark_scheme, max_marks, question_order, tags, image_path)
                 VALUES
-                    (?, ?, ?, ?, ?, ?);
+                    (?, ?, ?, ?, ?, ?, ?);
                 """;
 
         try (Connection conn = DatabaseManager.connect();
@@ -37,6 +58,7 @@ public class QuestionRepository {
             stmt.setInt(4, maxMarks);
             stmt.setInt(5, questionOrder);
             stmt.setString(6, blankToNull(tags));
+            stmt.setString(7, blankToNull(imagePath));
 
             stmt.executeUpdate();
 
@@ -49,7 +71,8 @@ public class QuestionRepository {
                             markScheme.trim(),
                             maxMarks,
                             questionOrder,
-                            blankToNull(tags)
+                            blankToNull(tags),
+                            blankToNull(imagePath)
                     );
                 }
             }
@@ -70,7 +93,8 @@ public class QuestionRepository {
                     draft.markScheme(),
                     draft.maxMarks(),
                     i + 1,
-                    draft.tags()
+                    draft.tags(),
+                    draft.imagePath()
             ));
         }
 
@@ -79,7 +103,7 @@ public class QuestionRepository {
 
     public List<Question> findByWorksheetId(long worksheetId) throws SQLException {
         String sql = """
-                SELECT id, worksheet_id, prompt, mark_scheme, max_marks, question_order, tags
+                SELECT id, worksheet_id, prompt, mark_scheme, max_marks, question_order, tags, image_path
                 FROM questions
                 WHERE worksheet_id = ?
                 ORDER BY question_order ASC;
@@ -121,7 +145,8 @@ public class QuestionRepository {
                 rs.getString("mark_scheme"),
                 rs.getInt("max_marks"),
                 rs.getInt("question_order"),
-                rs.getString("tags")
+                rs.getString("tags"),
+                rs.getString("image_path")
         );
     }
 
@@ -137,7 +162,16 @@ public class QuestionRepository {
             String prompt,
             String markScheme,
             int maxMarks,
-            String tags
+            String tags,
+            String imagePath
     ) {
+        public QuestionDraft(
+                String prompt,
+                String markScheme,
+                int maxMarks,
+                String tags
+        ) {
+            this(prompt, markScheme, maxMarks, tags, null);
+        }
     }
 }

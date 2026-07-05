@@ -13,9 +13,11 @@ import com.pararepilot.service.WorksheetRecommendation;
 import com.pararepilot.service.WorksheetCreationService;
 import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.QuestionImageViewFactory;
 import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
@@ -164,6 +166,8 @@ public class WorksheetDetailController {
         Label prompt = new Label(question.prompt());
         prompt.setWrapText(true);
 
+        Node imageNode = QuestionImageViewFactory.create(question.imagePath(), 520, 320);
+
         Label markSchemeHeading = new Label("Mark Scheme");
         markSchemeHeading.getStyleClass().add("small-label");
 
@@ -171,7 +175,13 @@ public class WorksheetDetailController {
         markScheme.setWrapText(true);
         markScheme.getStyleClass().add("muted-text");
 
-        card.getChildren().addAll(heading, prompt, markSchemeHeading, markScheme);
+        card.getChildren().addAll(heading, prompt);
+
+        if (imageNode != null) {
+            card.getChildren().add(imageNode);
+        }
+
+        card.getChildren().addAll(markSchemeHeading, markScheme);
         UiAnimations.animateCardEntry(card);
 
         return card;

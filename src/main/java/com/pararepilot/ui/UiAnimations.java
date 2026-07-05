@@ -283,7 +283,7 @@ public final class UiAnimations {
                 return;
             }
             node.getStyleClass().add("motion-hovered");
-            animateTranslateY(node, -3, 120);
+            animateTranslateY(node, -2, 120);
         });
 
         node.setOnMouseExited(event -> {

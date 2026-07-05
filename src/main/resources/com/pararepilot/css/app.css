@@ -119,6 +119,22 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.20), 16, 0.12, 0, 8);
 }
 
+.question-image-preview {
+    -fx-spacing: 6;
+}
+
+.question-image-actions {
+    -fx-spacing: 8;
+}
+
+.question-image-view {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 14, 0.12, 0, 6);
+}
+
+.question-image-unavailable {
+    -fx-padding: 6 0 2 0;
+}
+
 .clickable-card {
     -fx-cursor: hand;
 }
@@ -126,13 +142,13 @@
 .clickable-card:hover,
 .entity-card:hover,
 .dashboard-mini-card:hover {
-    -fx-background-color: rgba(31, 47, 76, 0.98);
-    -fx-border-color: -app-accent-border-strong;
+    -fx-background-color: rgba(29, 44, 70, 0.96);
+    -fx-border-color: -app-accent-border-soft;
 }
 
 .motion-hovered {
-    -fx-border-color: -app-accent-border-strong;
-    -fx-effect: dropshadow(gaussian, -app-accent-border-mid, 24, 0.16, 0, 12);
+    -fx-border-color: -app-accent-border-soft;
+    -fx-effect: dropshadow(gaussian, -app-accent-border-faint, 18, 0.10, 0, 8);
 }
 
 .button-hovered {
@@ -311,6 +327,13 @@
 .button:hover {
     -fx-background-color: rgba(38, 57, 88, 1.0);
     -fx-border-color: -app-accent-border-strong;
+}
+
+.compact-button {
+    -fx-font-size: 12px;
+    -fx-padding: 7 11 7 11;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
 }
 
 .button:pressed {
@@ -802,6 +825,81 @@
     -fx-font-weight: 900;
     -fx-padding: 4 8 4 8;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 12, 0.12, 0, 4);
+}
+
+.xp-reward-scrim {
+    -fx-background-color: rgba(2, 8, 23, 0.74);
+    -fx-padding: 28;
+}
+
+.xp-reward-content {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, rgba(23, 42, 69, 0.98) 0%, rgba(11, 31, 50, 0.98) 100%);
+    -fx-background-radius: 22;
+    -fx-border-color: -app-accent-border-mid;
+    -fx-border-radius: 22;
+    -fx-padding: 22;
+    -fx-spacing: 10;
+    -fx-pref-width: 420;
+    -fx-max-width: 420;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 24, 0.18, 0, 12);
+}
+
+.xp-reward-eyebrow {
+    -fx-text-fill: -app-accent;
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+}
+
+.xp-reward-title {
+    -fx-text-fill: #f7fbff;
+    -fx-font-size: 24px;
+    -fx-font-weight: 900;
+}
+
+.xp-reward-amount {
+    -fx-background-color: linear-gradient(to bottom right, -app-accent, -app-accent-dark);
+    -fx-background-radius: 999;
+    -fx-border-color: -app-accent-border-strong;
+    -fx-border-radius: 999;
+    -fx-text-fill: -app-accent-on;
+    -fx-font-size: 18px;
+    -fx-font-weight: 900;
+    -fx-padding: 8 14 8 14;
+}
+
+.xp-reward-rank {
+    -fx-text-fill: #9fb0c5;
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+}
+
+.xp-reward-actions {
+    -fx-padding: 6 0 0 0;
+}
+
+.xp-reward-ok-button {
+    -fx-min-width: 96;
+    -fx-pref-width: 96;
+    -fx-min-height: 42;
+    -fx-pref-height: 42;
+}
+
+.theme-light .xp-reward-scrim {
+    -fx-background-color: rgba(15, 23, 42, 0.42);
+}
+
+.theme-light .xp-reward-content {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, rgba(255, 255, 255, 0.98) 0%, -app-accent-bg-subtle 100%);
+    -fx-border-color: -app-accent-border-soft;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.14), 22, 0.12, 0, 10);
+}
+
+.theme-light .xp-reward-title {
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .xp-reward-rank {
+    -fx-text-fill: #475569;
 }
 
 .validation-error {

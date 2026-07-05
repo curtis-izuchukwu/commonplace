@@ -6,11 +6,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.pararepilot.model.DifficultyLevel;
 import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.Worksheet;
+import com.pararepilot.repository.AttemptRepository;
 import com.pararepilot.repository.DailyRecommendationRepository;
 import com.pararepilot.repository.MistakeRepository;
 import com.pararepilot.repository.ModuleRepository;
@@ -27,6 +29,7 @@ public class WorksheetSelectionService {
     private final MistakeRepository mistakeRepository;
     private final ModuleRepository moduleRepository;
     private final UserSettingsService userSettingsService;
+    private final AttemptRepository attemptRepository;
     private final DailyRecommendationRepository dailyRecommendationRepository;
 
     public WorksheetSelectionService() {
@@ -36,6 +39,7 @@ public class WorksheetSelectionService {
                 new MistakeRepository(),
                 new ModuleRepository(),
                 new UserSettingsService(),
+                new AttemptRepository(),
                 new DailyRecommendationRepository(),
                 new PriorityScoreService(),
                 new WeightedRandomPicker<>()
@@ -57,6 +61,7 @@ public class WorksheetSelectionService {
                 mistakeRepository,
                 moduleRepository,
                 userSettingsService,
+                new AttemptRepository(),
                 new DailyRecommendationRepository(),
                 priorityScoreService,
                 picker
@@ -73,11 +78,36 @@ public class WorksheetSelectionService {
             PriorityScoreService priorityScoreService,
             WeightedRandomPicker<WorksheetRecommendation> picker
     ) {
+        this(
+                worksheetRepository,
+                topicRepository,
+                mistakeRepository,
+                moduleRepository,
+                userSettingsService,
+                new AttemptRepository(),
+                dailyRecommendationRepository,
+                priorityScoreService,
+                picker
+        );
+    }
+
+    public WorksheetSelectionService(
+            WorksheetRepository worksheetRepository,
+            TopicRepository topicRepository,
+            MistakeRepository mistakeRepository,
+            ModuleRepository moduleRepository,
+            UserSettingsService userSettingsService,
+            AttemptRepository attemptRepository,
+            DailyRecommendationRepository dailyRecommendationRepository,
+            PriorityScoreService priorityScoreService,
+            WeightedRandomPicker<WorksheetRecommendation> picker
+    ) {
         this.worksheetRepository = worksheetRepository;
         this.topicRepository = topicRepository;
         this.mistakeRepository = mistakeRepository;
         this.moduleRepository = moduleRepository;
         this.userSettingsService = userSettingsService;
+        this.attemptRepository = attemptRepository;
         this.dailyRecommendationRepository = dailyRecommendationRepository;
         this.priorityScoreService = priorityScoreService;
         this.picker = picker;
@@ -92,7 +122,13 @@ public class WorksheetSelectionService {
     }
 
     private Optional<WorksheetRecommendation> recommendWorksheet(boolean forceNew) throws SQLException {
-        List<WorksheetRecommendation> recommendations = buildRecommendations();
+        Set<Long> completedTodayWorksheetIds =
+                attemptRepository.findWorksheetIdsCompletedOn(LocalDate.now());
+
+        List<WorksheetRecommendation> recommendations = buildRecommendations().stream()
+                .filter(recommendation ->
+                        !completedTodayWorksheetIds.contains(recommendation.worksheet().id()))
+                .toList();
 
         if (recommendations.isEmpty()) {
             dailyRecommendationRepository.clear();
@@ -100,25 +136,27 @@ public class WorksheetSelectionService {
         }
 
         Optional<Long> cachedWorksheetId = dailyRecommendationRepository.findTodayWorksheetId();
+        Optional<WorksheetRecommendation> cachedRecommendation = cachedWorksheetId
+                .flatMap(id -> recommendations.stream()
+                        .filter(recommendation -> recommendation.worksheet().id() == id)
+                        .findFirst());
 
-        if (!forceNew && cachedWorksheetId.isPresent()) {
-            Optional<WorksheetRecommendation> cachedRecommendation = recommendations.stream()
-                    .filter(recommendation -> recommendation.worksheet().id() == cachedWorksheetId.get())
-                    .findFirst();
+        if (!forceNew && cachedRecommendation.isPresent()) {
+            return cachedRecommendation;
+        }
 
-            if (cachedRecommendation.isPresent()) {
-                return cachedRecommendation;
-            }
-
+        if (cachedWorksheetId.isPresent() && cachedRecommendation.isEmpty()) {
             dailyRecommendationRepository.clear();
         }
 
-        List<WorksheetRecommendation> pickableRecommendations = recommendations;
+        Set<Long> alreadyRecommendedToday = dailyRecommendationRepository.findTodayWorksheetIds();
+        List<WorksheetRecommendation> pickableRecommendations = recommendations.stream()
+                .filter(recommendation ->
+                        !alreadyRecommendedToday.contains(recommendation.worksheet().id()))
+                .toList();
 
-        if (forceNew && cachedWorksheetId.isPresent() && recommendations.size() > 1) {
-            pickableRecommendations = recommendations.stream()
-                    .filter(recommendation -> recommendation.worksheet().id() != cachedWorksheetId.get())
-                    .toList();
+        if (pickableRecommendations.isEmpty()) {
+            return cachedRecommendation;
         }
 
         WorksheetRecommendation recommendation = picker.pick(

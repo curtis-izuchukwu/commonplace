@@ -15,10 +15,12 @@ import com.pararepilot.service.AttemptService;
 import com.pararepilot.service.WorksheetCreationService;
 import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.QuestionImageViewFactory;
 import com.pararepilot.ui.UiAnimations;
 import com.pararepilot.util.DateUtils;
 
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -160,6 +162,8 @@ public class AttemptWorksheetController {
         Label promptLabel = new Label(question.prompt());
         promptLabel.setWrapText(true);
 
+        Node imageNode = QuestionImageViewFactory.create(question.imagePath(), 520, 320);
+
         TextArea answerArea = new TextArea();
         answerArea.setPromptText("Write your answer here...");
         answerArea.setWrapText(true);
@@ -206,9 +210,13 @@ public class AttemptWorksheetController {
         mistakeNoteArea.setPrefRowCount(2);
         mistakeNoteArea.setUserData("mistakeNote");
 
+        card.getChildren().addAll(heading, promptLabel);
+
+        if (imageNode != null) {
+            card.getChildren().add(imageNode);
+        }
+
         card.getChildren().addAll(
-                heading,
-                promptLabel,
                 answerArea,
                 revealButton,
                 markSchemeHeading,

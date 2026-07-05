@@ -1,5 +1,7 @@
 package com.pararepilot.ui.controller;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,13 +11,16 @@ import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.repository.QuestionRepository;
+import com.pararepilot.service.QuestionImageStorage;
 import com.pararepilot.service.WorksheetCreationService;
 import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.LevelUi;
 import com.pararepilot.ui.OverlayService;
+import com.pararepilot.ui.QuestionImageViewFactory;
 import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -23,9 +28,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 
 public class WorksheetCreateController {
+
+    private static final String QUESTION_IMAGE_SOURCE_KEY = "question-image-source";
 
     @FXML private Label parentTopicLabel;
     @FXML private TextField titleField;
@@ -36,6 +46,7 @@ public class WorksheetCreateController {
     @FXML private Label statusLabel;
 
     private final WorksheetCreationService service = new WorksheetCreationService();
+    private final QuestionImageStorage imageStorage = new QuestionImageStorage();
 
     private Topic topic;
     private StudyModule module;
@@ -76,6 +87,7 @@ public class WorksheetCreateController {
         }
 
         try {
+            validateWorksheetTitle();
             List<QuestionRepository.QuestionDraft> drafts = collectQuestionDrafts();
 
             service.createWorksheetWithQuestions(
@@ -98,6 +110,8 @@ public class WorksheetCreateController {
         } catch (IllegalArgumentException e) {
             UiAnimations.validationError(titleField, questionsContainer);
             setStatus(e.getMessage());
+        } catch (IOException e) {
+            showError("Failed to attach question image", e.getMessage());
         } catch (SQLException e) {
             showError("Failed to save worksheet", e.getMessage());
         }
@@ -129,6 +143,45 @@ public class WorksheetCreateController {
         markSchemeArea.setPrefRowCount(3);
         markSchemeArea.setUserData("markScheme");
 
+        Button imageButton = new Button("Add image");
+        imageButton.getStyleClass().add("compact-button");
+
+        Button removeImageButton = new Button("Remove image");
+        removeImageButton.getStyleClass().add("danger-button");
+        removeImageButton.setVisible(false);
+        removeImageButton.setManaged(false);
+
+        Label imageStatusLabel = new Label("No image selected");
+        imageStatusLabel.getStyleClass().add("muted-text");
+        imageStatusLabel.setWrapText(true);
+
+        ImageView imagePreview = QuestionImageViewFactory.createPreview(null, 320, 180);
+        imagePreview.setVisible(false);
+        imagePreview.setManaged(false);
+
+        imageButton.setOnAction(event -> chooseQuestionImage(
+                row,
+                imageButton,
+                removeImageButton,
+                imageStatusLabel,
+                imagePreview
+        ));
+
+        removeImageButton.setOnAction(event -> removeQuestionImage(
+                row,
+                imageButton,
+                removeImageButton,
+                imageStatusLabel,
+                imagePreview
+        ));
+
+        HBox imageActions = new HBox(8, imageButton, removeImageButton, imageStatusLabel);
+        imageActions.getStyleClass().add("question-image-actions");
+        imageActions.setAlignment(Pos.CENTER_LEFT);
+
+        VBox imageBox = new VBox(6, imageActions, imagePreview);
+        imageBox.getStyleClass().add("question-image-preview");
+
         Spinner<Integer> maxMarksSpinner = new Spinner<>(1, 100, 3);
         maxMarksSpinner.setEditable(true);
         maxMarksSpinner.setUserData("maxMarks");
@@ -150,6 +203,7 @@ public class WorksheetCreateController {
                 heading,
                 promptArea,
                 markSchemeArea,
+                imageBox,
                 maxMarksLabel,
                 maxMarksSpinner,
                 removeButton
@@ -159,7 +213,74 @@ public class WorksheetCreateController {
         UiAnimations.animateCardEntry(row);
     }
 
-    private List<QuestionRepository.QuestionDraft> collectQuestionDrafts() {
+    private void chooseQuestionImage(
+            VBox row,
+            Button imageButton,
+            Button removeImageButton,
+            Label imageStatusLabel,
+            ImageView imagePreview
+    ) {
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Choose Question Image");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("PNG", "*.png"),
+                new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg")
+        );
+
+        var selectedFile = chooser.showOpenDialog(row.getScene().getWindow());
+
+        if (selectedFile == null) {
+            return;
+        }
+
+        Path selectedPath = selectedFile.toPath();
+
+        if (!QuestionImageStorage.isSupportedImage(selectedPath)) {
+            setStatus("Question images must be PNG, JPG, or JPEG.");
+            UiAnimations.validationError(row);
+            return;
+        }
+
+        ImageView selectedPreview = QuestionImageViewFactory.createPreview(selectedPath, 320, 180);
+
+        if (selectedPreview.getImage() == null) {
+            setStatus("Selected image could not be loaded.");
+            UiAnimations.validationError(row);
+            return;
+        }
+
+        row.getProperties().put(QUESTION_IMAGE_SOURCE_KEY, selectedPath);
+        imagePreview.setImage(selectedPreview.getImage());
+        imagePreview.setVisible(true);
+        imagePreview.setManaged(true);
+        imageStatusLabel.setText(selectedPath.getFileName().toString());
+        imageButton.setText("Replace image");
+        removeImageButton.setVisible(true);
+        removeImageButton.setManaged(true);
+        setStatus("");
+    }
+
+    private void removeQuestionImage(
+            VBox row,
+            Button imageButton,
+            Button removeImageButton,
+            Label imageStatusLabel,
+            ImageView imagePreview
+    ) {
+
+        row.getProperties().remove(QUESTION_IMAGE_SOURCE_KEY);
+        imagePreview.setImage(null);
+        imagePreview.setVisible(false);
+        imagePreview.setManaged(false);
+        imageStatusLabel.setText("No image selected");
+        imageButton.setText("Add image");
+        removeImageButton.setVisible(false);
+        removeImageButton.setManaged(false);
+    }
+
+    private List<QuestionRepository.QuestionDraft> collectQuestionDrafts() throws IOException {
         List<QuestionRepository.QuestionDraft> drafts = new ArrayList<>();
 
         for (int i = 0; i < questionsContainer.getChildren().size(); i++) {
@@ -189,15 +310,50 @@ public class WorksheetCreateController {
                 throw new IllegalStateException("Question form row is missing fields.");
             }
 
+            validateQuestionDraftInput(
+                    i + 1,
+                    promptArea.getText(),
+                    markSchemeArea.getText(),
+                    maxMarksSpinner.getValue()
+            );
+
+            String imagePath = null;
+            Object imageSource = row.getProperties().get(QUESTION_IMAGE_SOURCE_KEY);
+
+            if (imageSource instanceof Path sourcePath) {
+                imagePath = imageStorage.copyIntoImageStore(sourcePath);
+            }
+
             drafts.add(new QuestionRepository.QuestionDraft(
                     promptArea.getText(),
                     markSchemeArea.getText(),
                     maxMarksSpinner.getValue(),
-                    null
+                    null,
+                    imagePath
             ));
         }
 
         return drafts;
+    }
+
+    private void validateQuestionDraftInput(
+            int questionNumber,
+            String prompt,
+            String markScheme,
+            int maxMarks
+    ) {
+
+        if (prompt == null || prompt.isBlank()) {
+            throw new IllegalArgumentException("Question " + questionNumber + " needs a prompt.");
+        }
+
+        if (markScheme == null || markScheme.isBlank()) {
+            throw new IllegalArgumentException("Question " + questionNumber + " needs a mark scheme.");
+        }
+
+        if (maxMarks <= 0) {
+            throw new IllegalArgumentException("Question " + questionNumber + " must have at least 1 mark.");
+        }
     }
 
     private void renumberQuestionRows() {
@@ -207,6 +363,18 @@ public class WorksheetCreateController {
             if (!row.getChildren().isEmpty() && row.getChildren().get(0) instanceof Label label) {
                 label.setText("Question " + (i + 1));
             }
+        }
+    }
+
+    private void validateWorksheetTitle() {
+        String title = titleField.getText();
+
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Worksheet title cannot be empty.");
+        }
+
+        if (title.trim().length() > 120) {
+            throw new IllegalArgumentException("Worksheet title must be 120 characters or fewer.");
         }
     }
 

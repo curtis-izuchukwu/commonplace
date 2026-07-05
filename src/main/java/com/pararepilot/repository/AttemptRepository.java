@@ -8,8 +8,10 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.pararepilot.model.ConfidenceLevel;
 import com.pararepilot.model.WorksheetAttempt;
@@ -351,6 +353,40 @@ public class AttemptRepository {
                 return rs.getInt("attempt_count");
             }
         }
+    }
+
+    public Set<Long> findWorksheetIdsCompletedOn(LocalDate completionDate) throws SQLException {
+        LocalDateTime startOfDay = completionDate.atStartOfDay();
+        LocalDateTime startOfNextDay = completionDate.plusDays(1).atStartOfDay();
+
+        String sql = """
+                SELECT DISTINCT wa.worksheet_id
+                FROM worksheet_attempts wa
+                JOIN worksheets w ON w.id = wa.worksheet_id
+                JOIN topics t ON t.id = w.topic_id
+                JOIN modules m ON m.id = t.module_id
+                WHERE m.user_id = ?
+                  AND wa.completed_at >= ?
+                  AND wa.completed_at < ?;
+                """;
+
+        Set<Long> worksheetIds = new HashSet<>();
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.setString(2, DateUtils.toDatabaseDateTime(startOfDay));
+            stmt.setString(3, DateUtils.toDatabaseDateTime(startOfNextDay));
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    worksheetIds.add(rs.getLong("worksheet_id"));
+                }
+            }
+        }
+
+        return worksheetIds;
     }
     
     public record RecentAttemptDisplayItem(

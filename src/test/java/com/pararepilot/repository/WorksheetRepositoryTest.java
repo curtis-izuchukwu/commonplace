@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
@@ -63,7 +64,8 @@ class WorksheetRepositoryTest {
                                 "Why is deletion in a BST tricky?",
                                 "The node may have zero, one, or two children.",
                                 4,
-                                "trees,deletion"
+                                "trees,deletion",
+                                "images/bst-deletion.png"
                         )
                 )
         );
@@ -77,6 +79,8 @@ class WorksheetRepositoryTest {
         assertEquals(2, questions.size());
         assertEquals(1, questions.get(0).questionOrder());
         assertEquals(2, questions.get(1).questionOrder());
+        assertNull(questions.get(0).imagePath());
+        assertEquals("images/bst-deletion.png", questions.get(1).imagePath());
 
         assertTrue(worksheetRepository.countByTopicId(topic.id()) >= 1);
 

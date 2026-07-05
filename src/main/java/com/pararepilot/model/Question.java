@@ -7,6 +7,7 @@ public record Question(
         String markScheme,
         int maxMarks,
         int questionOrder,
-        String tags
+        String tags,
+        String imagePath
 ) {
 }

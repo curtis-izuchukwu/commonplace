@@ -126,6 +126,7 @@ public final class DatabaseManager {
                     max_marks INTEGER NOT NULL,
                     question_order INTEGER NOT NULL,
                     tags TEXT,
+                    image_path TEXT,
                     FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
                 );
                 """,
@@ -245,6 +246,18 @@ public final class DatabaseManager {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
                 );
+                """,
+
+                """
+                CREATE TABLE IF NOT EXISTS daily_recommendation_history (
+                    user_id INTEGER NOT NULL,
+                    recommendation_date TEXT NOT NULL,
+                    worksheet_id INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (user_id, recommendation_date, worksheet_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
+                );
                 """
         };
 
@@ -259,6 +272,7 @@ public final class DatabaseManager {
 
     private static void migrateExistingSchema(Connection conn) throws SQLException {
         addColumnIfMissing(conn, "modules", "user_id", "INTEGER");
+        addColumnIfMissing(conn, "questions", "image_path", "TEXT");
         addColumnIfMissing(conn, "worksheet_attempts", "xp_awarded_at", "TEXT");
         addColumnIfMissing(conn, "user_settings", "compact_layout", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing(conn, "user_settings", "font_size", "TEXT NOT NULL DEFAULT 'DEFAULT'");
@@ -279,6 +293,30 @@ public final class DatabaseManager {
         addColumnIfMissing(conn, "user_settings", "keyboard_hints_enabled", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing(conn, "user_settings", "screen_reader_labels_enabled", "INTEGER NOT NULL DEFAULT 1");
         migrateUserStatsTableIfNeeded(conn);
+        backfillDailyRecommendationHistory(conn);
+    }
+
+    private static void backfillDailyRecommendationHistory(Connection conn) throws SQLException {
+        String sql = """
+                INSERT OR IGNORE INTO daily_recommendation_history
+                    (user_id, recommendation_date, worksheet_id, created_at)
+                SELECT user_id, recommendation_date, worksheet_id, updated_at
+                FROM daily_recommendations
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM users
+                    WHERE users.id = daily_recommendations.user_id
+                )
+                  AND EXISTS (
+                    SELECT 1
+                    FROM worksheets
+                    WHERE worksheets.id = daily_recommendations.worksheet_id
+                );
+                """;
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(sql);
+        }
     }
 
     private static void addColumnIfMissing(

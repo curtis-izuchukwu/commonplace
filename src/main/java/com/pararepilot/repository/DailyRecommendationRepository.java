@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import com.pararepilot.service.AccountSession;
 import com.pararepilot.util.DateUtils;
@@ -54,8 +56,34 @@ public class DailyRecommendationRepository {
         return Optional.of(worksheetId);
     }
 
-    public void saveTodayWorksheetId(long worksheetId) throws SQLException {
+    public Set<Long> findTodayWorksheetIds() throws SQLException {
         String sql = """
+                SELECT worksheet_id
+                FROM daily_recommendation_history
+                WHERE user_id = ?
+                  AND recommendation_date = ?;
+                """;
+
+        Set<Long> worksheetIds = new HashSet<>();
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.setString(2, DateUtils.toDatabaseDate(LocalDate.now()));
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    worksheetIds.add(rs.getLong("worksheet_id"));
+                }
+            }
+        }
+
+        return worksheetIds;
+    }
+
+    public void saveTodayWorksheetId(long worksheetId) throws SQLException {
+        String activeSql = """
                 INSERT INTO daily_recommendations
                     (user_id, recommendation_date, worksheet_id, updated_at)
                 VALUES
@@ -66,14 +94,44 @@ public class DailyRecommendationRepository {
                     updated_at = excluded.updated_at;
                 """;
 
-        try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        String historySql = """
+                INSERT OR IGNORE INTO daily_recommendation_history
+                    (user_id, recommendation_date, worksheet_id, created_at)
+                VALUES
+                    (?, ?, ?, ?);
+                """;
 
-            stmt.setLong(1, AccountSession.currentUserId());
-            stmt.setString(2, DateUtils.toDatabaseDate(LocalDate.now()));
-            stmt.setLong(3, worksheetId);
-            stmt.setString(4, DateUtils.toDatabaseDateTime(DateUtils.now()));
-            stmt.executeUpdate();
+        long userId = AccountSession.currentUserId();
+        String today = DateUtils.toDatabaseDate(LocalDate.now());
+        String now = DateUtils.toDatabaseDateTime(DateUtils.now());
+
+        try (Connection conn = DatabaseManager.connect()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement activeStmt = conn.prepareStatement(activeSql);
+                 PreparedStatement historyStmt = conn.prepareStatement(historySql)) {
+
+                activeStmt.setLong(1, userId);
+                activeStmt.setString(2, today);
+                activeStmt.setLong(3, worksheetId);
+                activeStmt.setString(4, now);
+                activeStmt.executeUpdate();
+
+                historyStmt.setLong(1, userId);
+                historyStmt.setString(2, today);
+                historyStmt.setLong(3, worksheetId);
+                historyStmt.setString(4, now);
+                historyStmt.executeUpdate();
+
+                conn.commit();
+
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(originalAutoCommit);
+            }
         }
     }
 
