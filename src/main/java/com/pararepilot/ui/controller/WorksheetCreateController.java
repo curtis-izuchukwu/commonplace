@@ -6,11 +6,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.pararepilot.flightdeck.FlightDeckApiException;
+import com.pararepilot.flightdeck.FlightDeckGenerateRequest;
+import com.pararepilot.flightdeck.FlightDeckGenerateResponse;
+import com.pararepilot.flightdeck.FlightDeckQuestionFormat;
 import com.pararepilot.model.DifficultyLevel;
 import com.pararepilot.model.ImportanceLevel;
 import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.repository.QuestionRepository;
+import com.pararepilot.service.FlightDeckWorksheetGenerationService;
 import com.pararepilot.service.QuestionImageStorage;
 import com.pararepilot.service.WorksheetCreationService;
 import com.pararepilot.ui.AppIcon;
@@ -19,13 +24,16 @@ import com.pararepilot.ui.OverlayService;
 import com.pararepilot.ui.QuestionImageViewFactory;
 import com.pararepilot.ui.UiAnimations;
 
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
@@ -36,17 +44,26 @@ import javafx.stage.FileChooser;
 public class WorksheetCreateController {
 
     private static final String QUESTION_IMAGE_SOURCE_KEY = "question-image-source";
+    private static final String QUESTION_TAGS_KEY = "question-tags";
 
     @FXML private Label parentTopicLabel;
     @FXML private TextField titleField;
     @FXML private TextArea descriptionArea;
     @FXML private ComboBox<DifficultyLevel> difficultyCombo;
     @FXML private ComboBox<ImportanceLevel> importanceCombo;
+    @FXML private ComboBox<DifficultyLevel> flightDeckDifficultyCombo;
+    @FXML private Spinner<Integer> flightDeckQuestionCountSpinner;
+    @FXML private ComboBox<FlightDeckQuestionFormat> flightDeckFormatCombo;
+    @FXML private Button generateFlightDeckButton;
+    @FXML private ProgressIndicator flightDeckProgressIndicator;
+    @FXML private Label flightDeckStatusLabel;
     @FXML private VBox questionsContainer;
     @FXML private Label statusLabel;
 
     private final WorksheetCreationService service = new WorksheetCreationService();
     private final QuestionImageStorage imageStorage = new QuestionImageStorage();
+    private final FlightDeckWorksheetGenerationService flightDeckService =
+            new FlightDeckWorksheetGenerationService();
 
     private Topic topic;
     private StudyModule module;
@@ -61,6 +78,17 @@ public class WorksheetCreateController {
         importanceCombo.getItems().setAll(ImportanceLevel.values());
         importanceCombo.setValue(ImportanceLevel.MEDIUM);
         LevelUi.applyLevelBarStyling(importanceCombo);
+
+        flightDeckDifficultyCombo.getItems().setAll(DifficultyLevel.values());
+        flightDeckDifficultyCombo.setValue(DifficultyLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(flightDeckDifficultyCombo);
+
+        flightDeckQuestionCountSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, 3)
+        );
+
+        flightDeckFormatCombo.getItems().setAll(FlightDeckQuestionFormat.values());
+        flightDeckFormatCombo.setValue(FlightDeckQuestionFormat.SHORT_ANSWER);
 
         addQuestionRow();
     }
@@ -77,6 +105,63 @@ public class WorksheetCreateController {
     @FXML
     private void handleAddQuestion() {
         addQuestionRow();
+    }
+
+    @FXML
+    private void handleGenerateWithFlightDeck() {
+        if (topic == null) {
+            setStatus("Choose a topic before generating questions.");
+            setFlightDeckStatus("No parent topic selected.");
+            UiAnimations.validationError(parentTopicLabel);
+            return;
+        }
+
+        String subject = module == null || module.name().isBlank() ? "Study" : module.name();
+        int requestedCount = flightDeckQuestionCountSpinner.getValue();
+
+        FlightDeckGenerateRequest request = new FlightDeckGenerateRequest(
+                subject,
+                topic.name(),
+                flightDeckDifficultyCombo.getValue(),
+                requestedCount,
+                flightDeckFormatCombo.getValue()
+        );
+
+        setFlightDeckBusy(true);
+        setFlightDeckStatus("Generating editable draft questions with FlightDeck...");
+        setStatus("");
+
+        Task<FlightDeckGenerateResponse> task = new Task<>() {
+            @Override
+            protected FlightDeckGenerateResponse call() throws FlightDeckApiException {
+                return flightDeckService.generate(request);
+            }
+        };
+
+        task.setOnSucceeded(event -> {
+            setFlightDeckBusy(false);
+            applyGeneratedWorksheet(task.getValue(), requestedCount);
+        });
+
+        task.setOnFailed(event -> {
+            setFlightDeckBusy(false);
+            Throwable error = task.getException();
+
+            if (error != null) {
+                error.printStackTrace();
+            }
+
+            String message = error == null
+                    ? "FlightDeck generation failed. You can still create the worksheet manually."
+                    : error.getMessage();
+
+            setFlightDeckStatus(message);
+            setStatus(message);
+        });
+
+        Thread worker = new Thread(task, "flightdeck-generate-worker");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     @FXML
@@ -123,21 +208,34 @@ public class WorksheetCreateController {
     }
 
     private void addQuestionRow() {
+        addQuestionRow("", "", 3, null);
+    }
+
+    private void addQuestionRow(
+            String prompt,
+            String markScheme,
+            int maxMarks,
+            String tags
+    ) {
         int questionNumber = questionsContainer.getChildren().size() + 1;
 
         VBox row = new VBox(8);
         row.getStyleClass().add("question-card");
 
+        if (tags != null && !tags.isBlank()) {
+            row.getProperties().put(QUESTION_TAGS_KEY, tags);
+        }
+
         Label heading = new Label("Question " + questionNumber);
         heading.getStyleClass().add("card-title");
 
-        TextArea promptArea = new TextArea();
+        TextArea promptArea = new TextArea(prompt == null ? "" : prompt);
         promptArea.setPromptText("Question prompt");
         promptArea.setWrapText(true);
         promptArea.setPrefRowCount(3);
         promptArea.setUserData("prompt");
 
-        TextArea markSchemeArea = new TextArea();
+        TextArea markSchemeArea = new TextArea(markScheme == null ? "" : markScheme);
         markSchemeArea.setPromptText("Mark scheme");
         markSchemeArea.setWrapText(true);
         markSchemeArea.setPrefRowCount(3);
@@ -182,7 +280,7 @@ public class WorksheetCreateController {
         VBox imageBox = new VBox(6, imageActions, imagePreview);
         imageBox.getStyleClass().add("question-image-preview");
 
-        Spinner<Integer> maxMarksSpinner = new Spinner<>(1, 100, 3);
+        Spinner<Integer> maxMarksSpinner = new Spinner<>(1, 100, Math.max(1, maxMarks));
         maxMarksSpinner.setEditable(true);
         maxMarksSpinner.setUserData("maxMarks");
         maxMarksSpinner.setMaxWidth(220);
@@ -211,6 +309,99 @@ public class WorksheetCreateController {
 
         questionsContainer.getChildren().add(row);
         UiAnimations.animateCardEntry(row);
+    }
+
+    private void applyGeneratedWorksheet(
+            FlightDeckGenerateResponse response,
+            int requestedCount
+    ) {
+
+        if (response.questions().isEmpty()) {
+            String message = "FlightDeck did not return any usable questions. Manual creation is still available.";
+            setFlightDeckStatus(message);
+            setStatus(message);
+            return;
+        }
+
+        if (titleField.getText() == null || titleField.getText().isBlank()) {
+            titleField.setText(response.title().isBlank()
+                    ? topic.name() + " Practice"
+                    : response.title());
+        }
+
+        if (descriptionArea.getText() == null || descriptionArea.getText().isBlank()) {
+            descriptionArea.setText(response.description().isBlank()
+                    ? "Generated with FlightDeck. Review and edit before saving."
+                    : response.description());
+        }
+
+        removeSingleBlankQuestionRow();
+
+        response.questions().forEach(question -> {
+            QuestionRepository.QuestionDraft draft = question.toQuestionDraft();
+            addQuestionRow(
+                    draft.prompt(),
+                    draft.markScheme(),
+                    draft.maxMarks(),
+                    draft.tags()
+            );
+        });
+
+        String message = response.questions().size() < requestedCount
+                ? "FlightDeck returned " + response.questions().size()
+                        + " of " + requestedCount + " requested questions. Review before saving."
+                : "Generated " + response.questions().size()
+                        + " editable questions. Review before saving.";
+
+        UiAnimations.validationSuccess(questionsContainer);
+        setFlightDeckStatus(message);
+        setStatus(message);
+    }
+
+    private void removeSingleBlankQuestionRow() {
+        if (questionsContainer.getChildren().size() != 1
+                || !(questionsContainer.getChildren().get(0) instanceof VBox row)) {
+            return;
+        }
+
+        if (!questionRowIsBlank(row)) {
+            return;
+        }
+
+        questionsContainer.getChildren().clear();
+    }
+
+    private boolean questionRowIsBlank(VBox row) {
+        TextArea promptArea = findQuestionTextArea(row, "prompt");
+        TextArea markSchemeArea = findQuestionTextArea(row, "markScheme");
+
+        return textBlank(promptArea.getText())
+                && textBlank(markSchemeArea.getText())
+                && !row.getProperties().containsKey(QUESTION_IMAGE_SOURCE_KEY);
+    }
+
+    private TextArea findQuestionTextArea(VBox row, String userData) {
+        for (var child : row.getChildren()) {
+            if (child instanceof TextArea textArea && userData.equals(textArea.getUserData())) {
+                return textArea;
+            }
+        }
+
+        throw new IllegalStateException("Question row is missing " + userData + " field.");
+    }
+
+    private boolean textBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private void setFlightDeckBusy(boolean generating) {
+        generateFlightDeckButton.setDisable(generating);
+        flightDeckDifficultyCombo.setDisable(generating);
+        flightDeckQuestionCountSpinner.setDisable(generating);
+        flightDeckFormatCombo.setDisable(generating);
+        flightDeckProgressIndicator.setVisible(generating);
+        flightDeckProgressIndicator.setManaged(generating);
+        generateFlightDeckButton.setText(generating ? "Generating..." : "Generate");
     }
 
     private void chooseQuestionImage(
@@ -324,11 +515,18 @@ public class WorksheetCreateController {
                 imagePath = imageStorage.copyIntoImageStore(sourcePath);
             }
 
+            String tags = null;
+            Object savedTags = row.getProperties().get(QUESTION_TAGS_KEY);
+
+            if (savedTags instanceof String value && !value.isBlank()) {
+                tags = value;
+            }
+
             drafts.add(new QuestionRepository.QuestionDraft(
                     promptArea.getText(),
                     markSchemeArea.getText(),
                     maxMarksSpinner.getValue(),
-                    null,
+                    tags,
                     imagePath
             ));
         }
@@ -380,6 +578,10 @@ public class WorksheetCreateController {
 
     private void setStatus(String message) {
         statusLabel.setText(message);
+    }
+
+    private void setFlightDeckStatus(String message) {
+        flightDeckStatusLabel.setText(message == null ? "" : message);
     }
 
     private void closeWindow() {

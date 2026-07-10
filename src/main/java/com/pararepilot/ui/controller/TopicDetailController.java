@@ -88,7 +88,7 @@ public class TopicDetailController {
             var handle = OverlayService.<WorksheetCreateController>open(
                     topicNameLabel,
                     "/com/pararepilot/fxml/WorksheetCreateView.fxml",
-                    820,
+                    1120,
                     760
             );
 

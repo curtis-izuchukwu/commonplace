@@ -60,7 +60,9 @@
 .stat-card,
 .auth-panel,
 .topic-form-panel,
-.topic-list-panel {
+.topic-list-panel,
+.worksheet-create-sidebar,
+.worksheet-create-questions {
     -fx-background-color: rgba(14, 25, 42, 0.94);
     -fx-background-radius: 22;
     -fx-border-color: rgba(114, 149, 194, 0.28);
@@ -71,6 +73,11 @@
 
 .content-panel {
     -fx-padding: 20 22 20 22;
+}
+
+.worksheet-create-sidebar,
+.worksheet-create-questions {
+    -fx-padding: 16;
 }
 
 .section-title {
@@ -974,6 +981,8 @@
 .theme-light .auth-panel,
 .theme-light .topic-form-panel,
 .theme-light .topic-list-panel,
+.theme-light .worksheet-create-sidebar,
+.theme-light .worksheet-create-questions,
 .theme-light .settings-panel,
 .theme-light .entity-card,
 .theme-light .question-card,
@@ -1296,6 +1305,8 @@
 .compact-layout .hero-card,
 .compact-layout .stat-card,
 .compact-layout .settings-panel,
+.compact-layout .worksheet-create-sidebar,
+.compact-layout .worksheet-create-questions,
 .compact-layout .entity-card,
 .compact-layout .question-card,
 .compact-layout .notification-card {
@@ -1332,6 +1343,8 @@
 .high-contrast .hero-card,
 .high-contrast .stat-card,
 .high-contrast .settings-panel,
+.high-contrast .worksheet-create-sidebar,
+.high-contrast .worksheet-create-questions,
 .high-contrast .entity-card,
 .high-contrast .question-card,
 .high-contrast .mistake-card,
