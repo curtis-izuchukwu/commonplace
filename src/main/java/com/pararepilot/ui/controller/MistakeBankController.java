@@ -27,9 +27,14 @@ public class MistakeBankController {
 
     private final MistakeBankService mistakeBankService = new MistakeBankService();
     private Runnable onMistakesChanged;
+    private Runnable onClosed;
 
     public void setOnMistakesChanged(Runnable onMistakesChanged) {
         this.onMistakesChanged = onMistakesChanged;
+    }
+
+    public void setOnClosed(Runnable onClosed) {
+        this.onClosed = onClosed;
     }
 
     @FXML
@@ -44,6 +49,10 @@ public class MistakeBankController {
 
     @FXML
     private void handleClose() {
+        if (onClosed != null) {
+            onClosed.run();
+        }
+
         OverlayService.closeFrom(summaryLabel);
     }
 

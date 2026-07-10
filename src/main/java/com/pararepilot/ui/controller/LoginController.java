@@ -2,12 +2,15 @@ package com.pararepilot.ui.controller;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 
 import com.pararepilot.service.AccountService;
+import com.pararepilot.ui.AppChrome;
 import com.pararepilot.ui.UiAnimations;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -40,6 +43,8 @@ public class LoginController {
             setStatus("Account database failed to load: " + e.getMessage());
             setCreateMode(true);
         }
+
+        Platform.runLater(this::registerChromeCommands);
     }
 
     @FXML
@@ -106,6 +111,38 @@ public class LoginController {
         createAccountButton.setText(createMode ? "Create Account" : "New Account");
     }
 
+    private void registerChromeCommands() {
+        if (usernameField.getScene() == null) {
+            return;
+        }
+
+        AppChrome.setCommands(
+                usernameField.getScene(),
+                List.of(
+                        new AppChrome.Command(
+                                "Sign In",
+                                "Focus the sign-in form.",
+                                "login account username password",
+                                () -> {
+                                    if (hasAccounts) {
+                                        setCreateMode(false);
+                                    }
+                                    usernameField.requestFocus();
+                                }
+                        ),
+                        new AppChrome.Command(
+                                "Create Account",
+                                "Switch to account creation.",
+                                "register new account signup",
+                                () -> {
+                                    setCreateMode(true);
+                                    usernameField.requestFocus();
+                                }
+                        )
+                )
+        );
+    }
+
     private void openDashboard() throws IOException {
         FXMLLoader loader = new FXMLLoader(
                 getClass().getResource("/com/pararepilot/fxml/DashboardView.fxml")
@@ -114,7 +151,9 @@ public class LoginController {
         Parent root = loader.load();
         UiAnimations.installGlobalAnimations(root);
         Scene scene = usernameField.getScene();
-        scene.setRoot(root);
+        AppChrome.setContent(scene, root);
+        AppChrome.setBreadcrumb(scene, "Dashboard");
+        AppChrome.setDailyChip(scene, "");
 
         Stage stage = (Stage) scene.getWindow();
         stage.setTitle("ParārePilot");

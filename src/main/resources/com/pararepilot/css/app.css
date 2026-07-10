@@ -20,6 +20,268 @@
     -fx-font-family: "Segoe UI", "Inter", "Arial";
 }
 
+.app-chrome-root {
+    -fx-background-color: transparent;
+    -fx-padding: 10;
+}
+
+.app-chrome-frame {
+    -fx-background-color: #020817;
+    -fx-background-radius: 14;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.42), 26, 0.16, 0, 10);
+}
+
+.app-chrome-shell {
+    -fx-background-color: transparent;
+}
+
+.app-chrome-title-bar {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-max-height: 40;
+    -fx-padding: 4 8 4 12;
+    -fx-background-color: linear-gradient(to right, #061722 0%, #07101f 48%, #080b18 100%);
+    -fx-border-color: transparent transparent -app-accent-border-mid transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, -app-accent-bg-subtle, 18, 0.12, 0, 3);
+}
+
+.app-chrome-icon {
+    -fx-effect: dropshadow(gaussian, rgba(56, 189, 248, 0.28), 9, 0.2, 0, 0);
+}
+
+.app-chrome-title-text {
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+}
+
+.app-chrome-wordmark {
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #f7fbff;
+    -fx-padding: 0;
+}
+
+.app-chrome-breadcrumb {
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -app-accent-text;
+    -fx-padding: 0;
+}
+
+.app-chrome-chip {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-background-radius: 999;
+    -fx-border-color: -app-accent-border;
+    -fx-border-radius: 999;
+    -fx-text-fill: #dff7ff;
+    -fx-font-size: 10px;
+    -fx-font-weight: 900;
+    -fx-padding: 4 9 4 9;
+}
+
+.app-chrome-command-button {
+    -fx-background-color: rgba(24, 37, 61, 0.72);
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(116, 150, 194, 0.32);
+    -fx-border-radius: 999;
+    -fx-text-fill: #dbeafe;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-padding: 4 11 4 11;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+    -fx-effect: none;
+}
+
+.app-chrome-command-button:hover {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+    -fx-text-fill: #f7fbff;
+}
+
+.app-chrome-window-controls {
+    -fx-alignment: center;
+}
+
+.app-chrome-window-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8;
+    -fx-border-width: 0;
+    -fx-text-fill: #dbeafe;
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-padding: 0;
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-max-width: 34;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+    -fx-effect: none;
+}
+
+.app-chrome-window-button:hover {
+    -fx-background-color: rgba(148, 163, 184, 0.16);
+    -fx-border-color: transparent;
+    -fx-effect: none;
+}
+
+.app-chrome-close-button:hover {
+    -fx-background-color: rgba(239, 68, 68, 0.88);
+    -fx-border-color: transparent;
+    -fx-text-fill: #ffffff;
+}
+
+.window-control-icon {
+    -fx-min-width: 14;
+    -fx-pref-width: 14;
+    -fx-max-width: 14;
+    -fx-min-height: 14;
+    -fx-pref-height: 14;
+    -fx-max-height: 14;
+}
+
+.window-control-minimize-icon {
+    -fx-background-color: #dbeafe;
+    -fx-background-radius: 999;
+    -fx-min-width: 11;
+    -fx-pref-width: 11;
+    -fx-max-width: 11;
+    -fx-min-height: 1.5;
+    -fx-pref-height: 1.5;
+    -fx-max-height: 1.5;
+}
+
+.window-control-maximize-icon {
+    -fx-background-color: transparent;
+    -fx-border-color: #dbeafe;
+    -fx-border-radius: 2;
+    -fx-border-width: 1.4;
+    -fx-min-width: 10;
+    -fx-pref-width: 10;
+    -fx-max-width: 10;
+    -fx-min-height: 10;
+    -fx-pref-height: 10;
+    -fx-max-height: 10;
+}
+
+.window-control-close-line {
+    -fx-background-color: #dbeafe;
+    -fx-background-radius: 999;
+    -fx-min-width: 12;
+    -fx-pref-width: 12;
+    -fx-max-width: 12;
+    -fx-min-height: 1.6;
+    -fx-pref-height: 1.6;
+    -fx-max-height: 1.6;
+}
+
+.app-chrome-close-button:hover .window-control-close-line {
+    -fx-background-color: #ffffff;
+}
+
+.command-palette-scrim {
+    -fx-alignment: top-center;
+    -fx-padding: 74 24 24 24;
+}
+
+.command-palette {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, rgba(14, 25, 42, 0.98) 0%, rgba(10, 28, 47, 0.98) 100%);
+    -fx-background-radius: 20;
+    -fx-border-color: -app-accent-border;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 18;
+    -fx-max-height: 560;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.44), 28, 0.18, 0, 16);
+}
+
+.command-palette-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #f7fbff;
+}
+
+.command-palette-hint,
+.command-empty {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #9fb0c5;
+}
+
+.command-search-field {
+    -fx-background-color: rgba(24, 37, 61, 0.96);
+    -fx-background-radius: 15;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-border-radius: 15;
+    -fx-text-fill: #f7fbff;
+    -fx-prompt-text-fill: #8ca1bb;
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-padding: 11 14 11 14;
+}
+
+.command-search-field:focused {
+    -fx-border-color: -app-accent-border-strong;
+    -fx-effect: dropshadow(gaussian, -app-accent-border-faint, 16, 0.12, 0, 0);
+}
+
+.command-results {
+    -fx-padding: 2 2 2 0;
+}
+
+.command-results-scroll,
+.command-results-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.command-results-scroll {
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.command-result-row {
+    -fx-background-color: rgba(24, 37, 61, 0.78);
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(116, 150, 194, 0.26);
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 10 12 10 12;
+    -fx-min-height: 64;
+    -fx-pref-height: 64;
+    -fx-max-height: 64;
+    -fx-effect: none;
+}
+
+.command-result-row:hover,
+.command-result-row:focused {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+}
+
+.command-result-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #f7fbff;
+    -fx-padding: 0;
+}
+
+.command-result-description {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #9fb0c5;
+    -fx-padding: 0;
+}
+
 .dashboard-root,
 .topic-detail-root {
     -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #061722 0%, #050911 58%, #0d1024 100%);
@@ -1225,6 +1487,46 @@
     -fx-border-color: -app-accent-border-faint;
 }
 
+.theme-light .command-palette {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, rgba(255, 255, 255, 0.98) 0%, #eefdf7 100%);
+    -fx-border-color: -app-accent-border-soft;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.16), 24, 0.14, 0, 14);
+}
+
+.theme-light .command-palette-title,
+.theme-light .command-result-title {
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .command-palette-hint,
+.theme-light .command-empty,
+.theme-light .command-result-description {
+    -fx-text-fill: #475569;
+}
+
+.theme-light .command-search-field {
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-border-color: -app-accent-border-faint;
+    -fx-text-fill: #0f172a;
+    -fx-prompt-text-fill: #64748b;
+}
+
+.theme-light .command-search-field:focused {
+    -fx-border-color: -app-accent-border-strong;
+    -fx-effect: dropshadow(gaussian, -app-accent-border-faint, 14, 0.10, 0, 0);
+}
+
+.theme-light .command-result-row {
+    -fx-background-color: rgba(255, 255, 255, 0.78);
+    -fx-border-color: -app-accent-border-faint;
+}
+
+.theme-light .command-result-row:hover,
+.theme-light .command-result-row:focused {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+}
+
 .accent-cyan {
     -app-accent: #38bdf8;
     -app-accent-dark: #0ea5e9;
@@ -1393,4 +1695,221 @@
 
 .reduce-motion .button:pressed {
     -fx-translate-y: 0;
+}
+
+.app-chrome-title-bar .app-chrome-command-button,
+.theme-light .app-chrome-title-bar .app-chrome-command-button,
+.larger-controls .app-chrome-title-bar .app-chrome-command-button {
+    -fx-background-color: rgba(24, 37, 61, 0.72);
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(116, 150, 194, 0.32);
+    -fx-border-radius: 999;
+    -fx-border-width: 1;
+    -fx-text-fill: #dbeafe;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-padding: 4 11 4 11;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+    -fx-effect: none;
+}
+
+.app-chrome-title-bar .app-chrome-command-button:hover,
+.theme-light .app-chrome-title-bar .app-chrome-command-button:hover,
+.larger-controls .app-chrome-title-bar .app-chrome-command-button:hover {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+    -fx-text-fill: #f7fbff;
+}
+
+.app-chrome-title-bar .app-chrome-window-button,
+.theme-light .app-chrome-title-bar .app-chrome-window-button,
+.larger-controls .app-chrome-title-bar .app-chrome-window-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-max-width: 34;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+    -fx-effect: none;
+}
+
+.app-chrome-title-bar .app-chrome-window-button:hover,
+.theme-light .app-chrome-title-bar .app-chrome-window-button:hover,
+.larger-controls .app-chrome-title-bar .app-chrome-window-button:hover,
+.app-chrome-title-bar .app-chrome-window-button.button-hovered {
+    -fx-background-color: rgba(148, 163, 184, 0.16);
+    -fx-border-color: transparent;
+    -fx-effect: none;
+}
+
+.app-chrome-title-bar .app-chrome-close-button:hover,
+.theme-light .app-chrome-title-bar .app-chrome-close-button:hover,
+.larger-controls .app-chrome-title-bar .app-chrome-close-button:hover {
+    -fx-background-color: rgba(239, 68, 68, 0.88);
+    -fx-border-color: transparent;
+}
+
+.theme-light.app-chrome-root {
+    -fx-background-color: transparent;
+}
+
+.theme-light .app-chrome-frame {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.18), 24, 0.14, 0, 10);
+}
+
+.theme-light .app-chrome-title-bar {
+    -fx-background-color: linear-gradient(to right, #ffffff 0%, #f8fafc 48%, #eef6fb 100%);
+    -fx-border-color: transparent transparent -app-accent-border-faint transparent;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.10), 14, 0.10, 0, 3);
+}
+
+.theme-light .app-chrome-icon {
+    -fx-effect: dropshadow(gaussian, -app-accent-border-faint, 8, 0.14, 0, 0);
+}
+
+.theme-light .app-chrome-wordmark {
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .app-chrome-breadcrumb {
+    -fx-text-fill: -app-accent-dark;
+}
+
+.theme-light .app-chrome-chip {
+    -fx-background-color: rgba(255, 255, 255, 0.86);
+    -fx-border-color: -app-accent-border-soft;
+    -fx-text-fill: #334155;
+}
+
+.theme-light .app-chrome-title-bar .app-chrome-command-button,
+.theme-light.larger-controls .app-chrome-title-bar .app-chrome-command-button {
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-border-color: -app-accent-border-soft;
+    -fx-text-fill: #0f172a;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.10), 8, 0.10, 0, 3);
+}
+
+.theme-light .app-chrome-title-bar .app-chrome-command-button:hover,
+.theme-light.larger-controls .app-chrome-title-bar .app-chrome-command-button:hover {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .app-chrome-title-bar .app-chrome-window-button,
+.theme-light.larger-controls .app-chrome-title-bar .app-chrome-window-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: none;
+}
+
+.theme-light .app-chrome-title-bar .app-chrome-window-button:hover,
+.theme-light.larger-controls .app-chrome-title-bar .app-chrome-window-button:hover,
+.theme-light .app-chrome-title-bar .app-chrome-window-button.button-hovered {
+    -fx-background-color: rgba(15, 23, 42, 0.08);
+    -fx-border-color: transparent;
+    -fx-effect: none;
+}
+
+.theme-light .window-control-minimize-icon,
+.theme-light .window-control-close-line {
+    -fx-background-color: #334155;
+}
+
+.theme-light .window-control-maximize-icon {
+    -fx-border-color: #334155;
+}
+
+.theme-light .app-chrome-title-bar .app-chrome-close-button:hover {
+    -fx-background-color: rgba(239, 68, 68, 0.88);
+}
+
+.theme-light .app-chrome-close-button:hover .window-control-close-line {
+    -fx-background-color: #ffffff;
+}
+
+.command-palette .command-search-field,
+.theme-light .command-palette .command-search-field,
+.larger-controls .command-palette .command-search-field {
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-padding: 11 14 11 14;
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
+    -fx-max-height: 44;
+}
+
+.command-palette .command-search-field {
+    -fx-background-color: rgba(24, 37, 61, 0.96);
+    -fx-border-color: -app-accent-border-soft;
+    -fx-text-fill: #f7fbff;
+    -fx-prompt-text-fill: #8ca1bb;
+}
+
+.theme-light .command-palette .command-search-field {
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-border-color: -app-accent-border-faint;
+    -fx-text-fill: #0f172a;
+    -fx-prompt-text-fill: #64748b;
+}
+
+.button.command-result-row,
+.theme-light .button.command-result-row,
+.larger-controls .button.command-result-row {
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 10 12 10 12;
+    -fx-effect: none;
+    -fx-min-height: 64;
+    -fx-pref-height: 64;
+    -fx-max-height: 64;
+}
+
+.button.command-result-row {
+    -fx-background-color: rgba(24, 37, 61, 0.78);
+    -fx-border-color: rgba(116, 150, 194, 0.26);
+}
+
+.button.command-result-row:hover,
+.button.command-result-row:focused {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+}
+
+.theme-light .button.command-result-row {
+    -fx-background-color: rgba(255, 255, 255, 0.78);
+    -fx-border-color: -app-accent-border-faint;
+}
+
+.theme-light .button.command-result-row:hover,
+.theme-light .button.command-result-row:focused {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-strong;
+}
+
+.app-chrome-root.app-chrome-maximized,
+.theme-light.app-chrome-root.app-chrome-maximized {
+    -fx-padding: 0;
+}
+
+.app-chrome-root.app-chrome-maximized .app-chrome-frame,
+.theme-light.app-chrome-root.app-chrome-maximized .app-chrome-frame {
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-border-width: 0;
+    -fx-effect: none;
 }

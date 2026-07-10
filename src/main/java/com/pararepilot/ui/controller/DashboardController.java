@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.UserStats;
@@ -18,6 +19,7 @@ import com.pararepilot.service.DashboardService;
 import com.pararepilot.service.DashboardSummary;
 import com.pararepilot.service.UserSettingsService;
 import com.pararepilot.service.WorksheetRecommendation;
+import com.pararepilot.ui.AppChrome;
 import com.pararepilot.ui.AppIcon;
 import com.pararepilot.ui.AppPreferences;
 import com.pararepilot.ui.LevelUi;
@@ -85,6 +87,7 @@ public class DashboardController {
     private void initialize() {
         updateAccountMenu();
         Platform.runLater(this::applySavedPreferences);
+        Platform.runLater(this::registerChromeCommands);
         showDashboardPage();
         loadDashboard();
         startDashboardRefreshTimer();
@@ -125,6 +128,7 @@ public class DashboardController {
             UiAnimations.transitionContent(contentHost, root, UiAnimations.SlideDirection.FROM_RIGHT);
             setActivePage(manageModulesButton);
             modulesPageActive = true;
+            AppChrome.setBreadcrumb(manageModulesButton.getScene(), "Manage Modules");
             setStatus("Manage modules");
 
         } catch (IOException e) {
@@ -142,6 +146,11 @@ public class DashboardController {
                     760
             );
             handle.controller().setOnMistakesChanged(this::loadDashboard);
+            handle.controller().setOnClosed(() -> AppChrome.setBreadcrumb(
+                    accountMenuButton.getScene(),
+                    modulesPageActive ? "Manage Modules" : "Dashboard"
+            ));
+            AppChrome.setBreadcrumb(accountMenuButton.getScene(), "Mistake Bank");
 
         } catch (IOException e) {
             showError("Failed to open mistake bank", e.getMessage());
@@ -206,6 +215,7 @@ public class DashboardController {
     }
 
     private void updateDashboard(DashboardSummary summary) {
+        updateChromeDailyChip(summary);
         updateRecommendation(summary);
         updateStats(summary);
         updateReminders(summary);
@@ -213,6 +223,30 @@ public class DashboardController {
         updateRecentAttempts(summary);
 
         setStatus("");
+    }
+
+    private void updateChromeDailyChip(DashboardSummary summary) {
+        if (accountMenuButton.getScene() == null) {
+            Platform.runLater(() -> {
+                if (accountMenuButton.getScene() != null) {
+                    updateChromeDailyChip(summary);
+                }
+            });
+            return;
+        }
+
+        if (summary.worksheetWindowLocked()) {
+            AppChrome.setDailyChip(
+                    accountMenuButton.getScene(),
+                    "Next worksheet in " + countdownUntilNextWorksheet(summary.userStats())
+            );
+            return;
+        }
+
+        AppChrome.setDailyChip(
+                accountMenuButton.getScene(),
+                "Daily " + dailyProgressText(summary)
+        );
     }
 
     private void updateRecommendation(DashboardSummary summary) {
@@ -517,6 +551,7 @@ public class DashboardController {
         UiAnimations.transitionContent(contentHost, dashboardPane, UiAnimations.SlideDirection.FROM_LEFT);
         setActivePage(dashboardButton);
         modulesPageActive = false;
+        AppChrome.setBreadcrumb(dashboardButton.getScene(), "Dashboard");
     }
 
     private void setActivePage(Button activeButton) {
@@ -563,6 +598,66 @@ public class DashboardController {
         }
     }
 
+    private void registerChromeCommands() {
+        if (accountMenuButton.getScene() == null) {
+            return;
+        }
+
+        AppChrome.setCommands(
+                accountMenuButton.getScene(),
+                List.of(
+                        new AppChrome.Command(
+                                "Dashboard",
+                                "Show recommendations, progress, reminders, weak topics, and recent attempts.",
+                                "home today progress overview",
+                                this::handleOpenDashboard
+                        ),
+                        new AppChrome.Command(
+                                "Manage Modules",
+                                "Create modules and topics, then manage worksheet generation.",
+                                "modules topics worksheets create edit",
+                                this::handleOpenModules
+                        ),
+                        new AppChrome.Command(
+                                "Mistake Bank",
+                                "Review unresolved and resolved mistakes.",
+                                "mistakes review errors corrections",
+                                this::handleOpenMistakeBank
+                        ),
+                        new AppChrome.Command(
+                                "Open Recommended Worksheet",
+                                "Open the current daily worksheet recommendation.",
+                                "recommendation daily worksheet attempt",
+                                this::handleOpenRecommendation
+                        ),
+                        new AppChrome.Command(
+                                "Pick Another Worksheet",
+                                "Refresh the recommendation for today.",
+                                "refresh recommendation another",
+                                this::handleRefresh
+                        ),
+                        new AppChrome.Command(
+                                "Settings",
+                                "Open account, appearance, study, notification, and accessibility settings.",
+                                "preferences theme accent daily notifications accessibility",
+                                this::handleOpenSettings
+                        ),
+                        new AppChrome.Command(
+                                "Change Password",
+                                "Update the current account password.",
+                                "account security password",
+                                this::handleChangePassword
+                        ),
+                        new AppChrome.Command(
+                                "Switch Account",
+                                "Return to the sign-in screen.",
+                                "log out logout sign in account",
+                                this::handleSwitchAccount
+                        )
+                )
+        );
+    }
+
     private Node recommendationPanel() {
         return recommendationTitleLabel.getParent();
     }
@@ -578,7 +673,9 @@ public class DashboardController {
 
             Parent root = loader.load();
             UiAnimations.installGlobalAnimations(root);
-            accountMenuButton.getScene().setRoot(root);
+            AppChrome.setContent(accountMenuButton.getScene(), root);
+            AppChrome.setBreadcrumb(accountMenuButton.getScene(), "Sign In");
+            AppChrome.setDailyChip(accountMenuButton.getScene(), "");
 
         } catch (IOException e) {
             showError("Failed to switch account", e.getMessage());
