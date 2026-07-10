@@ -923,6 +923,17 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.46), 28, 0.20, 0, 16);
 }
 
+.import-review-scrim {
+    -fx-alignment: center;
+    -fx-padding: 24;
+}
+
+.import-review-panel {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, rgba(14, 25, 42, 0.98) 0%, rgba(12, 32, 54, 0.98) 100%);
+    -fx-border-color: -app-accent-border;
+    -fx-border-width: 1;
+}
+
 .settings-root {
     -fx-background-radius: 22;
     -fx-border-color: -app-accent-border-faint;
@@ -1198,6 +1209,11 @@
 
 .theme-light .overlay-scrim {
     -fx-background-color: rgba(15, 23, 42, 0.42);
+}
+
+.theme-light .import-review-panel {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #ffffff 0%, #f8fafc 64%, -app-accent-bg-subtle 100%);
+    -fx-border-color: -app-accent-border-faint;
 }
 
 .accent-cyan {

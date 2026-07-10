@@ -50,11 +50,13 @@ public class QuestionRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            String normalizedMarkScheme = markScheme == null ? "" : markScheme.trim();
 
             stmt.setLong(1, worksheetId);
             stmt.setString(2, prompt.trim());
-            stmt.setString(3, markScheme.trim());
+            stmt.setString(3, normalizedMarkScheme);
             stmt.setInt(4, maxMarks);
             stmt.setInt(5, questionOrder);
             stmt.setString(6, blankToNull(tags));
@@ -68,7 +70,7 @@ public class QuestionRepository {
                             keys.getLong(1),
                             worksheetId,
                             prompt.trim(),
-                            markScheme.trim(),
+                            normalizedMarkScheme,
                             maxMarks,
                             questionOrder,
                             blankToNull(tags),

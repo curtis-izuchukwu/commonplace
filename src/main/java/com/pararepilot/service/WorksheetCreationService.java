@@ -94,10 +94,6 @@ public class WorksheetCreationService {
                 throw new IllegalArgumentException("Question " + (i + 1) + " needs a prompt.");
             }
 
-            if (draft.markScheme() == null || draft.markScheme().isBlank()) {
-                throw new IllegalArgumentException("Question " + (i + 1) + " needs a mark scheme.");
-            }
-
             if (draft.maxMarks() <= 0) {
                 throw new IllegalArgumentException("Question " + (i + 1) + " must have at least 1 mark.");
             }

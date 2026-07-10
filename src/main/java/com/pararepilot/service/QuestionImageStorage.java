@@ -1,5 +1,6 @@
 package com.pararepilot.service;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,6 +8,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import javax.imageio.ImageIO;
 
 import com.pararepilot.repository.DatabaseManager;
 
@@ -37,6 +40,27 @@ public class QuestionImageStorage {
         String fileName = UUID.randomUUID() + "." + extension;
         Path destination = imageDirectory.resolve(fileName);
         Files.copy(sourcePath, destination);
+
+        return IMAGE_DIRECTORY_NAME + "/" + fileName;
+    }
+
+    public String saveBufferedImage(BufferedImage image, String extension) throws IOException {
+        if (image == null) {
+            return null;
+        }
+
+        String normalizedExtension = normalizeExtension(extension)
+                .orElseThrow(() -> new IOException("Image files must be PNG, JPG, or JPEG."));
+
+        Path imageDirectory = imageDirectory();
+        Files.createDirectories(imageDirectory);
+
+        String fileName = UUID.randomUUID() + "." + normalizedExtension;
+        Path destination = imageDirectory.resolve(fileName);
+
+        if (!ImageIO.write(image, normalizedExtension, destination.toFile())) {
+            throw new IOException("Failed to write extracted image.");
+        }
 
         return IMAGE_DIRECTORY_NAME + "/" + fileName;
     }
@@ -79,5 +103,23 @@ public class QuestionImageStorage {
         }
 
         return Optional.of(fileName.substring(extensionStart + 1).toLowerCase(Locale.ROOT));
+    }
+
+    private static Optional<String> normalizeExtension(String extension) {
+        if (extension == null || extension.isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalized = extension.trim().toLowerCase(Locale.ROOT);
+
+        if ("jpg".equals(normalized)) {
+            return Optional.of("jpeg");
+        }
+
+        if (SUPPORTED_EXTENSIONS.contains(normalized)) {
+            return Optional.of(normalized);
+        }
+
+        return Optional.empty();
     }
 }

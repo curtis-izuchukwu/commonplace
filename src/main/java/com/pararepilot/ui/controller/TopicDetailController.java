@@ -132,6 +132,33 @@ public class TopicDetailController {
         }
     }
 
+    @FXML
+    private void handleImportWorksheet() {
+        if (topic == null) {
+            UiAnimations.validationError(topicNameLabel);
+            setStatus("No topic selected.");
+            return;
+        }
+
+        try {
+            var handle = OverlayService.<ImportWorksheetController>open(
+                    topicNameLabel,
+                    "/com/pararepilot/fxml/ImportWorksheetView.fxml",
+                    900,
+                    780
+            );
+
+            ImportWorksheetController controller = handle.controller();
+            controller.setInitialSelection(parentModule, topic, () -> {
+                loadWorksheets();
+                notifyDataChanged();
+            });
+
+        } catch (IOException e) {
+            showError("Failed to open PDF import", e.getMessage());
+        }
+    }
+
     private StackPane createWorksheetCard(Worksheet worksheet) {
         StackPane card = new StackPane();
         card.getStyleClass().addAll("entity-card", "clickable-card");

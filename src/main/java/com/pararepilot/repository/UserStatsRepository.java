@@ -14,6 +14,23 @@ import com.pararepilot.util.DateUtils;
 public class UserStatsRepository {
 
     public UserStats find() throws SQLException {
+        ensureStatsRow();
+        UserStats stats = findRaw();
+
+        if (stats == null) {
+            return new UserStats(0, 0, null, 1);
+        }
+
+        UserStats normalizedStats = expireStaleStreak(stats, LocalDate.now());
+
+        if (!normalizedStats.equals(stats)) {
+            resetExpiredStreak();
+        }
+
+        return normalizedStats;
+    }
+
+    private UserStats findRaw() throws SQLException {
         String sql = """
                 SELECT xp, streak_count, last_completion_date, worksheet_interval_days
                 FROM user_stats
@@ -32,8 +49,7 @@ public class UserStatsRepository {
             }
         }
 
-        ensureStatsRow();
-        return find();
+        return null;
     }
 
     private void ensureStatsRow() throws SQLException {
@@ -112,6 +128,48 @@ public class UserStatsRepository {
         }
 
         return find();
+    }
+
+    UserStats expireStaleStreak(UserStats stats, LocalDate today) {
+        if (!streakIsStale(stats, today)) {
+            return stats;
+        }
+
+        return new UserStats(
+                stats.xp(),
+                0,
+                null,
+                stats.worksheetIntervalDays()
+        );
+    }
+
+    private boolean streakIsStale(UserStats stats, LocalDate today) {
+        if (stats == null
+                || stats.streakCount() <= 0
+                || stats.lastCompletionDate() == null
+                || today == null) {
+            return false;
+        }
+
+        int intervalDays = Math.max(1, stats.worksheetIntervalDays());
+        LocalDate lastDayToKeepStreak = stats.lastCompletionDate().plusDays(intervalDays);
+        return today.isAfter(lastDayToKeepStreak);
+    }
+
+    private void resetExpiredStreak() throws SQLException {
+        String sql = """
+                UPDATE user_stats
+                SET streak_count = 0,
+                    last_completion_date = NULL
+                WHERE user_id = ?;
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, AccountSession.currentUserId());
+            stmt.executeUpdate();
+        }
     }
 
     public UserStats updateWorksheetIntervalDays(int intervalDays) throws SQLException {
