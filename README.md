@@ -167,7 +167,7 @@ mvn --version
 Clone and run:
 
 ```bash
-git clone https://github.com/izuchukwucur-sudo/parare-pilot.git
+git clone https://github.com/curtis-izuchukwu/parare-pilot.git
 cd parare-pilot
 mvn javafx:run
 ```
