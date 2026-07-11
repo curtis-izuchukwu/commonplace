@@ -3,9 +3,7 @@ package com.pararepilot.service;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,6 +71,8 @@ public class DashboardService {
         List<AttemptRepository.RecentAttemptDisplayItem> recentAttempts =
                 attemptRepository.findRecentDisplayItems(RECENT_ATTEMPT_LIMIT);
 
+        List<StudyModule> modules = moduleRepository.findAll();
+
         int unresolvedMistakeCount =
                 mistakeRepository.countUnresolved();
 
@@ -95,7 +95,7 @@ public class DashboardService {
                 completedWorksheetsToday,
                 worksheetWindowLocked,
                 unresolvedMistakeCount,
-                moduleRepository.findAll()
+                modules
         );
 
         return new DashboardSummary(
@@ -104,6 +104,7 @@ public class DashboardService {
                 rank,
                 nextRankXp,
                 recommendation,
+                modules,
                 weakestTopics,
                 recentAttempts,
                 unresolvedMistakeCount,
@@ -153,21 +154,6 @@ public class DashboardService {
             ));
         }
 
-        if (settings.examReminderEnabled()) {
-            nextUpcomingExam(modules).ifPresent(module -> {
-                long daysUntilExam = ChronoUnit.DAYS.between(LocalDate.now(), module.examDate());
-                String dayText = daysUntilExam == 0
-                        ? "today"
-                        : "in " + daysUntilExam + " day" + (daysUntilExam == 1 ? "" : "s");
-
-                reminders.add(new DashboardReminder(
-                        "Exam countdown",
-                        module.name() + " exam is " + dayText + ".",
-                        "notification-warning"
-                ));
-            });
-        }
-
         if (settings.mistakeReminderEnabled() && unresolvedMistakeCount > 0) {
             reminders.add(new DashboardReminder(
                     "Mistake review",
@@ -213,16 +199,6 @@ public class DashboardService {
                 .plusDays(stats.worksheetIntervalDays());
 
         return today.isBefore(nextWorksheetDate);
-    }
-
-    private Optional<StudyModule> nextUpcomingExam(List<StudyModule> modules) {
-        LocalDate today = LocalDate.now();
-
-        return modules.stream()
-                .filter(module -> module.examDate() != null)
-                .filter(module -> !module.examDate().isBefore(today))
-                .filter(module -> ChronoUnit.DAYS.between(today, module.examDate()) <= 14)
-                .min(Comparator.comparing(StudyModule::examDate));
     }
 
     private boolean streakNeedsWorkToday(UserStats stats) {

@@ -5,9 +5,16 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.UserStats;
 import com.pararepilot.model.Worksheet;
@@ -41,7 +48,10 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -68,6 +78,9 @@ public class DashboardController {
     @FXML private ProgressBar rankProgressBar;
     @FXML private Label streakLabel;
     @FXML private Label mistakeCountLabel;
+    @FXML private Label examCalendarMonthLabel;
+    @FXML private GridPane examCalendarGrid;
+    @FXML private VBox examCalendarEvents;
 
     @FXML private VBox notificationList;
     @FXML private VBox weakTopicsList;
@@ -83,6 +96,8 @@ public class DashboardController {
     private boolean modulesPageActive;
     private Integer lastDisplayedXp;
     private String lastDisplayedRank;
+    private YearMonth visibleExamMonth = YearMonth.now();
+    private List<StudyModule> latestModules = List.of();
 
     @FXML
     private void initialize() {
@@ -195,6 +210,24 @@ public class DashboardController {
         }
     }
 
+    @FXML
+    private void handlePreviousExamMonth() {
+        visibleExamMonth = visibleExamMonth.minusMonths(1);
+        renderExamCalendar();
+    }
+
+    @FXML
+    private void handleCurrentExamMonth() {
+        visibleExamMonth = YearMonth.now();
+        renderExamCalendar();
+    }
+
+    @FXML
+    private void handleNextExamMonth() {
+        visibleExamMonth = visibleExamMonth.plusMonths(1);
+        renderExamCalendar();
+    }
+
     private void loadDashboard() {
         try {
             DashboardSummary summary = dashboardService.loadDashboard();
@@ -220,6 +253,7 @@ public class DashboardController {
         updateChromeDailyChip(summary);
         updateRecommendation(summary);
         updateStats(summary);
+        updateExamCalendar(summary.modules());
         updateReminders(summary);
         updateWeakTopics(summary);
         updateRecentAttempts(summary);
@@ -396,6 +430,171 @@ public class DashboardController {
         boolean showStreak = summary.userSettings().streakTrackingEnabled();
         streakLabel.setVisible(showStreak);
         streakLabel.setManaged(showStreak);
+    }
+
+    private void updateExamCalendar(List<StudyModule> modules) {
+        latestModules = modules == null ? List.of() : modules;
+        renderExamCalendar();
+    }
+
+    private void renderExamCalendar() {
+        if (examCalendarGrid == null || examCalendarEvents == null || examCalendarMonthLabel == null) {
+            return;
+        }
+
+        examCalendarGrid.getChildren().clear();
+        examCalendarGrid.getColumnConstraints().clear();
+
+        for (int i = 0; i < 7; i++) {
+            ColumnConstraints column = new ColumnConstraints();
+            column.setPercentWidth(100.0 / 7.0);
+            column.setHgrow(Priority.ALWAYS);
+            column.setFillWidth(true);
+            examCalendarGrid.getColumnConstraints().add(column);
+        }
+
+        examCalendarMonthLabel.setText(
+                visibleExamMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.UK))
+        );
+
+        LocalDate firstOfMonth = visibleExamMonth.atDay(1);
+        LocalDate firstOfNextMonth = visibleExamMonth.plusMonths(1).atDay(1);
+        LocalDate gridStart = firstOfMonth.minusDays(firstOfMonth.getDayOfWeek().getValue() - 1L);
+        int daySlots = (int) ChronoUnit.DAYS.between(gridStart, firstOfNextMonth);
+        int visibleCells = (int) Math.ceil(daySlots / 7.0) * 7;
+        Map<LocalDate, List<StudyModule>> examsByDate = latestModules.stream()
+                .filter(module -> module.examDate() != null)
+                .collect(Collectors.groupingBy(StudyModule::examDate));
+
+        for (int column = 0; column < 7; column++) {
+            LocalDate day = gridStart.plusDays(column);
+            Label label = new Label(day.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.UK));
+            label.getStyleClass().add("exam-calendar-weekday");
+            label.setMaxWidth(Double.MAX_VALUE);
+            GridPane.setHgrow(label, Priority.ALWAYS);
+            examCalendarGrid.add(label, column, 0);
+        }
+
+        LocalDate today = LocalDate.now();
+
+        for (int index = 0; index < visibleCells; index++) {
+            LocalDate date = gridStart.plusDays(index);
+            List<StudyModule> exams = examsByDate.getOrDefault(date, List.of());
+            VBox cell = createExamCalendarCell(date, exams, today);
+
+            int column = index % 7;
+            int row = (index / 7) + 1;
+            examCalendarGrid.add(cell, column, row);
+        }
+
+        renderExamEventList();
+    }
+
+    private VBox createExamCalendarCell(LocalDate date, List<StudyModule> exams, LocalDate today) {
+        VBox cell = new VBox(4);
+        cell.getStyleClass().add("exam-calendar-day");
+        cell.setMaxWidth(Double.MAX_VALUE);
+        cell.setMinHeight(52);
+        cell.setPrefHeight(52);
+        cell.setMaxHeight(52);
+        GridPane.setHgrow(cell, Priority.ALWAYS);
+
+        if (!YearMonth.from(date).equals(visibleExamMonth)) {
+            cell.getStyleClass().add("outside-month");
+        }
+
+        if (date.isEqual(today)) {
+            cell.getStyleClass().add("today");
+        }
+
+        if (!exams.isEmpty()) {
+            cell.getStyleClass().add("has-exam");
+        }
+
+        Label dayNumber = new Label(String.valueOf(date.getDayOfMonth()));
+        dayNumber.getStyleClass().add("exam-calendar-date-number");
+        cell.getChildren().add(dayNumber);
+
+        exams.stream()
+                .limit(2)
+                .forEach(module -> {
+                    Label examLabel = new Label(module.name());
+                    examLabel.getStyleClass().add("exam-calendar-event-pill");
+                    examLabel.setMaxWidth(Double.MAX_VALUE);
+                    examLabel.setWrapText(false);
+                    cell.getChildren().add(examLabel);
+                });
+
+        if (exams.size() > 2) {
+            Label moreLabel = new Label("+" + (exams.size() - 2) + " more");
+            moreLabel.getStyleClass().add("exam-calendar-more");
+            cell.getChildren().add(moreLabel);
+        }
+
+        return cell;
+    }
+
+    private void renderExamEventList() {
+        examCalendarEvents.getChildren().clear();
+
+        List<StudyModule> monthExams = latestModules.stream()
+                .filter(module -> module.examDate() != null)
+                .filter(module -> YearMonth.from(module.examDate()).equals(visibleExamMonth))
+                .sorted((first, second) -> first.examDate().compareTo(second.examDate()))
+                .toList();
+
+        if (monthExams.isEmpty()) {
+            Label emptyLabel = new Label("No exams scheduled this month.");
+            emptyLabel.getStyleClass().add("muted-text");
+            examCalendarEvents.getChildren().add(emptyLabel);
+            return;
+        }
+
+        for (StudyModule module : monthExams) {
+            examCalendarEvents.getChildren().add(createExamEventRow(module));
+        }
+    }
+
+    private HBox createExamEventRow(StudyModule module) {
+        HBox row = new HBox(10);
+        row.getStyleClass().add("exam-event-row");
+
+        Label dateLabel = new Label(module.examDate().format(DateTimeFormatter.ofPattern("d MMM", Locale.UK)));
+        dateLabel.getStyleClass().add("exam-event-date");
+
+        VBox details = new VBox(2);
+        details.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(details, Priority.ALWAYS);
+
+        Label title = new Label(module.name());
+        title.getStyleClass().add("card-title");
+        title.setWrapText(true);
+
+        Label countdown = new Label(formatExamCountdown(module.examDate()));
+        countdown.getStyleClass().add("muted-text");
+
+        details.getChildren().addAll(title, countdown);
+        row.getChildren().addAll(dateLabel, details);
+        return row;
+    }
+
+    private String formatExamCountdown(LocalDate examDate) {
+        long days = ChronoUnit.DAYS.between(LocalDate.now(), examDate);
+
+        if (days == 0) {
+            return "Exam is today";
+        }
+
+        if (days == 1) {
+            return "Exam is tomorrow";
+        }
+
+        if (days > 1) {
+            return "Exam in " + days + " days";
+        }
+
+        long daysAgo = Math.abs(days);
+        return "Exam was " + daysAgo + " day" + (daysAgo == 1 ? "" : "s") + " ago";
     }
 
     private void updateReminders(DashboardSummary summary) {

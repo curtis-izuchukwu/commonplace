@@ -3,6 +3,7 @@ package com.pararepilot.service;
 import java.util.List;
 import java.util.Optional;
 
+import com.pararepilot.model.StudyModule;
 import com.pararepilot.model.Topic;
 import com.pararepilot.model.UserStats;
 import com.pararepilot.model.UserSettings;
@@ -14,6 +15,7 @@ public record DashboardSummary(
         String rank,
         int nextRankXp,
         Optional<WorksheetRecommendation> recommendation,
+        List<StudyModule> modules,
         List<Topic> weakestTopics,
         List<AttemptRepository.RecentAttemptDisplayItem> recentAttempts,
         int unresolvedMistakeCount,

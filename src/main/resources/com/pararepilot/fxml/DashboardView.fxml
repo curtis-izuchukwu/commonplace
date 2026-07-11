@@ -7,6 +7,7 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.StackPane?>
@@ -113,6 +114,52 @@
                                            styleClass="muted-text"/>
                                 </VBox>
                             </HBox>
+
+                            <VBox spacing="12" styleClass="dashboard-card exam-calendar-card">
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <VBox HBox.hgrow="ALWAYS">
+                                        <Label text="Exam Calendar" styleClass="section-title"/>
+                                        <Label fx:id="examCalendarMonthLabel"
+                                               text="This month"
+                                               styleClass="muted-text"/>
+                                    </VBox>
+
+                                    <Button text="&lt;"
+                                            onAction="#handlePreviousExamMonth"
+                                            styleClass="calendar-nav-button"/>
+
+                                    <Button text="Today"
+                                            onAction="#handleCurrentExamMonth"
+                                            styleClass="compact-button"/>
+
+                                    <Button text="&gt;"
+                                            onAction="#handleNextExamMonth"
+                                            styleClass="calendar-nav-button"/>
+                                </HBox>
+
+                                <HBox spacing="14"
+                                      alignment="TOP_LEFT"
+                                      maxWidth="Infinity"
+                                      styleClass="exam-calendar-layout">
+                                    <VBox spacing="8"
+                                          HBox.hgrow="ALWAYS"
+                                          maxWidth="Infinity"
+                                          styleClass="exam-calendar-board">
+                                        <GridPane fx:id="examCalendarGrid"
+                                                  hgap="6"
+                                                  vgap="6"
+                                                  styleClass="exam-calendar-grid"/>
+                                    </VBox>
+
+                                    <VBox spacing="10"
+                                          minWidth="320"
+                                          prefWidth="360"
+                                          styleClass="exam-calendar-agenda">
+                                        <Label text="Scheduled exams" styleClass="small-label"/>
+                                        <VBox fx:id="examCalendarEvents" spacing="8"/>
+                                    </VBox>
+                                </HBox>
+                            </VBox>
 
                             <HBox spacing="18">
                                 <VBox spacing="12" styleClass="dashboard-card" HBox.hgrow="ALWAYS">

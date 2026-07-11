@@ -580,6 +580,121 @@
     -fx-text-fill: #f7fbff;
 }
 
+.exam-calendar-card {
+    -fx-padding: 18 20 20 20;
+}
+
+.exam-calendar-layout {
+    -fx-padding: 2 0 0 0;
+}
+
+.exam-calendar-board,
+.exam-calendar-agenda {
+    -fx-background-color: rgba(14, 25, 42, 0.94);
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(114, 149, 194, 0.28);
+    -fx-border-radius: 22;
+    -fx-padding: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 28, 0.18, 0, 14);
+}
+
+.exam-calendar-grid {
+    -fx-padding: 0;
+}
+
+.exam-calendar-weekday {
+    -fx-alignment: center;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #9fb0c5;
+    -fx-padding: 0 0 2 0;
+}
+
+.exam-calendar-day {
+    -fx-background-color: rgba(24, 37, 61, 0.42);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(116, 150, 194, 0.18);
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 6;
+    -fx-min-height: 52;
+    -fx-pref-height: 52;
+    -fx-max-height: 52;
+}
+
+.exam-calendar-day.outside-month {
+    -fx-opacity: 0.36;
+}
+
+.exam-calendar-day.today {
+    -fx-border-color: -app-accent-border-strong;
+    -fx-background-color: rgba(24, 37, 61, 0.66);
+}
+
+.exam-calendar-day.has-exam {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, -app-accent-bg-subtle 0%, rgba(24, 37, 61, 0.72) 100%);
+    -fx-border-color: -app-accent-border;
+}
+
+.exam-calendar-date-number {
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #f7fbff;
+}
+
+.exam-calendar-event-pill {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-background-radius: 999;
+    -fx-border-color: -app-accent-border-faint;
+    -fx-border-radius: 999;
+    -fx-text-fill: #dff7ff;
+    -fx-font-size: 9px;
+    -fx-font-weight: 900;
+    -fx-padding: 1 5 1 5;
+}
+
+.exam-calendar-more {
+    -fx-font-size: 9px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -app-accent-text;
+}
+
+.exam-event-row {
+    -fx-alignment: center-left;
+    -fx-background-color: rgba(24, 37, 61, 0.46);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(116, 150, 194, 0.20);
+    -fx-border-radius: 12;
+    -fx-padding: 9 10 9 10;
+}
+
+.exam-event-date {
+    -fx-alignment: center;
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-background-radius: 12;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-border-radius: 12;
+    -fx-text-fill: -app-accent-text;
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+    -fx-padding: 6 8 6 8;
+    -fx-min-width: 54;
+}
+
+.calendar-nav-button {
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-padding: 0;
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-max-width: 34;
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+    -fx-max-height: 34;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+}
+
 .button {
     -fx-background-color: rgba(27, 42, 66, 0.98);
     -fx-background-radius: 15;
@@ -1467,6 +1582,57 @@
     -fx-text-fill: #0f172a;
 }
 
+.theme-light .exam-calendar-board,
+.theme-light .exam-calendar-agenda {
+    -fx-background-color: rgba(255, 255, 255, 0.92);
+    -fx-border-color: -app-accent-border-faint;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.12), 20, 0.12, 0, 10);
+}
+
+.theme-light .exam-calendar-weekday {
+    -fx-text-fill: #64748b;
+}
+
+.theme-light .exam-calendar-day {
+    -fx-background-color: rgba(248, 250, 252, 0.74);
+    -fx-border-color: rgba(148, 163, 184, 0.20);
+}
+
+.theme-light .exam-calendar-day.today {
+    -fx-background-color: rgba(255, 255, 255, 0.92);
+    -fx-border-color: -app-accent-border-strong;
+}
+
+.theme-light .exam-calendar-day.has-exam {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, -app-accent-bg-subtle 0%, rgba(255, 255, 255, 0.88) 100%);
+    -fx-border-color: -app-accent-border;
+}
+
+.theme-light .exam-calendar-date-number {
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .exam-calendar-event-pill {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-faint;
+    -fx-text-fill: #0f172a;
+}
+
+.theme-light .exam-calendar-more {
+    -fx-text-fill: -app-accent-dark;
+}
+
+.theme-light .exam-event-row {
+    -fx-background-color: rgba(255, 255, 255, 0.68);
+    -fx-border-color: rgba(148, 163, 184, 0.20);
+}
+
+.theme-light .exam-event-date {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-text-fill: #0f172a;
+}
+
 .theme-light .context-menu,
 .theme-light .combo-box-popup .list-view,
 .theme-light .combo-box-popup .list-cell {
@@ -1912,4 +2078,20 @@
     -fx-border-radius: 0;
     -fx-border-width: 0;
     -fx-effect: none;
+}
+
+.button.calendar-nav-button,
+.theme-light .button.calendar-nav-button,
+.larger-controls .button.calendar-nav-button {
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-padding: 0;
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-max-width: 34;
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+    -fx-max-height: 34;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
 }
