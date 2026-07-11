@@ -1,6 +1,6 @@
-# PararePilot
+# PārarePilot
 
-PararePilot is a local-first JavaFX study app for organising revision material, attempting worksheets, reviewing mistakes, and getting adaptive daily worksheet recommendations.
+PārarePilot is a local-first JavaFX study app for organising revision material, attempting worksheets, reviewing mistakes, and getting adaptive daily worksheet recommendations.
 
 It is designed around a simple revision loop:
 
