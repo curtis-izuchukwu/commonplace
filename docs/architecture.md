@@ -1,132 +1,253 @@
-# ParārePilot Architecture
+# PararePilot Architecture
 
-ParārePilot uses a layered JavaFX architecture. Each layer has a clear responsibility and communicates only with the layer below it.
+PararePilot is a JavaFX desktop app with a local SQLite database. The codebase is organised around a conventional layered architecture:
 
-## Architecture Layers
+| Layer | Responsibility |
+| --- | --- |
+| UI | JavaFX FXML, controllers, overlays, app chrome, preferences, animations, and display helpers |
+| Service | Application workflows, business rules, account/session logic, recommendations, attempts, reflection, imports, and generation |
+| Repository | JDBC access to SQLite |
+| Model | Plain Java records and enums used across the app |
+| External adapters | FlightDeck API client and local PDF/OCR import helpers |
 
-| Layer                     | Responsibility                                                                                  |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| JavaFX FXML + Controllers | Handles the user interface, button clicks, screen updates, and user input                       |
-| Service Layer             | Contains business logic, application rules, scoring, recommendations, and workflow coordination |
-| Repository Layer          | Handles database access through JDBC                                                            |
-| SQLite Database           | Stores modules, topics, worksheets, questions, attempts, answers, mistakes, and user statistics |
+The intended dependency direction is:
 
-## Layer Overview
+```text
+UI -> Services -> Repositories -> SQLite
+```
 
-### Model Layer
-
-The model layer contains plain Java records and enums representing application data.
-
-Examples:
-
-| Model              | Purpose                                                     |
-| ------------------ | ----------------------------------------------------------- |
-| `StudyModule`      | Represents a study module or course area                    |
-| `Topic`            | Represents a topic within a module                          |
-| `Worksheet`        | Represents a worksheet assigned to a topic                  |
-| `Question`         | Represents a question inside a worksheet                    |
-| `WorksheetAttempt` | Represents a user's attempt at completing a worksheet       |
-| `Answer`           | Represents a user's answer to a question                    |
-| `MistakeBankItem`  | Represents a stored mistake for later review                |
-| `UserStats`        | Represents overall user progress and performance statistics |
-
-Models do not contain JavaFX, SQL, or controller logic.
+Models are shared across layers as simple data objects.
 
 ---
 
-### Repository Layer
+## Packages
 
-The repository layer is responsible for database access through JDBC.
-
-Repositories create, read, update, and delete SQLite records.
-
-Examples:
-
-| Repository            | Purpose                                  |
-| --------------------- | ---------------------------------------- |
-| `ModuleRepository`    | Stores and retrieves study modules       |
-| `TopicRepository`     | Stores and retrieves topics              |
-| `WorksheetRepository` | Stores and retrieves worksheets          |
-| `QuestionRepository`  | Stores and retrieves worksheet questions |
-| `AttemptRepository`   | Stores and retrieves worksheet attempts  |
-| `AnswerRepository`    | Stores and retrieves submitted answers   |
-| `MistakeRepository`   | Stores and retrieves mistake bank items  |
-| `UserStatsRepository` | Stores and retrieves user statistics     |
-
-Repositories should not contain JavaFX controller logic or business decision-making.
+| Package | Purpose |
+| --- | --- |
+| `com.pararepilot.model` | Records and enums for users, modules, topics, worksheets, attempts, answers, mistakes, settings, and stats |
+| `com.pararepilot.repository` | SQLite schema setup, migrations, and repository classes |
+| `com.pararepilot.service` | Business workflows and app rules |
+| `com.pararepilot.ui` | Shared JavaFX UI helpers |
+| `com.pararepilot.ui.controller` | JavaFX controllers for each view |
+| `com.pararepilot.flightdeck` | FlightDeck API configuration, client, request/response types, and JSON handling |
+| `com.pararepilot.importer` | PDF text/image extraction, OCR adapters, import issues, and worksheet draft parsing |
+| `com.pararepilot.util` | Small utility classes |
 
 ---
 
-### Service Layer
+## Model Layer
 
-The service layer contains business behaviour and application rules.
+Models are plain Java records/enums. They should not contain SQL, JavaFX, or workflow logic.
 
-Examples:
-
-| Service                     | Purpose                                                  |
-| --------------------------- | -------------------------------------------------------- |
-| `WorksheetSelectionService` | Selects worksheets for the user based on weighting rules |
-| `PriorityScoreService`      | Calculates worksheet priority scores                     |
-| `AttemptService`            | Handles worksheet attempt creation and completion        |
-| `ReflectionService`         | Processes post-attempt reflection and confidence updates |
-| `TopicStatsService`         | Calculates topic-level progress and mastery              |
-| `GamificationService`       | Handles streaks, XP, rewards, and motivational features  |
-| `DashboardService`          | Provides summarised data for the dashboard               |
-
-Services coordinate repositories and apply application rules.
+| Model | Purpose |
+| --- | --- |
+| `User` | Local account identity |
+| `UserSettings` | Per-account settings |
+| `UserStats` | XP, streaks, and worksheet interval |
+| `StudyModule` | Module, priority, and optional exam date |
+| `Topic` | Topic metadata, confidence, importance, and mastery |
+| `Worksheet` | Worksheet metadata and attempt statistics |
+| `Question` | Prompt, mark scheme, max marks, order, tags, and optional image path |
+| `WorksheetAttempt` | Completed worksheet attempt summary |
+| `Answer` | Submitted answer, awarded marks, and mistake note |
+| `MistakeBankItem` | Stored mistake review item |
+| `DifficultyLevel`, `ImportanceLevel`, `ConfidenceLevel` | Shared enums for study metadata |
 
 ---
 
-### UI Layer
+## Repository Layer
 
-The UI layer contains JavaFX FXML screens and controllers.
+Repositories own SQLite access through JDBC. They should not contain JavaFX logic or UI decisions.
 
-Controllers handle button clicks, display data, and call services.
+| Repository | Purpose |
+| --- | --- |
+| `DatabaseManager` | Creates `~/.pararepilot/appdata.db`, enables foreign keys, sets busy timeout, creates tables, and runs migrations |
+| `UserRepository` | Users and password metadata |
+| `RememberedSessionRepository` | Stay-signed-in session |
+| `UserSettingsRepository` | Per-account settings |
+| `UserStatsRepository` | XP, streaks, worksheet interval, and recommendation-window helpers |
+| `ModuleRepository` | Modules |
+| `TopicRepository` | Topics |
+| `WorksheetRepository` | Worksheets and worksheet statistics |
+| `QuestionRepository` | Worksheet questions and optional image paths |
+| `AttemptRepository` | Worksheet attempts |
+| `AnswerRepository` | Attempt answers |
+| `MistakeRepository` | Mistake bank items |
+| `DailyRecommendationRepository` | Current daily recommendation and same-day recommendation history |
 
-They do not directly perform SQL queries.
+### SQLite Data
 
-Examples:
+The main tables are:
 
-| UI Component        | Purpose                                           |
-| ------------------- | ------------------------------------------------- |
-| FXML files          | Define the structure of JavaFX screens            |
-| Controllers         | Handle user actions and update the UI             |
-| View models or DTOs | Optional objects used to prepare data for display |
+| Table | Purpose |
+| --- | --- |
+| `users` | Local accounts |
+| `remembered_session` | Current remembered account |
+| `user_settings` | Per-account settings |
+| `user_stats` | XP, streaks, and worksheet interval |
+| `modules` | Study modules |
+| `topics` | Module topics |
+| `worksheets` | Worksheets and score history |
+| `questions` | Questions, mark schemes, marks, order, tags, and image paths |
+| `worksheet_attempts` | Completed attempts and reflection fields |
+| `answers` | User answers and marking data |
+| `mistake_bank` | Stored mistakes |
+| `daily_recommendations` | Current recommendation for a user/day |
+| `daily_recommendation_history` | Worksheets already recommended to a user on a date |
 
-Controllers should call services rather than repositories directly.
+SQLite connections are created through `DatabaseManager.connect()`, which applies:
 
-## Main Data Flow
+- `PRAGMA foreign_keys = ON`
+- `PRAGMA busy_timeout = 5000`
+- table creation and safe migrations
 
-### Worksheet Creation and Attempt Flow
+---
 
-| Step | Action                                               |
-| ---- | ---------------------------------------------------- |
-| 1    | User creates a worksheet                             |
-| 2    | Worksheet and questions are saved to SQLite          |
-| 3    | User attempts the worksheet                          |
-| 4    | Answers and marks are saved                          |
-| 5    | Reflection updates worksheet stats and topic mastery |
-| 6    | Mistakes are stored in the mistake bank              |
-| 7    | Weighted selector recommends future worksheets       |
+## Service Layer
 
-## Architecture Rule Summary
+Services coordinate repositories and enforce application rules.
 
-| Rule                             | Explanation                                          |
-| -------------------------------- | ---------------------------------------------------- |
-| Models stay simple               | Models only represent data                           |
-| Controllers stay UI-focused      | Controllers handle screens, input, and display logic |
-| Services own behaviour           | Services contain business rules and workflow logic   |
-| Repositories own persistence     | Repositories handle SQLite queries and updates       |
-| SQL stays out of controllers     | Controllers should not directly query the database   |
-| JavaFX stays out of repositories | Repositories should not know anything about the UI   |
+| Service | Purpose |
+| --- | --- |
+| `AccountService` | Account creation, sign in, sign out, remembered sessions, and password changes |
+| `PasswordHasher` | Password hashing and verification |
+| `AccountSession` | In-memory current user context |
+| `UserSettingsService` | Loads and saves settings |
+| `DataManagementService` | Database export/import and current-account data clearing |
+| `ModuleTopicService` | Module/topic creation and lookup workflows |
+| `StudyStructureService` | Study structure helpers |
+| `WorksheetCreationService` | Worksheet and question persistence |
+| `QuestionImageStorage` | Copies selected/generated images into `~/.pararepilot/images/` and resolves stored paths |
+| `FlightDeckWorksheetGenerationService` | Converts FlightDeck responses into editable worksheet data |
+| `WorksheetSelectionService` | Selects and stores daily worksheet recommendations |
+| `PriorityScoreService` | Calculates worksheet priority scores |
+| `AttemptService` | Creates attempts and persists answers |
+| `ReflectionService` | Completes attempts, updates stats, stores mistakes, and awards XP |
+| `TopicStatsService` | Updates topic confidence and mastery |
+| `GamificationService` | XP, ranks, streaks, and reward calculations |
+| `MistakeBankService` | Mistake review, revisit, and resolve workflows |
+| `DashboardService` | Aggregates dashboard summary data |
 
-## Dependency Direction
+### Recommendation Flow
 
-| From             | Calls                                                            |
-| ---------------- | ---------------------------------------------------------------- |
-| UI Layer         | Service Layer                                                    |
-| Service Layer    | Repository Layer                                                 |
-| Repository Layer | SQLite Database                                                  |
-| Model Layer      | Used across UI, services, and repositories as plain data objects |
+1. `DashboardService` asks `WorksheetSelectionService` for the current daily recommendation.
+2. `WorksheetSelectionService` loads eligible worksheets and related context.
+3. `PriorityScoreService` calculates weighted priority scores.
+4. `WeightedRandomPicker` selects a worksheet from the weighted candidates.
+5. `DailyRecommendationRepository` stores the current recommendation and writes same-day history.
+6. Future refreshes avoid recommending a worksheet already used that day.
 
-The dependency direction should stay one-way. Higher layers may depend on lower layers, but lower layers should not depend on higher layers.
+### Attempt and Reflection Flow
+
+1. User opens a worksheet from the dashboard, module manager, or topic detail.
+2. `AttemptService` creates a completed attempt record and answer records.
+3. `ReflectionService` applies reflection data.
+4. Worksheet stats and topic mastery are updated.
+5. Marked mistakes are written to `mistake_bank`.
+6. XP, rank progress, streaks, and daily completion state are updated.
+
+### Import and Generation Flow
+
+Manual creation, FlightDeck generation, and PDF import all end by saving normal worksheets/questions through the worksheet creation path.
+
+| Source | Main classes |
+| --- | --- |
+| Manual | `WorksheetCreateController`, `WorksheetCreationService` |
+| FlightDeck | `FlightDeckApiClient`, `FlightDeckWorksheetGenerationService`, `WorksheetCreateController` |
+| PDF import | `PdfImportService`, `PdfTextExtractionService`, `PdfImageExtractionService`, OCR services, `WorksheetDraftParser`, `ImportWorksheetController` |
+
+Question images are copied into local app data before the question is saved.
+
+---
+
+## UI Layer
+
+FXML files define views; controllers handle user actions and call services. Controllers should not write SQL directly.
+
+| View | Controller | Purpose |
+| --- | --- | --- |
+| `LoginView.fxml` | `LoginController` | Sign in and account creation |
+| `DashboardView.fxml` | `DashboardController` | Dashboard, navigation, recommendation, progress, recent activity, and exam calendar |
+| `ModulesView.fxml` | `ModulesController` | Module/topic management and module recommendation panel |
+| `TopicDetailView.fxml` | `TopicDetailController` | Topic details and worksheet list |
+| `WorksheetCreateView.fxml` | `WorksheetCreateController` | Manual and FlightDeck worksheet creation |
+| `ImportWorksheetView.fxml` | `ImportWorksheetController` | PDF import and review |
+| `WorksheetDetailView.fxml` | `WorksheetDetailController` | Worksheet details and recommendation explanation |
+| `AttemptWorksheetView.fxml` | `AttemptWorksheetController` | Worksheet attempts |
+| `ReflectionView.fxml` | `ReflectionController` | Post-attempt reflection |
+| `MistakeBankView.fxml` | `MistakeBankController` | Mistake review |
+| `SettingsView.fxml` | `SettingsController` | Account, study, notification, gamification, data, and accessibility settings |
+| `ChangePasswordView.fxml` | `ChangePasswordController` | Password changes |
+
+Shared UI helpers:
+
+| Class | Purpose |
+| --- | --- |
+| `AppChrome` | Main window wrapper, title bar, command palette, and window controls |
+| `AppIcon` | Shared app icon loading/application |
+| `AppPreferences` | Applies saved settings to JavaFX roots/scenes |
+| `OverlayService` | Opens and closes in-app overlay views |
+| `UiAnimations` | Shared animation/feedback helpers |
+| `LevelUi` | Difficulty/priority visual helpers |
+| `QuestionImageViewFactory` | JavaFX image previews and missing-image fallback |
+
+---
+
+## External Adapters
+
+### FlightDeck
+
+The `flightdeck` package isolates online worksheet generation.
+
+| Class | Purpose |
+| --- | --- |
+| `FlightDeckApiConfig` | Base URL from system property, environment variable, or default endpoint |
+| `FlightDeckApiClient` | HTTP client for `/generate` |
+| `FlightDeckGenerateRequest` | Generation request |
+| `FlightDeckGenerateResponse` | Generation response |
+| `FlightDeckGeneratedQuestion` | Generated question DTO |
+| `FlightDeckQuestionFormat` | Supported question format enum |
+| `FlightDeckJson` | Lightweight JSON handling |
+
+### PDF/OCR Import
+
+The `importer` package isolates local PDF import.
+
+| Class/group | Purpose |
+| --- | --- |
+| `PdfTextExtractionService` | Selectable text extraction |
+| `PdfImageExtractionService` | Embedded image extraction |
+| `OcrService` implementations | Optional OCR fallback |
+| `WorksheetDraftParser` | Converts extracted text/images into editable question drafts |
+| `ImportedWorksheetDraft`, `ImportedQuestionDraft` | Draft models shown in the import review UI |
+| `ImportIssue` | Import warnings/info for the user |
+
+---
+
+## Rules and Boundaries
+
+| Rule | Reason |
+| --- | --- |
+| Models stay simple | They are shared data objects |
+| Controllers stay UI-focused | UI code should not own persistence or scoring rules |
+| Services own workflows | Business behaviour belongs in one testable layer |
+| Repositories own persistence | SQL and schema details stay in one layer |
+| Import/API adapters stay isolated | External parsing and network details should not leak into controllers |
+| Local files are stored under app data | User-selected question images should not rely on original absolute paths |
+
+---
+
+## Data Location
+
+Default app data directory:
+
+```text
+~/.pararepilot/
+```
+
+Important paths:
+
+| Path | Purpose |
+| --- | --- |
+| `~/.pararepilot/appdata.db` | SQLite database |
+| `~/.pararepilot/images/` | Copied question images and extracted PDF images |

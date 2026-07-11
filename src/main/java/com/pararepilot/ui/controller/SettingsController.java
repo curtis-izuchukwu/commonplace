@@ -59,8 +59,6 @@ public class SettingsController {
     @FXML private CheckBox archiveCompletedModulesCheckBox;
     @FXML private CheckBox higherContrastCheckBox;
     @FXML private CheckBox largerControlsCheckBox;
-    @FXML private CheckBox keyboardHintsCheckBox;
-    @FXML private CheckBox screenReaderLabelsCheckBox;
     @FXML private Label statusLabel;
 
     private final UserSettingsService userSettingsService = new UserSettingsService();
@@ -126,8 +124,8 @@ public class SettingsController {
                     archiveCompletedModulesCheckBox.isSelected(),
                     higherContrastCheckBox.isSelected(),
                     largerControlsCheckBox.isSelected(),
-                    keyboardHintsCheckBox.isSelected(),
-                    screenReaderLabelsCheckBox.isSelected()
+                    false,
+                    false
             ));
 
             userStatsRepository.updateWorksheetIntervalDays(intervalDaysSpinner.getValue());
@@ -294,8 +292,6 @@ public class SettingsController {
             archiveCompletedModulesCheckBox.setSelected(settings.archiveCompletedModules());
             higherContrastCheckBox.setSelected(settings.higherContrast());
             largerControlsCheckBox.setSelected(settings.largerControls());
-            keyboardHintsCheckBox.setSelected(settings.keyboardHintsEnabled());
-            screenReaderLabelsCheckBox.setSelected(settings.screenReaderLabelsEnabled());
             statusLabel.setText("");
 
         } catch (SQLException e) {
