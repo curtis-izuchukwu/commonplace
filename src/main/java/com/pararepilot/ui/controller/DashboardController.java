@@ -52,6 +52,7 @@ public class DashboardController {
     @FXML private Button manageModulesButton;
     @FXML private MenuButton accountMenuButton;
     @FXML private MenuItem accountNameItem;
+    @FXML private Label welcomeLabel;
     @FXML private StackPane contentHost;
     @FXML private ScrollPane dashboardPane;
 
@@ -86,6 +87,7 @@ public class DashboardController {
     @FXML
     private void initialize() {
         updateAccountMenu();
+        updateWelcomeMessage();
         Platform.runLater(this::applySavedPreferences);
         Platform.runLater(this::registerChromeCommands);
         showDashboardPage();
@@ -574,6 +576,14 @@ public class DashboardController {
         accountMenuButton.setAccessibleText("Account menu");
         accountNameItem.setText("Signed in as " + accountText);
         accountNameItem.setDisable(true);
+    }
+
+    private void updateWelcomeMessage() {
+        String username = AccountSession.currentUser()
+                .map(user -> user.username())
+                .orElse("");
+
+        welcomeLabel.setText(username.isBlank() ? "Welcome Back" : "Welcome Back, " + username);
     }
 
     private VBox createAccountMenuIcon() {

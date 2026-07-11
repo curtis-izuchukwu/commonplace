@@ -20,8 +20,9 @@
         <top>
             <HBox spacing="12" styleClass="top-bar">
                 <VBox HBox.hgrow="ALWAYS">
-                    <Label text="ParārePilot" styleClass="app-title"/>
-                    <Label text="Adaptive study tracker" styleClass="app-subtitle"/>
+                    <Label fx:id="welcomeLabel"
+                           text="Welcome Back"
+                           styleClass="app-title"/>
                 </VBox>
 
                 <Button fx:id="dashboardButton"
