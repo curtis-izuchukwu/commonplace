@@ -1,370 +1,152 @@
-# ParārePilot
+# PararePilot
 
-**ParārePilot** is a local-first JavaFX study tracker for organising revision material, attempting worksheets, recording mistakes, and getting adaptive worksheet recommendations.
+PararePilot is a local-first JavaFX study app for organising revision material, attempting worksheets, reviewing mistakes, and getting adaptive daily worksheet recommendations.
 
-The app is built around a simple idea:
+It is designed around a simple revision loop:
 
-> Pick something useful, but keep revision unpredictable.
+1. Create modules, topics, and worksheets.
+2. Attempt questions and self-mark answers.
+3. Reflect on weak areas.
+4. Save mistakes for later review.
+5. Let the app recommend what to practise next.
 
-ParārePilot stores modules, topics, worksheets, questions, attempts, reflections, mistakes, XP, streaks, and recommendations in a local SQLite database.
-
----
-
-## Status
-
-V1 is complete.
-
-Current features include:
-
-| Area               | Included                                                                           |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| Study organisation | Module and topic management                                                        |
-| Worksheet creation | Manual worksheet creation                                                          |
-| Question storage   | Question prompts, mark schemes, and maximum marks                                  |
-| Attempts           | In-app worksheet attempt flow                                                      |
-| Marking            | Self-marking after revealing mark schemes                                          |
-| Reflection         | Post-attempt confidence, weakness, notes, and next action                          |
-| Progress tracking  | Topic mastery and worksheet statistics                                             |
-| Mistakes           | Mistake bank with unresolved and resolved items                                    |
-| Gamification       | XP, ranks, and streaks                                                             |
-| Recommendations    | Adaptive weighted worksheet selection                                              |
-| Dashboard          | Recommended worksheet, weak topics, recent attempts, XP, streak, and mistake count |
-| Persistence        | Local SQLite database storage                                                      |
-
-Planned work includes FlightDeck API integration, generated worksheets, improved analytics, import/export, search, and theme support.
-
----
-
-## Screenshots
-
-### Dashboard
-
-![Dashboard](docs/screenshots/dashboard.png)
-
-### Modules
-
-![Modules](docs/screenshots/modules.png)
-
-### Topic Detail
-
-![Topic Detail](docs/screenshots/topic-detail.png)
-
-### Worksheet Detail
-
-![Worksheet Detail](docs/screenshots/worksheet-detail.png)
-
-### Attempt Flow
-
-![Attempt Flow](docs/screenshots/attempt-flow.png)
-
-### Reflection
-
-![Reflection](docs/screenshots/reflection.png)
-
-### Mistake Bank
-
-![Mistake Bank](docs/screenshots/mistake-bank.png)
-
----
-
-## How It Works
-
-ParārePilot turns revision into a repeatable loop.
-
-| Step | Action                          |
-| ---- | ------------------------------- |
-| 1    | Create study material           |
-| 2    | Attempt worksheets              |
-| 3    | Self-mark answers               |
-| 4    | Reflect on weaknesses           |
-| 5    | Store mistakes                  |
-| 6    | Update topic mastery            |
-| 7    | Recommend what to practise next |
-
-Recommendations are based on worksheet age, recent scores, topic confidence, difficulty, importance, failure streaks, and unresolved mistakes.
-
-The app does not always select the single highest-priority worksheet. Instead, it uses weighted randomness so weaker areas appear more often without making the recommendations feel fixed.
+All study data is stored locally in SQLite.
 
 ---
 
 ## Features
 
-### Module and Topic Management
-
-Users can create modules and topics to organise their study material.
-
-Each topic tracks:
-
-| Field              | Description                                  |
-| ------------------ | -------------------------------------------- |
-| Importance         | How important the topic is                   |
-| Confidence         | How confident the user feels about the topic |
-| Mastery score      | Current estimated mastery                    |
-| Related worksheets | Worksheets attached to the topic             |
-| Related mistakes   | Mistakes attached to the topic               |
+- Local accounts with sign in, remembered sessions, password changes, and account switching.
+- Module and topic management with exam dates, priorities, confidence, and mastery tracking.
+- Worksheet creation by manual entry, optional FlightDeck generation, or local PDF import.
+- Optional image attachments for individual worksheet questions.
+- In-app worksheet attempts with answer fields, mark scheme reveal, self-marking, and mistake notes.
+- Reflection flow after each attempt.
+- Mistake bank with revisit and resolved states.
+- Daily adaptive worksheet recommendations based on scores, confidence, difficulty, importance, failure streaks, and mistakes.
+- Dashboard with the current recommendation, progress, streak, weak topics, recent attempts, and exam calendar.
+- Settings for study preferences, notifications, gamification, data backup, and accessibility.
+- Local backup export/import.
 
 ---
 
-### Manual Worksheet Creation
+## Screenshots
 
-Users can create worksheets from lectures, tutorials, past papers, or personal notes.
-
-Each worksheet contains:
-
-| Field         | Description                          |
-| ------------- | ------------------------------------ |
-| Title         | Worksheet name                       |
-| Description   | Optional worksheet summary           |
-| Difficulty    | Easy, medium, or hard                |
-| Importance    | Revision importance                  |
-| Questions     | Worksheet questions                  |
-| Mark schemes  | Expected answers or marking guidance |
-| Maximum marks | Marks available for each question    |
-
----
-
-### Worksheet Attempts
-
-Users can attempt worksheets inside the app.
-
-Each question supports:
-
-| Feature            | Description                                                     |
-| ------------------ | --------------------------------------------------------------- |
-| Answer field       | Text area for the user's answer                                 |
-| Mark scheme reveal | Shows the mark scheme after the user has attempted the question |
-| Self-awarded marks | Lets the user mark their own answer                             |
-| Mistake checkbox   | Marks the answer as a mistake                                   |
-| Mistake note       | Records what went wrong                                         |
+| Screen | File |
+| --- | --- |
+| Dashboard | [docs/screenshots/dashboard.png](docs/screenshots/dashboard.png) |
+| Manage Modules | [docs/screenshots/modules.png](docs/screenshots/modules.png) |
+| Topic Detail | [docs/screenshots/topic-detail.png](docs/screenshots/topic-detail.png) |
+| Worksheet Creation | [docs/screenshots/worksheet-creation.png](docs/screenshots/worksheet-creation.png) |
+| Worksheet Detail | [docs/screenshots/worksheet-detail.png](docs/screenshots/worksheet-detail.png) |
+| Attempt Flow | [docs/screenshots/attempt-flow.png](docs/screenshots/attempt-flow.png) |
+| Reflection | [docs/screenshots/reflection.png](docs/screenshots/reflection.png) |
+| Mistake Bank | [docs/screenshots/mistake-bank.png](docs/screenshots/mistake-bank.png) |
+| Login | [docs/screenshots/login.png](docs/screenshots/login.png) |
+| PDF Import Review | [docs/screenshots/pdf-import-review.png](docs/screenshots/pdf-import-review.png) |
+| Settings | [docs/screenshots/settings-overview.png](docs/screenshots/settings-overview.png) |
 
 ---
 
-### Reflection and Stats
+## Worksheet Creation
 
-After an attempt, the user completes a short reflection.
+PararePilot supports three worksheet sources:
 
-| Field                    | Description                        |
-| ------------------------ | ---------------------------------- |
-| Confidence after attempt | Updated confidence level           |
-| Main weakness            | Main problem area from the attempt |
-| Next action              | What to do next                    |
-| General notes            | Additional notes about the attempt |
+| Source | Description |
+| --- | --- |
+| Manual | Create worksheets question by question. |
+| FlightDeck | Generate an editable draft from the optional online FlightDeck API. |
+| PDF import | Extract text and images from a local PDF into an editable draft. |
 
-After reflection, the app updates:
-
-| Data                     | Description                   |
-| ------------------------ | ----------------------------- |
-| Worksheet latest score   | Most recent score             |
-| Worksheet average score  | Average score across attempts |
-| Worksheet attempt count  | Number of completed attempts  |
-| Worksheet failure streak | Consecutive failed attempts   |
-| Topic confidence         | Updated topic confidence      |
-| Topic mastery            | Updated topic mastery score   |
-
----
-
-### Mistake Bank
-
-Answers marked as mistakes are saved to the mistake bank.
-
-Each mistake record contains:
-
-| Field           | Description                                   |
-| --------------- | --------------------------------------------- |
-| Topic           | Linked topic                                  |
-| Worksheet       | Linked worksheet                              |
-| Question prompt | Original question                             |
-| User answer     | Submitted answer                              |
-| Mark scheme     | Expected answer or marking guidance           |
-| Mistake note    | User-written note about the mistake           |
-| Created date    | Date the mistake was recorded                 |
-| Resolved status | Whether the mistake has been resolved         |
-| Revisit count   | Number of times the mistake has been reviewed |
-
----
-
-### Gamification
-
-ParārePilot uses a lightweight XP and rank system.
-
-XP is awarded for:
-
-| Action                | Description                     |
-| --------------------- | ------------------------------- |
-| Completing worksheets | Rewards regular practice        |
-| Scoring 70%+          | Rewards solid performance       |
-| Scoring 90%+          | Rewards strong performance      |
-| Completing reflection | Rewards review after practice   |
-| Reviewing mistakes    | Rewards returning to weak areas |
-
-Ranks:
-
-| Rank       | XP Required |
-| ---------- | ----------: |
-| Novice     |        0 XP |
-| Apprentice |      500 XP |
-| Scholar    |     1500 XP |
-| Specialist |     3000 XP |
-| Master     |     5000 XP |
-
----
-
-### Dashboard
-
-The dashboard shows the user's current revision state.
-
-| Item                     | Description                            |
-| ------------------------ | -------------------------------------- |
-| Recommended worksheet    | Next suggested worksheet               |
-| Priority explanation     | Reason for the recommendation          |
-| XP and rank              | Current XP progress                    |
-| Streak                   | Current practice streak                |
-| Unresolved mistake count | Number of mistakes still open          |
-| Weakest topics           | Topics that need attention             |
-| Recent attempts          | Recent worksheet activity              |
-| Navigation buttons       | Access to modules and the mistake bank |
-
----
-
-## Adaptive Weighted Selection
-
-ParārePilot assigns each eligible worksheet a priority score.
-
-The score uses:
-
-| Factor                   | Effect                                        |
-| ------------------------ | --------------------------------------------- |
-| Age since last attempt   | Older worksheets become more likely to appear |
-| Latest score             | Lower-scoring worksheets receive a boost      |
-| Topic confidence         | Low-confidence topics receive a boost         |
-| Worksheet difficulty     | Difficulty affects priority                   |
-| Worksheet importance     | Important worksheets receive a boost          |
-| Topic importance         | Important topics increase worksheet priority  |
-| Failure streak           | Repeated failures increase priority           |
-| Unresolved mistake count | Linked unresolved mistakes increase priority  |
-
-The app then performs weighted-random selection.
-
-This means a weak worksheet is more likely to appear, but it is not guaranteed every time.
-
-More detail is available in:
+FlightDeck uses this endpoint by default:
 
 ```text
-docs/weighted-selection.md
+https://flightdeck-api.izuchukwucur.workers.dev
+```
+
+You can override it with:
+
+```text
+PARAREPILOT_FLIGHTDECK_API_BASE_URL
+```
+
+or:
+
+```text
+-Dpararepilot.flightdeck.baseUrl=https://your-endpoint.example
 ```
 
 ---
 
-## Architecture
+## Question Images
 
-ParārePilot uses a layered JavaFX architecture.
+Each question can have one optional image.
 
-| Layer                     | Responsibility                             |
-| ------------------------- | ------------------------------------------ |
-| JavaFX FXML + Controllers | Screens, input handling, and display logic |
-| Service Layer             | Application rules and workflow logic       |
-| Repository Layer          | Database access through JDBC               |
-| SQLite Database           | Local application data                     |
+- Supported formats: PNG, JPG, JPEG.
+- Selected images are copied into the app data folder.
+- SQLite stores the copied image path, not the raw image data.
+- Images appear only with the question they are attached to.
+- Missing image files are handled without crashing the app.
 
----
-
-### Model Layer
-
-The model layer contains plain Java records and enums.
-
-| Model              | Description                                |
-| ------------------ | ------------------------------------------ |
-| `StudyModule`      | Study module                               |
-| `Topic`            | Topic inside a module                      |
-| `Worksheet`        | Worksheet attached to a topic              |
-| `Question`         | Question inside a worksheet                |
-| `WorksheetAttempt` | Completed or in-progress worksheet attempt |
-| `Answer`           | User answer for a question                 |
-| `MistakeBankItem`  | Stored mistake                             |
-| `UserStats`        | XP, streaks, and user progress             |
-
----
-
-### Repository Layer
-
-The repository layer handles SQLite persistence through JDBC.
-
-| Repository            | Description                             |
-| --------------------- | --------------------------------------- |
-| `ModuleRepository`    | Stores and retrieves modules            |
-| `TopicRepository`     | Stores and retrieves topics             |
-| `WorksheetRepository` | Stores and retrieves worksheets         |
-| `QuestionRepository`  | Stores and retrieves questions          |
-| `AttemptRepository`   | Stores and retrieves worksheet attempts |
-| `AnswerRepository`    | Stores and retrieves answers            |
-| `MistakeRepository`   | Stores and retrieves mistake bank items |
-| `UserStatsRepository` | Stores and retrieves user statistics    |
-
----
-
-### Service Layer
-
-The service layer contains the main application logic.
-
-| Service                     | Description                          |
-| --------------------------- | ------------------------------------ |
-| `WorksheetSelectionService` | Selects recommended worksheets       |
-| `PriorityScoreService`      | Calculates worksheet priority scores |
-| `AttemptService`            | Handles worksheet attempts           |
-| `ReflectionService`         | Handles post-attempt reflection      |
-| `TopicStatsService`         | Updates topic confidence and mastery |
-| `GamificationService`       | Handles XP, ranks, and streaks       |
-| `DashboardService`          | Provides dashboard data              |
-
----
-
-### UI Layer
-
-The UI layer contains JavaFX FXML screens and controllers.
-
-| View                        | Description                 |
-| --------------------------- | --------------------------- |
-| `DashboardView.fxml`        | Main dashboard              |
-| `ModulesView.fxml`          | Module and topic management |
-| `TopicDetailView.fxml`      | Topic details               |
-| `WorksheetDetailView.fxml`  | Worksheet details           |
-| `AttemptWorksheetView.fxml` | Worksheet attempt screen    |
-| `ReflectionView.fxml`       | Post-attempt reflection     |
-| `MistakeBankView.fxml`      | Mistake bank                |
-
-More detail is available in:
+Images are stored under:
 
 ```text
-docs/architecture.md
+~/.pararepilot/images/
 ```
+
+---
+
+## Recommendations
+
+Recommendations use weighted selection rather than always choosing the single highest-scoring worksheet.
+
+The score considers:
+
+- Time since last attempt.
+- Latest score.
+- Topic confidence.
+- Worksheet difficulty.
+- Worksheet and topic importance.
+- Failure streak.
+- Linked unresolved mistakes.
+- User study preferences.
+
+The app also tracks daily recommendation history so the same worksheet is not recommended twice in one day.
+
+More detail: [docs/weighted-selection.md](docs/weighted-selection.md)
+
+---
+
+## Local Data
+
+Default data directory:
+
+```text
+~/.pararepilot/
+```
+
+Main files:
+
+| Path | Purpose |
+| --- | --- |
+| `~/.pararepilot/appdata.db` | SQLite database |
+| `~/.pararepilot/images/` | Copied question images and extracted PDF images |
+
+The database is created automatically when the app starts.
 
 ---
 
 ## Tech Stack
 
-| Technology | Use                             |
-| ---------- | ------------------------------- |
-| Java 21    | Main language and runtime       |
-| JavaFX 21  | Desktop UI                      |
-| Maven      | Build and dependency management |
-| SQLite     | Local database                  |
-| JDBC       | Database access                 |
-| JUnit 5    | Testing                         |
-| CSS        | JavaFX styling                  |
-
----
-
-## Local Data Storage
-
-ParārePilot stores its SQLite database locally.
-
-Default location:
-
-```text
-~/.pararepilot/appdata.db
-```
-
-The database is created automatically when the app starts.
+| Technology | Use |
+| --- | --- |
+| Java 21 | Application runtime |
+| JavaFX 21 | Desktop UI |
+| Maven | Build and test tooling |
+| SQLite | Local persistence |
+| JDBC | Database access |
+| Apache PDFBox | PDF text and image extraction |
+| JUnit 5 | Tests |
 
 ---
 
@@ -372,84 +154,60 @@ The database is created automatically when the app starts.
 
 ### Requirements
 
-| Requirement | Use                                 |
-| ----------- | ----------------------------------- |
-| Java 21     | Compile and run the application     |
-| Maven       | Build, test, and launch the project |
+- Java 21
+- Maven
 
-Check installed versions:
+Check versions:
 
 ```bash
 java --version
 mvn --version
 ```
 
-### Clone the Repository
+Clone and run:
 
 ```bash
 git clone https://github.com/izuchukwucur-sudo/parare-pilot.git
 cd parare-pilot
+mvn javafx:run
 ```
 
-### Run Tests
+Run tests:
 
 ```bash
 mvn clean test
 ```
 
-### Start the App
+---
 
-```bash
-mvn javafx:run
-```
+## Architecture
+
+PararePilot uses a layered JavaFX architecture:
+
+| Layer | Responsibility |
+| --- | --- |
+| FXML and controllers | Screens and user interaction |
+| Services | Application workflows and business rules |
+| Repositories | SQLite persistence |
+| Models | Study, account, worksheet, attempt, and mistake data |
+
+More detail: [docs/architecture.md](docs/architecture.md)
 
 ---
 
-## V1 Feature List
+## Current Limitations
 
-| Feature                                                                   | Status   |
-| ------------------------------------------------------------------------- | -------- |
-| Create modules and topics                                                 | Complete |
-| Create worksheets with questions and mark schemes                         | Complete |
-| Attempt worksheets inside the app                                         | Complete |
-| Reveal mark schemes                                                       | Complete |
-| Self-mark answers                                                         | Complete |
-| Complete reflection after attempts                                        | Complete |
-| Update worksheet stats                                                    | Complete |
-| Update topic mastery                                                      | Complete |
-| Store mistakes                                                            | Complete |
-| Review and resolve mistakes                                               | Complete |
-| Recommend worksheets using weighted randomness                            | Complete |
-| Display XP, rank, streak, mistake count, weak topics, and recent attempts | Complete |
-| Persist data locally with SQLite                                          | Complete |
-
----
-
-## Planned Features
-
-| Feature                     | Notes                                                      |
-| --------------------------- | ---------------------------------------------------------- |
-| FlightDeck API integration  | Generate worksheets from structured prompts                |
-| Generated worksheet preview | Review generated worksheets before saving                  |
-| Boss worksheets             | Larger challenge-style revision sessions                   |
-| Revenge question sessions   | Revisit previously failed questions                        |
-| Search and filters          | Find modules, topics, worksheets, and mistakes more easily |
-| JSON import/export          | Back up and move data                                      |
-| Attempt export              | Export completed worksheet attempts                        |
-| Theme system                | Add visual customisation                                   |
-| Improved analytics          | Show more detailed progress data                           |
-| Cloud sync                  | Optional cross-device data sync                            |
-| Tutor mode                  | Support guided review workflows                            |
+- Delete account is not implemented yet.
+- Cloud sync is not implemented; the app is local-first.
+- PDF import quality depends on the source PDF and available local OCR.
+- FlightDeck generation requires network access.
+- Boss worksheets are planned but not implemented yet.
 
 ---
 
 ## Related Project
 
-ParārePilot is designed to work with **FlightDeck API**, a separate worksheet-generation API.
-
-FlightDeck API generates structured revision material from subject, topic, difficulty, question count, and format inputs.
-
-| Project        | Role                         |
-| -------------- | ---------------------------- |
-| ParārePilot    | Offline JavaFX study tracker |
-| FlightDeck API | Worksheet-generation API     |
+| Project | Role |
+| --- | --- |
+| PararePilot | Local-first JavaFX study tracker |
+| FlightDeck API | Optional worksheet-generation API |

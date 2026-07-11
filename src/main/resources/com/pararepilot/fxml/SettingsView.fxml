@@ -128,8 +128,6 @@
                     <Label text="Accessibility" styleClass="section-title"/>
                     <CheckBox fx:id="higherContrastCheckBox" text="Higher contrast"/>
                     <CheckBox fx:id="largerControlsCheckBox" text="Larger controls"/>
-                    <CheckBox fx:id="keyboardHintsCheckBox" text="Keyboard navigation hints"/>
-                    <CheckBox fx:id="screenReaderLabelsCheckBox" text="Screen-reader friendly labels"/>
                 </VBox>
             </GridPane>
         </content>
