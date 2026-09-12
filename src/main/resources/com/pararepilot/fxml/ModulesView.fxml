@@ -16,139 +16,142 @@
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.pararepilot.ui.controller.ModulesController"
       styleClass="app-root">
-    <HBox spacing="24" styleClass="main-content modules-content" VBox.vgrow="ALWAYS">
+    <ScrollPane fitToWidth="true" fitToHeight="true" minHeight="0" minWidth="0"
+                VBox.vgrow="ALWAYS" styleClass="modules-scroll">
+        <content>
+            <HBox spacing="24" styleClass="main-content,modules-content" minHeight="-Infinity">
 
-            <VBox spacing="14" styleClass="side-panel" prefWidth="405">
-                <Label text="Create Module" styleClass="section-title"/>
+                <VBox spacing="14" styleClass="side-panel" prefWidth="405">
+                    <Label text="Create Module" styleClass="section-title"/>
 
-                <TextField fx:id="moduleNameField" promptText="Module name, e.g. Algorithms"/>
-                <TextArea fx:id="moduleDescriptionArea"
-                          promptText="Description"
-                          prefRowCount="3"
-                          wrapText="true"/>
-                <Label text="Exam date" styleClass="small-label"/>
-                <DatePicker fx:id="moduleExamDatePicker" promptText="Exam date"/>
-                <Label text="Module priority" styleClass="small-label"/>
-                <ComboBox fx:id="moduleImportanceCombo"
-                          promptText="Priority"
-                          maxWidth="Infinity"/>
+                    <TextField fx:id="moduleNameField" promptText="Module name, e.g. Algorithms"/>
+                    <TextArea fx:id="moduleDescriptionArea"
+                              promptText="Description"
+                              prefRowCount="3"
+                              wrapText="true"/>
+                    <Label text="Exam date" styleClass="small-label"/>
+                    <DatePicker fx:id="moduleExamDatePicker" promptText="Exam date"/>
+                    <Label text="Module priority" styleClass="small-label"/>
+                    <ComboBox fx:id="moduleImportanceCombo"
+                              promptText="Priority"
+                              maxWidth="Infinity"/>
 
-                <Button text="Add Module"
-                        onAction="#handleAddModule"
-                        maxWidth="Infinity"
-                        styleClass="primary-button"/>
+                    <Button text="Add Module"
+                            onAction="#handleAddModule"
+                            maxWidth="Infinity"
+                            styleClass="primary-button"/>
 
-                <Separator/>
+                    <Separator/>
 
-                <Label text="Your Modules" styleClass="section-title"/>
+                    <Label text="Your Modules" styleClass="section-title"/>
 
-                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
-                    <content>
-                        <VBox fx:id="modulesList" spacing="10"/>
-                    </content>
-                </ScrollPane>
-            </VBox>
-
-            <VBox spacing="16" styleClass="content-panel" HBox.hgrow="ALWAYS">
-                <VBox spacing="4" styleClass="recommendation-card">
-                    <HBox spacing="16" alignment="TOP_LEFT">
-                        <VBox spacing="1" HBox.hgrow="ALWAYS">
-                            <Label text="Recommended Worksheet" styleClass="section-title"/>
-                            <Label fx:id="recommendationTitleLabel"
-                                   text="No recommendation yet"
-                                   styleClass="card-title"
-                                   wrapText="true"/>
-                            <Label fx:id="recommendationMetaLabel"
-                                   text="Create worksheets to unlock adaptive recommendations."
-                                   styleClass="muted-text"
-                                   wrapText="true"/>
-                            <HBox fx:id="recommendationVisualMeta"
-                                  spacing="10"
-                                  alignment="CENTER_LEFT"/>
-                        </VBox>
-
-                        <HBox spacing="10"
-                              alignment="TOP_RIGHT"
-                              styleClass="recommendation-actions">
-                            <Button text="Refresh"
-                                    onAction="#handleRefreshRecommendation"/>
-
-                            <Button fx:id="openRecommendationButton"
-                                    text="Open"
-                                    onAction="#handleOpenRecommendedWorksheet"
-                                    styleClass="primary-button"/>
-                            <Button text="Mistake Bank"
-                                    onAction="#handleOpenMistakeBank"/>
-                        </HBox>
-                    </HBox>
-
-                    <Label fx:id="recommendationReasonLabel"
-                           text=""
-                           styleClass="muted-text"
-                           visible="false"
-                           managed="false"
-                           wrapText="true"/>
+                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                        <content>
+                            <VBox fx:id="modulesList" spacing="10"/>
+                        </content>
+                    </ScrollPane>
                 </VBox>
 
-                <Separator/>
-                <Label fx:id="selectedModuleTitle"
-                       text="Select a module"
-                       styleClass="section-title"/>
-
-                <Label fx:id="selectedModuleMeta"
-                       text="Create or select a module to start adding topics."
-                       styleClass="muted-text"
-                       wrapText="true"/>
-
-                <HBox spacing="20" VBox.vgrow="ALWAYS">
-                    <VBox spacing="12"
-                          styleClass="topic-form-panel"
-                          prefWidth="395">
-                        <Label text="Create Topic" styleClass="section-title"/>
-
-                        <TextField fx:id="topicNameField" promptText="Topic name, e.g. Binary Search Trees"/>
-                        <TextArea fx:id="topicDescriptionArea"
-                                  promptText="Description"
-                                  prefRowCount="5"
-                                  wrapText="true"/>
-
-                        <HBox spacing="10">
-                            <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                <Label text="Topic priority" styleClass="small-label"/>
-                                <ComboBox fx:id="topicImportanceCombo"
-                                          promptText="Priority"
-                                          maxWidth="Infinity"/>
+                <VBox spacing="16" styleClass="content-panel" HBox.hgrow="ALWAYS">
+                    <VBox spacing="4" styleClass="recommendation-card">
+                        <HBox spacing="16" alignment="TOP_LEFT">
+                            <VBox spacing="1" HBox.hgrow="ALWAYS">
+                                <Label text="Recommended Worksheet" styleClass="section-title"/>
+                                <Label fx:id="recommendationTitleLabel"
+                                       text="No recommendation yet"
+                                       styleClass="card-title"
+                                       wrapText="true"/>
+                                <Label fx:id="recommendationMetaLabel"
+                                       text="Create worksheets to unlock adaptive recommendations."
+                                       styleClass="muted-text"
+                                       wrapText="true"/>
+                                <HBox fx:id="recommendationVisualMeta"
+                                      spacing="10"
+                                      alignment="CENTER_LEFT"/>
                             </VBox>
-                            <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                <Label text="Confidence" styleClass="small-label"/>
-                                <ComboBox fx:id="topicConfidenceCombo"
-                                          promptText="Confidence"
-                                          maxWidth="Infinity"/>
-                            </VBox>
+
+                            <HBox spacing="10"
+                                  alignment="TOP_RIGHT"
+                                  styleClass="recommendation-actions">
+                                <Button text="Refresh"
+                                        onAction="#handleRefreshRecommendation"/>
+
+                                <Button fx:id="openRecommendationButton"
+                                        text="Open"
+                                        onAction="#handleOpenRecommendedWorksheet"
+                                        styleClass="primary-button"/>
+                            </HBox>
                         </HBox>
 
-                        <Button text="Add Topic"
-                                onAction="#handleAddTopic"
-                                maxWidth="Infinity"
-                                styleClass="primary-button"/>
+                        <Label fx:id="recommendationReasonLabel"
+                               text=""
+                               styleClass="muted-text"
+                               visible="false"
+                               managed="false"
+                               wrapText="true"/>
                     </VBox>
 
-                    <VBox spacing="12"
-                          styleClass="topic-list-panel"
-                          HBox.hgrow="ALWAYS">
-                        <Label text="Topics" styleClass="section-title"/>
+                    <Separator/>
+                    <Label fx:id="selectedModuleTitle"
+                           text="Select a module"
+                           styleClass="section-title"/>
 
-                        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
-                            <content>
-                                <VBox fx:id="topicsList" spacing="10"/>
-                            </content>
-                        </ScrollPane>
-                    </VBox>
-                </HBox>
+                    <Label fx:id="selectedModuleMeta"
+                           text="Create or select a module to start adding topics."
+                           styleClass="muted-text"
+                           wrapText="true"/>
 
-                <Label fx:id="statusLabel" text="" styleClass="status-text"/>
-            </VBox>
+                    <HBox spacing="20" VBox.vgrow="ALWAYS">
+                        <VBox spacing="12"
+                              styleClass="topic-form-panel"
+                              prefWidth="395">
+                            <Label text="Create Topic" styleClass="section-title"/>
 
-    </HBox>
+                            <TextField fx:id="topicNameField" promptText="Topic name, e.g. Binary Search Trees"/>
+                            <TextArea fx:id="topicDescriptionArea"
+                                      promptText="Description"
+                                      prefRowCount="5"
+                                      wrapText="true"/>
+
+                            <HBox spacing="10">
+                                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                    <Label text="Topic priority" styleClass="small-label"/>
+                                    <ComboBox fx:id="topicImportanceCombo"
+                                              promptText="Priority"
+                                              maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                    <Label text="Confidence" styleClass="small-label"/>
+                                    <ComboBox fx:id="topicConfidenceCombo"
+                                              promptText="Confidence"
+                                              maxWidth="Infinity"/>
+                                </VBox>
+                            </HBox>
+
+                            <Button text="Add Topic"
+                                    onAction="#handleAddTopic"
+                                    maxWidth="Infinity"
+                                    styleClass="primary-button"/>
+                        </VBox>
+
+                        <VBox spacing="12"
+                              styleClass="topic-list-panel"
+                              HBox.hgrow="ALWAYS">
+                            <Label text="Topics" styleClass="section-title"/>
+
+                            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                                <content>
+                                    <VBox fx:id="topicsList" spacing="10"/>
+                                </content>
+                            </ScrollPane>
+                        </VBox>
+                    </HBox>
+
+                    <Label fx:id="statusLabel" text="" styleClass="status-text"/>
+                </VBox>
+
+            </HBox>
+        </content>
+    </ScrollPane>
 
 </VBox>

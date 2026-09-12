@@ -3,6 +3,7 @@ package com.pararepilot.ui;
 import java.awt.HeadlessException;
 import java.awt.Toolkit;
 import java.util.List;
+import java.util.Locale;
 
 import com.pararepilot.model.UserSettings;
 
@@ -18,6 +19,10 @@ public final class AppPreferences {
             "accent-blue",
             "accent-mint",
             "accent-rose",
+            "accent-brass",
+            "accent-graphite",
+            "accent-forest",
+            "accent-burgundy",
             "reduce-motion",
             "compact-layout",
             "font-small",
@@ -116,18 +121,19 @@ public final class AppPreferences {
     }
 
     private static String accentClass(String accentColor) {
-        if ("BLUE".equalsIgnoreCase(accentColor)) {
-            return "accent-blue";
-        }
+        return "accent-" + accentDisplayName(accentColor).toLowerCase(Locale.ROOT);
+    }
 
-        if ("MINT".equalsIgnoreCase(accentColor)) {
-            return "accent-mint";
+    /** Accepts saved legacy accents without requiring a database migration. */
+    public static String accentDisplayName(String accentColor) {
+        if (accentColor == null) {
+            return "Brass";
         }
-
-        if ("ROSE".equalsIgnoreCase(accentColor)) {
-            return "accent-rose";
-        }
-
-        return "accent-cyan";
+        return switch (accentColor.toUpperCase(Locale.ROOT)) {
+            case "BLUE", "GRAPHITE" -> "Graphite";
+            case "MINT", "FOREST" -> "Forest";
+            case "ROSE", "BURGUNDY" -> "Burgundy";
+            default -> "Brass";
+        };
     }
 }

@@ -168,22 +168,6 @@ public class ModulesController {
         );
     }
 
-    @FXML
-    private void handleOpenMistakeBank() {
-        try {
-            var handle = OverlayService.<MistakeBankController>open(
-                    statusLabel,
-                    "/com/pararepilot/fxml/MistakeBankView.fxml",
-                    920,
-                    760
-            );
-            handle.controller().setOnMistakesChanged(this::refreshSelectedModuleData);
-
-        } catch (IOException e) {
-            showError("Failed to open mistake bank", e.getMessage());
-        }
-    }
-
     private void loadRecommendation() {
         try {
             updateRecommendation(dashboardService.loadDashboard());

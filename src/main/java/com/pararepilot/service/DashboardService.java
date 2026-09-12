@@ -159,8 +159,9 @@ public class DashboardService {
                     "Mistake review",
                     unresolvedMistakeCount + " unresolved mistake"
                             + (unresolvedMistakeCount == 1 ? "" : "s")
-                            + " are waiting in the mistake bank.",
-                    "notification-info"
+                            + (unresolvedMistakeCount == 1 ? " is" : " are")
+                            + " waiting in the mistake bank.",
+                    "notification-review"
             ));
         }
 

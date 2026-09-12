@@ -38,8 +38,11 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Pos;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -48,6 +51,7 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -78,6 +82,9 @@ public class DashboardController {
     @FXML private ProgressBar rankProgressBar;
     @FXML private Label streakLabel;
     @FXML private Label mistakeCountLabel;
+    @FXML private HBox rankRecordRow;
+    @FXML private VBox xpRecordGroup;
+    @FXML private HBox streakRecordRow;
     @FXML private Label examCalendarMonthLabel;
     @FXML private GridPane examCalendarGrid;
     @FXML private VBox examCalendarEvents;
@@ -97,6 +104,7 @@ public class DashboardController {
     private Integer lastDisplayedXp;
     private String lastDisplayedRank;
     private YearMonth visibleExamMonth = YearMonth.now();
+    private LocalDate selectedExamDate;
     private List<StudyModule> latestModules = List.of();
 
     @FXML
@@ -213,18 +221,21 @@ public class DashboardController {
     @FXML
     private void handlePreviousExamMonth() {
         visibleExamMonth = visibleExamMonth.minusMonths(1);
+        selectedExamDate = null;
         renderExamCalendar();
     }
 
     @FXML
     private void handleCurrentExamMonth() {
-        visibleExamMonth = YearMonth.now();
+        selectedExamDate = LocalDate.now();
+        visibleExamMonth = YearMonth.from(selectedExamDate);
         renderExamCalendar();
     }
 
     @FXML
     private void handleNextExamMonth() {
         visibleExamMonth = visibleExamMonth.plusMonths(1);
+        selectedExamDate = null;
         renderExamCalendar();
     }
 
@@ -320,7 +331,7 @@ public class DashboardController {
             UiAnimations.fadeTextChange(recommendationTitleLabel, "No recommendation yet");
             UiAnimations.fadeTextChange(
                     recommendationMetaLabel,
-                    "Create modules, topics, and worksheets to unlock recommendations."
+                    "Add a worksheet in Manage Modules to choose your next study session."
             );
             setRecommendationReason("");
             openRecommendationButton.setDisable(true);
@@ -347,7 +358,6 @@ public class DashboardController {
 
         setRecommendationReason("Daily progress: " + dailyProgressText(summary));
         openRecommendationButton.setDisable(false);
-        UiAnimations.softPulse(openRecommendationButton);
     }
 
     private String countdownUntilNextWorksheet(UserStats stats) {
@@ -384,7 +394,7 @@ public class DashboardController {
         UserStats stats = summary.userStats();
 
         String rank = summary.rank();
-        rankLabel.setText("Rank: " + rank);
+        rankLabel.setText(rank);
         xpLabel.setText(stats.xp() + " XP");
 
         int nextRankXp = summary.nextRankXp();
@@ -393,6 +403,7 @@ public class DashboardController {
                 ? 1.0
                 : (double) stats.xp() / nextRankXp;
         UiAnimations.animateProgress(rankProgressBar, targetProgress);
+        rankProgressBar.setAccessibleText(stats.xp() + " XP; next rank at " + nextRankXp + " XP");
 
         if (lastDisplayedXp != null && stats.xp() > lastDisplayedXp) {
             UiAnimations.showFloatingXp(rankProgressBar, stats.xp() - lastDisplayedXp);
@@ -406,30 +417,24 @@ public class DashboardController {
         lastDisplayedXp = stats.xp();
         lastDisplayedRank = rank;
 
-        streakLabel.setText(
-                stats.streakCount()
-                        + " day"
-                        + (stats.streakCount() == 1 ? "" : "s")
-                        + " streak"
-        );
+        streakLabel.setText(stats.streakCount() + " day" + (stats.streakCount() == 1 ? "" : "s"));
 
-        mistakeCountLabel.setText(
-                summary.unresolvedMistakeCount()
-                        + " unresolved mistake"
-                        + (summary.unresolvedMistakeCount() == 1 ? "" : "s")
+        int unresolvedMistakes = summary.unresolvedMistakeCount();
+        mistakeCountLabel.setText(unresolvedMistakes + " unresolved");
+        mistakeCountLabel.getStyleClass().removeAll("study-record-warning", "study-record-success");
+        mistakeCountLabel.getStyleClass().add(
+                unresolvedMistakes > 0 ? "study-record-warning" : "study-record-success"
         );
 
         boolean showXpAndRank = summary.userSettings().showXpAndRank();
-        rankLabel.setVisible(showXpAndRank);
-        rankLabel.setManaged(showXpAndRank);
-        xpLabel.setVisible(showXpAndRank);
-        xpLabel.setManaged(showXpAndRank);
-        rankProgressBar.setVisible(showXpAndRank);
-        rankProgressBar.setManaged(showXpAndRank);
+        rankRecordRow.setVisible(showXpAndRank);
+        rankRecordRow.setManaged(showXpAndRank);
+        xpRecordGroup.setVisible(showXpAndRank);
+        xpRecordGroup.setManaged(showXpAndRank);
 
         boolean showStreak = summary.userSettings().streakTrackingEnabled();
-        streakLabel.setVisible(showStreak);
-        streakLabel.setManaged(showStreak);
+        streakRecordRow.setVisible(showStreak);
+        streakRecordRow.setManaged(showStreak);
     }
 
     private void updateExamCalendar(List<StudyModule> modules) {
@@ -491,12 +496,9 @@ public class DashboardController {
     }
 
     private VBox createExamCalendarCell(LocalDate date, List<StudyModule> exams, LocalDate today) {
-        VBox cell = new VBox(4);
+        VBox cell = new VBox(3);
         cell.getStyleClass().add("exam-calendar-day");
         cell.setMaxWidth(Double.MAX_VALUE);
-        cell.setMinHeight(52);
-        cell.setPrefHeight(52);
-        cell.setMaxHeight(52);
         GridPane.setHgrow(cell, Priority.ALWAYS);
 
         if (!YearMonth.from(date).equals(visibleExamMonth)) {
@@ -507,16 +509,43 @@ public class DashboardController {
             cell.getStyleClass().add("today");
         }
 
+        if (date.equals(selectedExamDate)) {
+            cell.getStyleClass().add("selected");
+        }
+
         if (!exams.isEmpty()) {
             cell.getStyleClass().add("has-exam");
         }
 
         Label dayNumber = new Label(String.valueOf(date.getDayOfMonth()));
         dayNumber.getStyleClass().add("exam-calendar-date-number");
-        cell.getChildren().add(dayNumber);
+        HBox dateHeading = new HBox(4, dayNumber);
+        dateHeading.setAlignment(Pos.CENTER_LEFT);
+        if (date.isEqual(today)) {
+            Label todayLabel = new Label("Today");
+            todayLabel.getStyleClass().add("exam-calendar-today-label");
+            dateHeading.getChildren().add(todayLabel);
+        }
+        cell.getChildren().add(dateHeading);
+        String examDescription = exams.stream().map(StudyModule::name).collect(Collectors.joining(", "));
+        String accessibleDate = date.format(DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.UK))
+                + (date.isEqual(today) ? ", today" : "")
+                + (date.equals(selectedExamDate) ? ", selected" : "")
+                + (exams.isEmpty() ? ", no exams" : ", exams: " + examDescription);
+        cell.setAccessibleText(accessibleDate);
+        cell.setAccessibleRole(AccessibleRole.BUTTON);
+        cell.setFocusTraversable(true);
+        cell.setOnMouseClicked(event -> selectExamDate(date));
+        cell.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+                selectExamDate(date);
+                event.consume();
+            }
+        });
+        Tooltip.install(cell, new Tooltip(accessibleDate));
 
         exams.stream()
-                .limit(2)
+                .limit(1)
                 .forEach(module -> {
                     Label examLabel = new Label(module.name());
                     examLabel.getStyleClass().add("exam-calendar-event-pill");
@@ -525,13 +554,19 @@ public class DashboardController {
                     cell.getChildren().add(examLabel);
                 });
 
-        if (exams.size() > 2) {
-            Label moreLabel = new Label("+" + (exams.size() - 2) + " more");
+        if (exams.size() > 1) {
+            Label moreLabel = new Label("+" + (exams.size() - 1) + " more");
             moreLabel.getStyleClass().add("exam-calendar-more");
             cell.getChildren().add(moreLabel);
         }
 
         return cell;
+    }
+
+    private void selectExamDate(LocalDate date) {
+        selectedExamDate = date;
+        visibleExamMonth = YearMonth.from(date);
+        renderExamCalendar();
     }
 
     private void renderExamEventList() {
@@ -546,7 +581,13 @@ public class DashboardController {
         if (monthExams.isEmpty()) {
             Label emptyLabel = new Label("No exams scheduled this month.");
             emptyLabel.getStyleClass().add("muted-text");
-            examCalendarEvents.getChildren().add(emptyLabel);
+            emptyLabel.setWrapText(true);
+            Label helpLabel = new Label("Add exam dates in Manage Modules when your assessments are confirmed.");
+            helpLabel.getStyleClass().add("muted-text");
+            helpLabel.setWrapText(true);
+            VBox emptyState = new VBox(8, emptyLabel, helpLabel);
+            emptyState.getStyleClass().add("exam-empty-state");
+            examCalendarEvents.getChildren().add(emptyState);
             return;
         }
 
