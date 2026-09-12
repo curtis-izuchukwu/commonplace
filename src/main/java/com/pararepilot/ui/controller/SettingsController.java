@@ -71,7 +71,7 @@ public class SettingsController {
     @FXML
     private void initialize() {
         themeComboBox.getItems().setAll("Dark", "Light", "System");
-        accentComboBox.getItems().setAll("Cyan", "Blue", "Mint", "Rose");
+        accentComboBox.getItems().setAll("Brass", "Graphite", "Forest", "Burgundy");
         fontSizeComboBox.getItems().setAll("Small", "Default", "Large");
         minDifficultyComboBox.getItems().setAll(DifficultyLevel.values());
         maxDifficultyComboBox.getItems().setAll(DifficultyLevel.values());
@@ -267,7 +267,7 @@ public class SettingsController {
             var stats = userStatsRepository.find();
 
             themeComboBox.setValue(toDisplayValue(settings.theme()));
-            accentComboBox.setValue(toDisplayValue(settings.accentColor()));
+            accentComboBox.setValue(AppPreferences.accentDisplayName(settings.accentColor()));
             reduceMotionCheckBox.setSelected(settings.reduceMotion());
             compactLayoutCheckBox.setSelected(settings.compactLayout());
             fontSizeComboBox.setValue(toDisplayValue(settings.fontSize()));

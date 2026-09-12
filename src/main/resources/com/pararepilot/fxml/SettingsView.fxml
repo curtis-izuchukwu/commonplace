@@ -16,7 +16,7 @@
       fx:id="settingsRoot"
       fx:controller="com.pararepilot.ui.controller.SettingsController"
       spacing="14"
-      styleClass="app-root settings-root">
+      styleClass="app-root,settings-root">
 
     <padding>
         <Insets top="22" right="22" bottom="22" left="22"/>
@@ -45,9 +45,9 @@
                 <VBox spacing="10" styleClass="settings-panel" GridPane.columnIndex="1" GridPane.rowIndex="0">
                     <Label text="Appearance" styleClass="section-title"/>
                     <Label text="Theme" styleClass="small-label"/>
-                    <ComboBox fx:id="themeComboBox" maxWidth="Infinity"/>
+                    <ComboBox fx:id="themeComboBox" maxWidth="Infinity" styleClass="appearance-combo"/>
                     <Label text="Accent" styleClass="small-label"/>
-                    <ComboBox fx:id="accentComboBox" maxWidth="Infinity"/>
+                    <ComboBox fx:id="accentComboBox" maxWidth="Infinity" styleClass="appearance-combo,accent-combo"/>
                     <CheckBox fx:id="compactLayoutCheckBox" text="Compact layout"/>
                     <Label text="Font size" styleClass="small-label"/>
                     <ComboBox fx:id="fontSizeComboBox" maxWidth="Infinity"/>

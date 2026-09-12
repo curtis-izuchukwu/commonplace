@@ -10,9 +10,11 @@ import com.pararepilot.ui.UiAnimations;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -22,7 +24,12 @@ public class Main extends Application {
     public void start(Stage stage) throws IOException {
         InitialView initialView = loadInitialView();
         AppChrome chrome = AppChrome.create(stage, initialView.root());
-        Scene scene = new Scene(chrome, 1480, 760);
+        Rectangle2D workArea = Screen.getPrimary().getVisualBounds();
+        // Reserve room for the taller Modules page from startup, including login.
+        // Smaller displays use the page's scrollbars rather than off-screen controls.
+        double windowHeight = Math.min(1000, workArea.getHeight());
+        double windowWidth = Math.min(1480, workArea.getWidth());
+        Scene scene = new Scene(chrome, windowWidth, windowHeight);
         scene.setFill(Color.TRANSPARENT);
 
         String stylesheet = Main.class
@@ -35,8 +42,10 @@ public class Main extends Application {
         stage.setTitle("PararePilot");
         stage.initStyle(StageStyle.TRANSPARENT);
         stage.setScene(scene);
-        stage.setMinWidth(1000);
-        stage.setMinHeight(680);
+        stage.setMinWidth(Math.min(1000, workArea.getWidth()));
+        stage.setMinHeight(windowHeight);
+        stage.setX(workArea.getMinX() + (workArea.getWidth() - windowWidth) / 2);
+        stage.setY(workArea.getMinY() + (workArea.getHeight() - windowHeight) / 2);
         AppIcon.applyRuntimeIcons(stage);
         stage.show();
     }

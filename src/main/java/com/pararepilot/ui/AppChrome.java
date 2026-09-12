@@ -17,8 +17,6 @@ import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -175,16 +173,9 @@ public class AppChrome extends StackPane {
         titleBar.getStyleClass().add("app-chrome-title-bar");
         titleBar.setAlignment(Pos.CENTER_LEFT);
 
-        Image icon = AppIcon.image();
-        ImageView iconView = new ImageView();
-        iconView.getStyleClass().add("app-chrome-icon");
-        iconView.setFitWidth(22);
-        iconView.setFitHeight(22);
-        iconView.setPreserveRatio(true);
-
-        if (icon != null) {
-            iconView.setImage(icon);
-        }
+        Label brandMark = new Label("PP");
+        brandMark.getStyleClass().add("brand-mark");
+        brandMark.setAccessibleText("ParārePilot");
 
         VBox titleText = new VBox(0);
         titleText.getStyleClass().add("app-chrome-title-text");
@@ -208,7 +199,7 @@ public class AppChrome extends StackPane {
         Button commandButton = new Button("Search");
         commandButton.getStyleClass().add("app-chrome-command-button");
         commandButton.setTooltip(new Tooltip("Quick search"));
-        commandButton.setFocusTraversable(false);
+        commandButton.setFocusTraversable(true);
         commandButton.setOnAction(event -> openCommandPalette());
 
         maximizeButton.setGraphic(createMaximizeIcon());
@@ -226,12 +217,15 @@ public class AppChrome extends StackPane {
                 createWindowButton(createCloseIcon(), "Close", stage::close)
         );
 
+        HBox utilities = new HBox(6, dailyChipLabel, commandButton);
+        utilities.getStyleClass().add("app-chrome-utilities");
+        utilities.setAlignment(Pos.CENTER_LEFT);
+
         titleBar.getChildren().addAll(
-                iconView,
+                brandMark,
                 titleText,
                 dragRegion,
-                dailyChipLabel,
-                commandButton,
+                utilities,
                 controls
         );
 
@@ -244,7 +238,7 @@ public class AppChrome extends StackPane {
 
     private void openCommandPalette() {
         if (commandOverlay != null) {
-            Platform.runLater(() -> commandSearchField.requestFocus());
+            Platform.runLater(this::focusCommandSearch);
             return;
         }
 
@@ -302,7 +296,13 @@ public class AppChrome extends StackPane {
 
         updateCommandResults();
         UiAnimations.animateOverlayOpen(scrim, content);
-        Platform.runLater(() -> commandSearchField.requestFocus());
+        Platform.runLater(this::focusCommandSearch);
+    }
+
+    private void focusCommandSearch() {
+        if (commandSearchField != null) {
+            commandSearchField.requestFocus();
+        }
     }
 
     private void updateCommandResults() {

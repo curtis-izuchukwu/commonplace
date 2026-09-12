@@ -157,8 +157,6 @@ public class LoginController {
 
         Stage stage = (Stage) scene.getWindow();
         stage.setTitle("ParārePilot");
-        stage.setMinWidth(1000);
-        stage.setMinHeight(680);
     }
 
     private void setStatus(String message) {

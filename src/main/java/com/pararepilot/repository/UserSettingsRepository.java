@@ -211,8 +211,9 @@ public class UserSettingsRepository {
             return "CYAN";
         }
 
-        return switch (accentColor.toUpperCase()) {
-            case "BLUE", "MINT", "ROSE" -> accentColor.toUpperCase();
+        return switch (accentColor.toUpperCase(java.util.Locale.ROOT)) {
+            case "BRASS", "GRAPHITE", "FOREST", "BURGUNDY", "BLUE", "MINT", "ROSE" ->
+                    accentColor.toUpperCase(java.util.Locale.ROOT);
             default -> "CYAN";
         };
     }
