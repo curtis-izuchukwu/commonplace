@@ -1,21 +1,21 @@
-package com.commonplace.flightdeck;
+package com.commonplace.press;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class FlightDeckJson {
+final class PressJson {
 
     private final String json;
     private int index;
 
-    private FlightDeckJson(String json) {
+    private PressJson(String json) {
         this.json = json == null ? "" : json;
     }
 
     static Object parse(String json) {
-        FlightDeckJson parser = new FlightDeckJson(json);
+        PressJson parser = new PressJson(json);
         Object value = parser.readValue();
         parser.skipWhitespace();
 
@@ -194,7 +194,11 @@ final class FlightDeckJson {
         String raw = json.substring(start, index);
 
         try {
-            return decimal ? Double.parseDouble(raw) : Long.parseLong(raw);
+            // Separate returns avoid numeric promotion of integer metadata to Double.
+            if (decimal) {
+                return Double.parseDouble(raw);
+            }
+            return Long.parseLong(raw);
         } catch (NumberFormatException e) {
             throw error("Invalid JSON number.");
         }

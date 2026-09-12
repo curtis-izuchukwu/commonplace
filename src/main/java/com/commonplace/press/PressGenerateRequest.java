@@ -1,32 +1,40 @@
-package com.commonplace.flightdeck;
+package com.commonplace.press;
 
 import java.util.Locale;
 
 import com.commonplace.model.DifficultyLevel;
 
-public record FlightDeckGenerateRequest(
+public record PressGenerateRequest(
         String subject,
         String topic,
         DifficultyLevel difficulty,
         int questionCount,
-        FlightDeckQuestionFormat format
+        PressQuestionFormat format
 ) {
 
-    public FlightDeckGenerateRequest {
+    public PressGenerateRequest {
         if (subject == null || subject.isBlank()) {
-            throw new IllegalArgumentException("Subject is required for FlightDeck generation.");
+            throw new IllegalArgumentException("Subject is required for Press generation.");
         }
 
         if (topic == null || topic.isBlank()) {
-            throw new IllegalArgumentException("Topic is required for FlightDeck generation.");
+            throw new IllegalArgumentException("Topic is required for Press generation.");
         }
 
         if (questionCount < 1 || questionCount > 10) {
-            throw new IllegalArgumentException("FlightDeck question count must be between 1 and 10.");
+            throw new IllegalArgumentException("Press question count must be between 1 and 10.");
         }
 
+        subject = subject.trim();
+        topic = topic.trim();
+        if (subject.length() > 80) {
+            throw new IllegalArgumentException("Press subject must be 80 characters or fewer.");
+        }
+        if (topic.length() > 120) {
+            throw new IllegalArgumentException("Press topic must be 120 characters or fewer.");
+        }
         difficulty = difficulty == null ? DifficultyLevel.MEDIUM : difficulty;
-        format = format == null ? FlightDeckQuestionFormat.SHORT_ANSWER : format;
+        format = format == null ? PressQuestionFormat.SHORT_ANSWER : format;
     }
 
     public String toJson() {

@@ -1,11 +1,48 @@
-package com.commonplace.flightdeck;
+package com.commonplace.press;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-class FlightDeckGenerateResponseTest {
+class PressGenerateResponseTest {
+
+    @Test
+    void parsesPressMarkingPointArraysAndMetadata() {
+        var response = PressGenerateResponse.fromJson("""
+                {"metadata":{"service":"Press API","mode":"ai","cache":"hit","questionCount":1},
+                 "questions":[{"id":1,"type":"long-answer","question":"Explain recursion.",
+                 "answer":"A function calls itself until its base case.",
+                 "marks":8,"markScheme":["Self-call (3 marks)","Base case (5 marks)"]}]}
+                """);
+        var draft = response.questions().getFirst().toQuestionDraft();
+        assertEquals("press,long-answer", draft.tags());
+        assertEquals(8, draft.maxMarks());
+        assertEquals("- Self-call (3 marks)\n- Base case (5 marks)\n\nAnswer: A function calls itself until its base case.",
+                draft.markScheme());
+        assertEquals("hit", response.metadata().get("cache"));
+        assertEquals("1", response.metadata().get("questionCount"));
+    }
+
+    @Test
+    void doesNotDropShortAnswersOrInventMissingMarkSchemes() {
+        var response = PressGenerateResponse.fromJson("""
+                {"questions":[{"question":"Choose one.","answer":"A","markScheme":["Award one mark."]},
+                 {"question":"Unfinished question."}]}
+                """);
+        assertTrue(response.questions().getFirst().toQuestionDraft().markScheme().contains("Answer: A"));
+        assertEquals("", response.questions().get(1).toQuestionDraft().markScheme());
+    }
+
+    @Test
+    void skipsEmptyAliasesAndPreservesUnicodeAndMultilinePoints() {
+        var response = PressGenerateResponse.fromJson("""
+                {"questions":[{"question":null,"prompt":"Solve x² = 4.","markScheme":[],
+                 "mark_scheme":["x = ±2", "Check both roots.\\nSubstitute into x²."],"answer":"±2"}]}
+                """);
+        assertEquals("Solve x² = 4.", response.questions().getFirst().prompt());
+        assertTrue(response.questions().getFirst().markScheme().contains("Check both roots.\nSubstitute"));
+    }
 
     @Test
     void parsesWorksheetWrappedResponse() {
@@ -34,7 +71,7 @@ class FlightDeckGenerateResponseTest {
                 }
                 """;
 
-        FlightDeckGenerateResponse response = FlightDeckGenerateResponse.fromJson(json);
+        PressGenerateResponse response = PressGenerateResponse.fromJson(json);
 
         assertEquals("Binary Search Practice", response.title());
         assertEquals("Generated revision worksheet", response.description());
@@ -56,7 +93,7 @@ class FlightDeckGenerateResponseTest {
                 ]
                 """;
 
-        FlightDeckGenerateResponse response = FlightDeckGenerateResponse.fromJson(json);
+        PressGenerateResponse response = PressGenerateResponse.fromJson(json);
 
         assertEquals(1, response.questions().size());
         assertEquals("Define recursion.", response.questions().get(0).prompt());
@@ -77,7 +114,7 @@ class FlightDeckGenerateResponseTest {
                 }
                 """;
 
-        FlightDeckGenerateResponse response = FlightDeckGenerateResponse.fromJson(json);
+        PressGenerateResponse response = PressGenerateResponse.fromJson(json);
 
         assertEquals(1, response.questions().size());
         assertEquals("Explain Big O notation.", response.questions().get(0).prompt());

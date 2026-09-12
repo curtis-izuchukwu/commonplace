@@ -8,7 +8,7 @@ Commonplace is a JavaFX desktop app with a local SQLite database. The codebase i
 | Service | Application workflows, business rules, account/session logic, recommendations, attempts, reflection, imports, and generation |
 | Repository | JDBC access to SQLite |
 | Model | Plain Java records and enums used across the app |
-| External adapters | FlightDeck API client and local PDF/OCR import helpers |
+| External adapters | Press API client and local PDF/OCR import helpers |
 
 The intended dependency direction is:
 
@@ -29,7 +29,7 @@ Models are shared across layers as simple data objects.
 | `com.commonplace.service` | Business workflows and app rules |
 | `com.commonplace.ui` | Shared JavaFX UI helpers |
 | `com.commonplace.ui.controller` | JavaFX controllers for each view |
-| `com.commonplace.flightdeck` | FlightDeck API configuration, client, request/response types, and JSON handling |
+| `com.commonplace.press` | Press API configuration, client, request/response types, and JSON handling |
 | `com.commonplace.importer` | PDF text/image extraction, OCR adapters, import issues, and worksheet draft parsing |
 | `com.commonplace.util` | Small utility classes |
 
@@ -118,7 +118,7 @@ Services coordinate repositories and enforce application rules.
 | `StudyStructureService` | Study structure helpers |
 | `WorksheetCreationService` | Worksheet and question persistence |
 | `QuestionImageStorage` | Copies selected/generated images into `~/.commonplace/images/` and resolves stored paths |
-| `FlightDeckWorksheetGenerationService` | Converts FlightDeck responses into editable worksheet data |
+| `PressWorksheetGenerationService` | Optional generation boundary; resolves API configuration only when requested |
 | `WorksheetSelectionService` | Selects and stores daily worksheet recommendations |
 | `PriorityScoreService` | Calculates worksheet priority scores |
 | `AttemptService` | Creates attempts and persists answers |
@@ -148,12 +148,12 @@ Services coordinate repositories and enforce application rules.
 
 ### Import and Generation Flow
 
-Manual creation, FlightDeck generation, and PDF import all end by saving normal worksheets/questions through the worksheet creation path.
+Manual creation, Press generation, and PDF import all end by saving normal worksheets/questions through the worksheet creation path.
 
 | Source | Main classes |
 | --- | --- |
 | Manual | `WorksheetCreateController`, `WorksheetCreationService` |
-| FlightDeck | `FlightDeckApiClient`, `FlightDeckWorksheetGenerationService`, `WorksheetCreateController` |
+| Press | `PressApiClient`, `PressWorksheetGenerationService`, `WorksheetCreateController` |
 | PDF import | `PdfImportService`, `PdfTextExtractionService`, `PdfImageExtractionService`, OCR services, `WorksheetDraftParser`, `ImportWorksheetController` |
 
 Question images are copied into local app data before the question is saved.
@@ -170,7 +170,7 @@ FXML files define views; controllers handle user actions and call services. Cont
 | `DashboardView.fxml` | `DashboardController` | Dashboard, navigation, recommendation, progress, recent activity, and exam calendar |
 | `ModulesView.fxml` | `ModulesController` | Module/topic management and module recommendation panel |
 | `TopicDetailView.fxml` | `TopicDetailController` | Topic details and worksheet list |
-| `WorksheetCreateView.fxml` | `WorksheetCreateController` | Manual and FlightDeck worksheet creation |
+| `WorksheetCreateView.fxml` | `WorksheetCreateController` | Manual and Press worksheet creation |
 | `ImportWorksheetView.fxml` | `ImportWorksheetController` | PDF import and review |
 | `WorksheetDetailView.fxml` | `WorksheetDetailController` | Worksheet details and recommendation explanation |
 | `AttemptWorksheetView.fxml` | `AttemptWorksheetController` | Worksheet attempts |
@@ -195,19 +195,36 @@ Shared UI helpers:
 
 ## External Adapters
 
-### FlightDeck
+### Press
 
-The `flightdeck` package isolates online worksheet generation.
+The `press` package isolates online worksheet generation.
 
 | Class | Purpose |
 | --- | --- |
-| `FlightDeckApiConfig` | Base URL from system property, environment variable, or default endpoint |
-| `FlightDeckApiClient` | HTTP client for `/generate` |
-| `FlightDeckGenerateRequest` | Generation request |
-| `FlightDeckGenerateResponse` | Generation response |
-| `FlightDeckGeneratedQuestion` | Generated question DTO |
-| `FlightDeckQuestionFormat` | Supported question format enum |
-| `FlightDeckJson` | Lightweight JSON handling |
+| `PressApiConfig` | Base URL from system property, environment variable, or default endpoint |
+| `PressApiClient` | HTTP client for `/generate` |
+| `PressGenerateRequest` | Generation request |
+| `PressGenerateResponse` | Generation response |
+| `PressGeneratedQuestion` | Generated question DTO |
+| `PressQuestionFormat` | Supported question format enum |
+| `PressJson` | Lightweight JSON handling |
+
+`POST /generate` sends `subject`, `topic`, `difficulty`, `questionCount` (1–10), and `format`
+(`short-answer` or `long-answer`). The deployed response contains `metadata` and a `questions` array;
+each question provides `question`, `answer`, `markScheme` (an array of marking points), `marks`, and `type`.
+The adapter retains marking points as separate lines and the model answer in `QuestionDraft.markScheme`,
+and tags new drafts with `press` and their format. Existing saved questions need no migration.
+
+`WorksheetCreateController` takes the API subject and topic exclusively from the user-entered
+Press fields (80 and 120 characters maximum). The module and saved topic are only used for local
+organisation; they are not automatically added to generation requests. The captured request topic
+supplies a suggested worksheet title when Press returns no title. Saving still uses the original local topic ID.
+
+The JavaFX controller owns one cancellable background task. It validates editable spinners before
+sending or saving, preserves existing drafts, and prevents saving while generation is pending.
+Closing the editor or stopping generation interrupts the request. The HTTP adapter has a 10-second
+connection timeout and 90-second request timeout, surfaces API errors, and does not automatically
+retry POST requests. No API history is fetched; Commonplace's local worksheets remain the source of truth.
 
 ### PDF/OCR Import
 

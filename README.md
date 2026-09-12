@@ -18,7 +18,7 @@ All study data is stored locally in SQLite.
 
 - Local accounts with sign in, remembered sessions, password changes, and account switching.
 - Module and topic management with exam dates, priorities, confidence, and mastery tracking.
-- Worksheet creation by manual entry, optional FlightDeck generation, or local PDF import.
+- Worksheet creation by manual entry, optional Press generation, or local PDF import.
 - Optional image attachments for individual worksheet questions.
 - In-app worksheet attempts with answer fields, mark scheme reveal, self-marking, and mistake notes.
 - Reflection flow after each attempt.
@@ -55,26 +55,42 @@ Commonplace supports three worksheet sources:
 | Source | Description |
 | --- | --- |
 | Manual | Create worksheets question by question. |
-| FlightDeck | Generate an editable draft from the optional online FlightDeck API. |
+| Press | Generate an editable draft from the optional online Press API. |
 | PDF import | Extract text and images from a local PDF into an editable draft. |
 
-FlightDeck uses this endpoint by default:
+Press uses this endpoint by default:
 
 ```text
-https://flightdeck-api.izuchukwucur.workers.dev
+https://press-api.izuchukwucur.workers.dev
 ```
 
 You can override it with:
 
 ```text
-COMMONPLACE_FLIGHTDECK_API_BASE_URL
+COMMONPLACE_PRESS_API_BASE_URL
 ```
 
 or:
 
 ```text
--Dcommonplace.flightdeck.baseUrl=https://your-endpoint.example
+-Dcommonplace.press.baseUrl=https://your-endpoint.example
 ```
+
+Use the base URL (without `/generate`). The system property takes precedence over the environment variable.
+Update any custom launch configuration to use these Press setting names.
+
+Press supports **short-answer** and **long-answer** generation, with 1–10 questions and easy, medium,
+or hard difficulty. Enter a **Subject** (up to 80 characters) and **Specific topic to generate**
+(up to 120 characters) in the Press panel. Neither field is filled from your module or saved topic.
+Commonplace sends only these user-entered fields and generation options—not the module name,
+existing questions, answers, or attached images. The worksheet still saves under the selected local topic.
+Answers and every marking point are retained
+in editable mark schemes. Review their accuracy before saving; generated content can be incorrect.
+
+Generation runs in the background with a 90-second request timeout. **Stop generation** keeps your
+draft intact. Validation, rate-limit, network, and service errors appear in the editor; you can retry
+or continue manually. Saved Press questions use the same local worksheet, attempt, and review flows
+as manually created questions, and require no network connection to study.
 
 ---
 
@@ -178,6 +194,25 @@ Run tests:
 mvn clean test
 ```
 
+The JavaFX editor tests are opt-in and need a desktop display:
+
+```bash
+mvn test -Dcommonplace.uiTest=true
+```
+
+To also smoke-test both formats against the deployed Press API (sends synthetic study topics):
+
+```bash
+mvn test -Dcommonplace.uiTest=true -Dcommonplace.press.liveTest=true
+```
+
+Repository tests use SQLite. To keep test data separate from your normal profile, pass a test-JVM
+home directory, for example on Windows:
+
+```powershell
+mvn test '-DargLine=-Duser.home=C:/path/to/commonplace/target/test-profile' -Dcommonplace.uiTest=true
+```
+
 ---
 
 ## Architecture
@@ -200,7 +235,7 @@ More detail: [docs/architecture.md](docs/architecture.md)
 - Delete account is not implemented yet.
 - Cloud sync is not implemented; the app is local-first.
 - PDF import quality depends on the source PDF and available local OCR.
-- FlightDeck generation requires network access.
+- Press generation requires network access.
 - Boss worksheets are planned but not implemented yet.
 
 ---
@@ -210,4 +245,4 @@ More detail: [docs/architecture.md](docs/architecture.md)
 | Project | Role |
 | --- | --- |
 | Commonplace | Local-first JavaFX study tracker |
-| FlightDeck API | Optional worksheet-generation API |
+| Press API | Optional worksheet-generation API |

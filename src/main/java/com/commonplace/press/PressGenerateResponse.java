@@ -1,29 +1,29 @@
-package com.commonplace.flightdeck;
+package com.commonplace.press;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public record FlightDeckGenerateResponse(
+public record PressGenerateResponse(
         String title,
         String description,
-        List<FlightDeckGeneratedQuestion> questions,
+        List<PressGeneratedQuestion> questions,
         Map<String, String> metadata
 ) {
 
-    public FlightDeckGenerateResponse {
+    public PressGenerateResponse {
         title = title == null ? "" : title.trim();
         description = description == null ? "" : description.trim();
         questions = questions == null ? List.of() : List.copyOf(questions);
         metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
     }
 
-    public static FlightDeckGenerateResponse fromJson(String json) {
-        Object parsed = FlightDeckJson.parse(json);
+    public static PressGenerateResponse fromJson(String json) {
+        Object parsed = PressJson.parse(json);
 
         if (parsed instanceof List<?> list) {
-            return new FlightDeckGenerateResponse("", "", parseQuestions(list), Map.of());
+            return new PressGenerateResponse("", "", parseQuestions(list), Map.of());
         }
 
         Map<String, Object> root = objectOrEmpty(parsed);
@@ -35,7 +35,7 @@ public record FlightDeckGenerateResponse(
         List<Object> questionValues = findQuestionValues(root);
         Map<String, String> metadata = extractMetadata(root, worksheet);
 
-        return new FlightDeckGenerateResponse(
+        return new PressGenerateResponse(
                 title,
                 description,
                 parseQuestions(questionValues),
@@ -43,11 +43,11 @@ public record FlightDeckGenerateResponse(
         );
     }
 
-    private static List<FlightDeckGeneratedQuestion> parseQuestions(List<?> questionValues) {
-        List<FlightDeckGeneratedQuestion> questions = new ArrayList<>();
+    private static List<PressGeneratedQuestion> parseQuestions(List<?> questionValues) {
+        List<PressGeneratedQuestion> questions = new ArrayList<>();
 
         for (Object value : questionValues) {
-            FlightDeckGeneratedQuestion question = parseQuestion(value);
+            PressGeneratedQuestion question = parseQuestion(value);
 
             if (question != null && !question.prompt().isBlank()) {
                 questions.add(question);
@@ -57,9 +57,9 @@ public record FlightDeckGenerateResponse(
         return questions;
     }
 
-    private static FlightDeckGeneratedQuestion parseQuestion(Object value) {
+    private static PressGeneratedQuestion parseQuestion(Object value) {
         if (value instanceof String prompt) {
-            return new FlightDeckGeneratedQuestion(prompt, "", "", 1, "", List.of(), Map.of());
+            return new PressGeneratedQuestion(prompt, "", "", 1, "", List.of(), Map.of());
         }
 
         Map<String, Object> question = objectOrEmpty(value);
@@ -87,7 +87,7 @@ public record FlightDeckGenerateResponse(
                 "solution"
         );
 
-        String markScheme = firstString(
+        String markScheme = firstMarkScheme(
                 question,
                 "markScheme",
                 "mark_scheme",
@@ -103,7 +103,7 @@ public record FlightDeckGenerateResponse(
         List<String> options = firstStringList(question, "options", "choices", "answers");
         Map<String, String> metadata = extractMetadata(question, Map.of());
 
-        return new FlightDeckGeneratedQuestion(
+        return new PressGeneratedQuestion(
                 prompt,
                 answer,
                 markScheme,
@@ -165,20 +165,38 @@ public record FlightDeckGenerateResponse(
     }
 
     private static String firstString(Map<String, Object> source, String... keys) {
-        Object value = firstValue(source, keys);
-
-        if (value == null) {
-            return "";
+        for (String key : keys) {
+            Object value = source.get(key);
+            if (value instanceof String text && !text.isBlank()) {
+                return text.trim();
+            }
+            if (value instanceof Number || value instanceof Boolean) {
+                return String.valueOf(value);
+            }
         }
+        return "";
+    }
 
-        if (value instanceof String text) {
-            return text.trim();
+    private static String firstMarkScheme(Map<String, Object> source, String... keys) {
+        for (String key : keys) {
+            Object value = source.get(key);
+            if (value instanceof String text && !text.isBlank()) {
+                return text.trim();
+            }
+            if (value instanceof List<?> points) {
+                List<String> lines = new ArrayList<>();
+                for (Object point : points) {
+                    String text = point instanceof String s ? s.trim()
+                            : firstString(objectOrEmpty(point), "text", "point", "description");
+                    if (!text.isBlank()) {
+                        lines.add("- " + text);
+                    }
+                }
+                if (!lines.isEmpty()) {
+                    return String.join("\n", lines);
+                }
+            }
         }
-
-        if (value instanceof Number || value instanceof Boolean) {
-            return String.valueOf(value);
-        }
-
         return "";
     }
 

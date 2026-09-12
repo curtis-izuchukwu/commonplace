@@ -25,7 +25,6 @@
                     <Label fx:id="welcomeLabel"
                            text="Welcome Back"
                            styleClass="app-title,page-title" wrapText="true"/>
-                    <Label text="Return to the work." styleClass="muted-text" wrapText="true"/>
                 </VBox>
 
                 <HBox spacing="8" alignment="CENTER_LEFT" styleClass="dashboard-nav">

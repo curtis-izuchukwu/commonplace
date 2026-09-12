@@ -322,21 +322,22 @@
 
 .app-chrome-window-controls {
     -fx-alignment: center;
+    -fx-spacing: 0;
 }
 
 .app-chrome-window-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 8;
+    -fx-background-radius: 2;
     -fx-border-color: transparent;
-    -fx-border-radius: 8;
+    -fx-border-radius: 2;
     -fx-border-width: 0;
     -fx-text-fill: -app-text;
     -fx-font-size: 13px;
     -fx-font-weight: 600;
     -fx-padding: 0;
-    -fx-min-width: 34;
-    -fx-pref-width: 34;
-    -fx-max-width: 34;
+    -fx-min-width: 32;
+    -fx-pref-width: 32;
+    -fx-max-width: 32;
     -fx-min-height: 28;
     -fx-pref-height: 28;
     -fx-max-height: 28;
@@ -344,9 +345,14 @@
 }
 
 .app-chrome-window-button:hover {
-    -fx-background-color: -app-hover;
+    -fx-background-color: -app-border;
     -fx-border-color: transparent;
     -fx-effect: none;
+}
+
+.app-chrome-window-button:pressed {
+    -fx-background-color: -app-border-strong;
+    -fx-translate-y: 0;
 }
 
 .app-chrome-close-button:hover {
@@ -365,42 +371,33 @@
 }
 
 .window-control-minimize-icon {
-    -fx-background-color: -app-text;
-    -fx-background-radius: 999;
-    -fx-min-width: 11;
-    -fx-pref-width: 11;
-    -fx-max-width: 11;
-    -fx-min-height: 1.5;
-    -fx-pref-height: 1.5;
-    -fx-max-height: 1.5;
+    -fx-stroke: -app-paper;
+    -fx-stroke-width: 1.25;
+    -fx-opacity: 0.86;
 }
 
 .window-control-maximize-icon {
-    -fx-background-color: transparent;
-    -fx-border-color: -app-text;
-    -fx-border-radius: 2;
-    -fx-border-width: 1.4;
-    -fx-min-width: 10;
-    -fx-pref-width: 10;
-    -fx-max-width: 10;
-    -fx-min-height: 10;
-    -fx-pref-height: 10;
-    -fx-max-height: 10;
+    -fx-fill: transparent;
+    -fx-stroke: -app-paper;
+    -fx-stroke-width: 1.1;
+    -fx-opacity: 0.86;
 }
 
 .window-control-close-line {
-    -fx-background-color: -app-text;
-    -fx-background-radius: 999;
-    -fx-min-width: 12;
-    -fx-pref-width: 12;
-    -fx-max-width: 12;
-    -fx-min-height: 1.6;
-    -fx-pref-height: 1.6;
-    -fx-max-height: 1.6;
+    -fx-stroke: -app-paper;
+    -fx-stroke-width: 1.25;
+    -fx-opacity: 0.86;
+}
+
+.app-chrome-window-button:hover .window-control-minimize-icon,
+.app-chrome-window-button:hover .window-control-close-line,
+.app-chrome-window-button:hover .window-control-maximize-icon {
+    -fx-stroke: -app-text;
+    -fx-opacity: 1;
 }
 
 .app-chrome-close-button:hover .window-control-close-line {
-    -fx-background-color: #ffffff;
+    -fx-stroke: #ffffff;
 }
 
 .command-palette-scrim {
@@ -1706,14 +1703,14 @@
 .app-chrome-title-bar .app-chrome-window-button,
 .larger-controls .app-chrome-title-bar .app-chrome-window-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 8;
+    -fx-background-radius: 2;
     -fx-border-color: transparent;
-    -fx-border-radius: 8;
+    -fx-border-radius: 2;
     -fx-border-width: 0;
     -fx-padding: 0;
-    -fx-min-width: 34;
-    -fx-pref-width: 34;
-    -fx-max-width: 34;
+    -fx-min-width: 32;
+    -fx-pref-width: 32;
+    -fx-max-width: 32;
     -fx-min-height: 28;
     -fx-pref-height: 28;
     -fx-max-height: 28;
@@ -1723,7 +1720,7 @@
 .app-chrome-title-bar .app-chrome-window-button:hover,
 .larger-controls .app-chrome-title-bar .app-chrome-window-button:hover,
 .app-chrome-title-bar .app-chrome-window-button.button-hovered {
-    -fx-background-color: -app-hover;
+    -fx-background-color: -app-border;
     -fx-border-color: transparent;
     -fx-effect: none;
 }
@@ -1828,16 +1825,6 @@
 .nav-button.primary-button:hover {
     -fx-background-color: -app-action;
     -fx-text-fill: -app-action-text;
-}
-.brand-mark {
-    -fx-background-color: -app-field;
-    -fx-border-color: -app-accent-border;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-padding: 3 5;
-    -fx-font-size: 10px;
-    -fx-font-weight: 600;
-    -fx-text-fill: -app-accent-text;
 }
 .dashboard-actions {
     -fx-padding: 8 0 0 0;
@@ -2087,40 +2074,40 @@
 }
 .app-chrome-title-bar .app-chrome-window-controls {
     -fx-alignment: center;
-    -fx-spacing: 1;
-    -fx-padding: 0 0 0 5;
+    -fx-spacing: 0;
+    -fx-padding: 0 0 0 6;
     -fx-border-color: transparent transparent transparent -app-border;
     -fx-border-width: 0 0 0 1;
 }
 .app-chrome-title-bar .app-chrome-window-button,
 .larger-controls .app-chrome-title-bar .app-chrome-window-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 4;
+    -fx-background-radius: 2;
     -fx-border-color: transparent;
-    -fx-border-radius: 4;
+    -fx-border-radius: 2;
     -fx-border-width: 0;
     -fx-padding: 0;
-    -fx-min-width: 30;
-    -fx-pref-width: 30;
-    -fx-max-width: 30;
-    -fx-min-height: 26;
-    -fx-pref-height: 26;
-    -fx-max-height: 26;
+    -fx-min-width: 32;
+    -fx-pref-width: 32;
+    -fx-max-width: 32;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
 }
 .app-chrome-title-bar .window-control-icon {
-    -fx-min-width: 13;
-    -fx-pref-width: 13;
-    -fx-max-width: 13;
-    -fx-min-height: 13;
-    -fx-pref-height: 13;
-    -fx-max-height: 13;
+    -fx-min-width: 14;
+    -fx-pref-width: 14;
+    -fx-max-width: 14;
+    -fx-min-height: 14;
+    -fx-pref-height: 14;
+    -fx-max-height: 14;
 }
 .app-chrome-title-bar .window-control-minimize-icon,
 .app-chrome-title-bar .window-control-close-line {
-    -fx-background-color: -app-muted;
+    -fx-stroke: -app-paper;
 }
 .app-chrome-title-bar .window-control-maximize-icon {
-    -fx-border-color: -app-muted;
+    -fx-stroke: -app-paper;
 }
 .theme-light .app-chrome-title-bar .app-chrome-chip,
 .theme-light .app-chrome-title-bar .app-chrome-command-button {

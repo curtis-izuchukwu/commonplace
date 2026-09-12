@@ -1,14 +1,13 @@
-package com.commonplace.flightdeck;
+package com.commonplace.press;
 
-public enum FlightDeckQuestionFormat {
+public enum PressQuestionFormat {
     SHORT_ANSWER("short-answer", "Short answer"),
-    MULTIPLE_CHOICE("multiple-choice", "Multiple choice"),
-    MIXED("mixed", "Mixed");
+    LONG_ANSWER("long-answer", "Long answer");
 
     private final String apiValue;
     private final String label;
 
-    FlightDeckQuestionFormat(String apiValue, String label) {
+    PressQuestionFormat(String apiValue, String label) {
         this.apiValue = apiValue;
         this.label = label;
     }

@@ -17,6 +17,7 @@ import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -26,7 +27,10 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeType;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -173,9 +177,19 @@ public class AppChrome extends StackPane {
         titleBar.getStyleClass().add("app-chrome-title-bar");
         titleBar.setAlignment(Pos.CENTER_LEFT);
 
-        Label brandMark = new Label("C");
-        brandMark.getStyleClass().add("brand-mark");
+        ImageView brandImage = new ImageView(AppIcon.titleBarImage());
+        brandImage.setFitWidth(24);
+        brandImage.setFitHeight(24);
+        brandImage.setPreserveRatio(true);
+        brandImage.setSmooth(true);
+
+        StackPane brandMark = new StackPane(brandImage);
+        brandMark.getStyleClass().add("app-chrome-icon");
+        brandMark.setMinSize(28, 28);
+        brandMark.setPrefSize(28, 28);
+        brandMark.setMaxSize(28, 28);
         brandMark.setAccessibleText("Commonplace");
+        brandMark.setMouseTransparent(true);
 
         VBox titleText = new VBox(0);
         titleText.getStyleClass().add("app-chrome-title-text");
@@ -424,8 +438,9 @@ public class AppChrome extends StackPane {
         StackPane icon = new StackPane();
         icon.getStyleClass().add("window-control-icon");
 
-        Region line = new Region();
+        Line line = new Line(2, 7, 12, 7);
         line.getStyleClass().add("window-control-minimize-icon");
+        line.setStrokeLineCap(StrokeLineCap.BUTT);
         icon.getChildren().add(line);
         icon.setMouseTransparent(true);
 
@@ -436,8 +451,9 @@ public class AppChrome extends StackPane {
         StackPane icon = new StackPane();
         icon.getStyleClass().add("window-control-icon");
 
-        Region box = new Region();
+        Rectangle box = new Rectangle(9, 9);
         box.getStyleClass().add("window-control-maximize-icon");
+        box.setStrokeType(StrokeType.INSIDE);
         icon.getChildren().add(box);
         icon.setMouseTransparent(true);
 
@@ -448,13 +464,13 @@ public class AppChrome extends StackPane {
         StackPane icon = new StackPane();
         icon.getStyleClass().add("window-control-icon");
 
-        Region firstLine = new Region();
+        Line firstLine = new Line(3, 3, 11, 11);
         firstLine.getStyleClass().add("window-control-close-line");
-        firstLine.setRotate(45);
+        firstLine.setStrokeLineCap(StrokeLineCap.BUTT);
 
-        Region secondLine = new Region();
+        Line secondLine = new Line(11, 3, 3, 11);
         secondLine.getStyleClass().add("window-control-close-line");
-        secondLine.setRotate(-45);
+        secondLine.setStrokeLineCap(StrokeLineCap.BUTT);
 
         icon.getChildren().addAll(firstLine, secondLine);
         icon.setMouseTransparent(true);

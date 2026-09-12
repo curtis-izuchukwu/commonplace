@@ -10,14 +10,16 @@
 <?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.commonplace.ui.controller.WorksheetCreateController"
-      spacing="14"
-      styleClass="app-root">
+    fx:controller="com.commonplace.ui.controller.WorksheetCreateController"
+    spacing="14"
+    styleClass="app-root">
 
     <padding>
         <Insets top="24" right="24" bottom="24" left="24"/>
@@ -25,115 +27,155 @@
 
     <Label text="Create Worksheet" styleClass="app-title"/>
     <Label fx:id="parentTopicLabel"
-           text="Parent topic"
-           styleClass="app-subtitle"
-           wrapText="true"/>
+        text="Parent topic"
+        styleClass="app-subtitle"
+        wrapText="true"/>
 
     <Separator/>
 
     <HBox spacing="16" VBox.vgrow="ALWAYS">
-        <VBox spacing="12"
-              prefWidth="400"
-              minWidth="360"
-              maxWidth="430"
-              styleClass="worksheet-create-sidebar">
+        <VBox spacing="12" prefWidth="400" minWidth="360" maxWidth="430"
+            styleClass="worksheet-create-sidebar">
+            <ScrollPane fx:id="worksheetDetailsScroll"
+                fitToWidth="true"
+                hbarPolicy="NEVER"
+                minHeight="0"
+                VBox.vgrow="ALWAYS">
+                <content>
+                    <VBox spacing="12">
 
-            <TextField fx:id="titleField" promptText="Worksheet title, e.g. BST Traversal Practice"/>
+                        <TextField fx:id="titleField" promptText="Worksheet title, e.g. BST Traversal Practice"/>
 
-            <TextArea fx:id="descriptionArea"
-                      promptText="Description"
-                      prefRowCount="3"
-                      wrapText="true"/>
+                        <TextArea fx:id="descriptionArea"
+                            promptText="Description"
+                            prefRowCount="3"
+                            wrapText="true"/>
+
+                        <HBox spacing="10">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Difficulty" styleClass="small-label"/>
+                                <ComboBox fx:id="difficultyCombo"
+                                    promptText="Difficulty"
+                                    maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Worksheet priority" styleClass="small-label"/>
+                                <ComboBox fx:id="importanceCombo"
+                                    promptText="Priority"
+                                    maxWidth="Infinity"/>
+                            </VBox>
+                        </HBox>
+
+                        <Separator/>
+
+                        <VBox spacing="10" styleClass="notification-card">
+                            <VBox spacing="3">
+                                <HBox spacing="7" alignment="CENTER_LEFT">
+                                    <ImageView fx:id="pressHeadingIcon"
+                                        fitWidth="20"
+                                        fitHeight="20"
+                                        preserveRatio="true"
+                                        smooth="true"
+                                        mouseTransparent="true"
+                                        accessibleText="Press">
+                                        <image>
+                                            <Image url="@../assets/press_icon.png"/>
+                                        </image>
+                                    </ImageView>
+                                    <Label text="Generate with Press" styleClass="section-title"/>
+                                </HBox>
+                                <Label text="Choose what to generate below. Only these inputs and generation options are sent to Press, not your module name."
+                                    styleClass="muted-text"
+                                    wrapText="true"/>
+                            </VBox>
+
+                            <VBox spacing="6">
+                                <Label text="Subject" styleClass="small-label"/>
+                                <TextField fx:id="pressSubjectField"
+                                    promptText="e.g. Computer Science"
+                                    accessibleText="Press subject"/>
+                            </VBox>
+
+                            <VBox spacing="6">
+                                <Label text="Specific topic to generate" styleClass="small-label"/>
+                                <TextField fx:id="pressTopicField"
+                                    promptText="e.g. BST deletion and AVL rotations"
+                                    accessibleText="Specific topic for Press"/>
+                            </VBox>
+
+                            <VBox spacing="6">
+                                <Label text="Difficulty" styleClass="small-label"/>
+                                <ComboBox fx:id="pressDifficultyCombo"
+                                    maxWidth="Infinity"/>
+                            </VBox>
+
+                            <HBox spacing="10">
+                                <VBox spacing="6">
+                                    <Label text="Count" styleClass="small-label"/>
+                                    <Spinner fx:id="pressQuestionCountSpinner"
+                                        editable="true"
+                                        prefWidth="110"/>
+                                </VBox>
+                                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                    <Label text="Format" styleClass="small-label"/>
+                                    <ComboBox fx:id="pressFormatCombo"
+                                        maxWidth="Infinity"/>
+                                </VBox>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Button fx:id="generatePressButton"
+                                    text="Generate"
+                                    minWidth="150"
+                                    maxWidth="Infinity"
+                                    HBox.hgrow="ALWAYS"
+                                    onAction="#handleGenerateWithPress"
+                                    styleClass="primary-button"/>
+                                <ProgressIndicator fx:id="pressProgressIndicator"
+                                    prefWidth="28"
+                                    prefHeight="28"
+                                    visible="false"
+                                    managed="false"/>
+                            </HBox>
+
+                            <Button fx:id="cancelPressButton"
+                                text="Stop generation"
+                                visible="false"
+                                managed="false"
+                                onAction="#handleCancelGeneration"/>
+
+                            <Label fx:id="pressStatusLabel"
+                                text=""
+                                styleClass="muted-text"
+                                wrapText="true"/>
+                        </VBox>
+
+                        <Label fx:id="statusLabel"
+                            text=""
+                            styleClass="status-text"
+                            wrapText="true"/>
+
+                    </VBox>
+                </content>
+            </ScrollPane>
 
             <HBox spacing="10">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="Difficulty" styleClass="small-label"/>
-                    <ComboBox fx:id="difficultyCombo"
-                              promptText="Difficulty"
-                              maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="Worksheet priority" styleClass="small-label"/>
-                    <ComboBox fx:id="importanceCombo"
-                              promptText="Priority"
-                              maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
-
-            <Separator/>
-
-            <VBox spacing="10" styleClass="notification-card">
-                <VBox spacing="3">
-                    <Label text="Generate with FlightDeck" styleClass="section-title"/>
-                    <Label text="Optional online generation. Draft questions stay editable before saving."
-                           styleClass="muted-text"
-                           wrapText="true"/>
-                </VBox>
-
-                <VBox spacing="6">
-                    <Label text="Difficulty" styleClass="small-label"/>
-                    <ComboBox fx:id="flightDeckDifficultyCombo"
-                              maxWidth="Infinity"/>
-                </VBox>
-
-                <HBox spacing="10">
-                    <VBox spacing="6">
-                        <Label text="Count" styleClass="small-label"/>
-                        <Spinner fx:id="flightDeckQuestionCountSpinner"
-                                 editable="true"
-                                 prefWidth="110"/>
-                    </VBox>
-                    <VBox spacing="6" HBox.hgrow="ALWAYS">
-                        <Label text="Format" styleClass="small-label"/>
-                        <ComboBox fx:id="flightDeckFormatCombo"
-                                  maxWidth="Infinity"/>
-                    </VBox>
-                </HBox>
-
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Button fx:id="generateFlightDeckButton"
-                            text="Generate"
-                            minWidth="150"
-                            maxWidth="Infinity"
-                            HBox.hgrow="ALWAYS"
-                            onAction="#handleGenerateWithFlightDeck"
-                            styleClass="primary-button"/>
-                    <ProgressIndicator fx:id="flightDeckProgressIndicator"
-                                       prefWidth="28"
-                                       prefHeight="28"
-                                       visible="false"
-                                       managed="false"/>
-                </HBox>
-
-                <Label fx:id="flightDeckStatusLabel"
-                       text=""
-                       styleClass="muted-text"
-                       wrapText="true"/>
-            </VBox>
-
-            <Label fx:id="statusLabel"
-                   text=""
-                   styleClass="status-text"
-                   wrapText="true"
-                   VBox.vgrow="ALWAYS"/>
-
-            <HBox spacing="10">
-                <Button text="Save Worksheet"
-                        onAction="#handleSaveWorksheet"
-                        styleClass="primary-button"/>
+                <Button fx:id="saveWorksheetButton" text="Save Worksheet"
+                    onAction="#handleSaveWorksheet"
+                    styleClass="primary-button"/>
                 <Button text="Cancel"
-                        onAction="#handleCancel"/>
+                    onAction="#handleCancel"/>
             </HBox>
         </VBox>
 
         <VBox spacing="12"
-              HBox.hgrow="ALWAYS"
-              styleClass="worksheet-create-questions">
+            HBox.hgrow="ALWAYS"
+            styleClass="worksheet-create-questions">
             <HBox spacing="12">
                 <Label text="Questions" styleClass="section-title" HBox.hgrow="ALWAYS"/>
                 <Button text="Add Question"
-                        onAction="#handleAddQuestion"
-                        styleClass="primary-button"/>
+                    onAction="#handleAddQuestion"
+                    styleClass="primary-button"/>
             </HBox>
 
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">

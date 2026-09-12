@@ -6,16 +6,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.commonplace.flightdeck.FlightDeckApiException;
-import com.commonplace.flightdeck.FlightDeckGenerateRequest;
-import com.commonplace.flightdeck.FlightDeckGenerateResponse;
-import com.commonplace.flightdeck.FlightDeckQuestionFormat;
+import com.commonplace.press.PressApiException;
+import com.commonplace.press.PressGenerateRequest;
+import com.commonplace.press.PressGenerateResponse;
+import com.commonplace.press.PressQuestionFormat;
 import com.commonplace.model.DifficultyLevel;
 import com.commonplace.model.ImportanceLevel;
 import com.commonplace.model.StudyModule;
 import com.commonplace.model.Topic;
 import com.commonplace.repository.QuestionRepository;
-import com.commonplace.service.FlightDeckWorksheetGenerationService;
+import com.commonplace.service.PressWorksheetGenerationService;
 import com.commonplace.service.QuestionImageStorage;
 import com.commonplace.service.WorksheetCreationService;
 import com.commonplace.ui.AppIcon;
@@ -51,23 +51,35 @@ public class WorksheetCreateController {
     @FXML private TextArea descriptionArea;
     @FXML private ComboBox<DifficultyLevel> difficultyCombo;
     @FXML private ComboBox<ImportanceLevel> importanceCombo;
-    @FXML private ComboBox<DifficultyLevel> flightDeckDifficultyCombo;
-    @FXML private Spinner<Integer> flightDeckQuestionCountSpinner;
-    @FXML private ComboBox<FlightDeckQuestionFormat> flightDeckFormatCombo;
-    @FXML private Button generateFlightDeckButton;
-    @FXML private ProgressIndicator flightDeckProgressIndicator;
-    @FXML private Label flightDeckStatusLabel;
+    @FXML private TextField pressSubjectField;
+    @FXML private TextField pressTopicField;
+    @FXML private ComboBox<DifficultyLevel> pressDifficultyCombo;
+    @FXML private Spinner<Integer> pressQuestionCountSpinner;
+    @FXML private ComboBox<PressQuestionFormat> pressFormatCombo;
+    @FXML private Button generatePressButton;
+    @FXML private Button cancelPressButton;
+    @FXML private Button saveWorksheetButton;
+    @FXML private ProgressIndicator pressProgressIndicator;
+    @FXML private Label pressStatusLabel;
     @FXML private VBox questionsContainer;
     @FXML private Label statusLabel;
 
-    private final WorksheetCreationService service = new WorksheetCreationService();
+    private final WorksheetCreationService service;
     private final QuestionImageStorage imageStorage = new QuestionImageStorage();
-    private final FlightDeckWorksheetGenerationService flightDeckService =
-            new FlightDeckWorksheetGenerationService();
+    private final PressWorksheetGenerationService pressService;
+    private Task<PressGenerateResponse> generationTask;
 
     private Topic topic;
-    private StudyModule module;
     private Runnable onWorksheetSaved;
+
+    public WorksheetCreateController() {
+        this(new WorksheetCreationService(), new PressWorksheetGenerationService());
+    }
+
+    WorksheetCreateController(WorksheetCreationService service, PressWorksheetGenerationService pressService) {
+        this.service = service;
+        this.pressService = pressService;
+    }
 
     @FXML
     private void initialize() {
@@ -79,23 +91,27 @@ public class WorksheetCreateController {
         importanceCombo.setValue(ImportanceLevel.MEDIUM);
         LevelUi.applyLevelBarStyling(importanceCombo);
 
-        flightDeckDifficultyCombo.getItems().setAll(DifficultyLevel.values());
-        flightDeckDifficultyCombo.setValue(DifficultyLevel.MEDIUM);
-        LevelUi.applyLevelBarStyling(flightDeckDifficultyCombo);
+        pressDifficultyCombo.getItems().setAll(DifficultyLevel.values());
+        pressDifficultyCombo.setValue(DifficultyLevel.MEDIUM);
+        LevelUi.applyLevelBarStyling(pressDifficultyCombo);
 
-        flightDeckQuestionCountSpinner.setValueFactory(
+        pressQuestionCountSpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, 3)
         );
 
-        flightDeckFormatCombo.getItems().setAll(FlightDeckQuestionFormat.values());
-        flightDeckFormatCombo.setValue(FlightDeckQuestionFormat.SHORT_ANSWER);
+        pressFormatCombo.getItems().setAll(PressQuestionFormat.values());
+        pressFormatCombo.setValue(PressQuestionFormat.SHORT_ANSWER);
 
         addQuestionRow();
+        titleField.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (oldScene != null && newScene == null) {
+                cancelGeneration();
+            }
+        });
     }
 
     public void setTopic(Topic topic, StudyModule module, Runnable onWorksheetSaved) {
         this.topic = topic;
-        this.module = module;
         this.onWorksheetSaved = onWorksheetSaved;
 
         String moduleText = module == null ? "Unknown module" : module.name();
@@ -108,64 +124,79 @@ public class WorksheetCreateController {
     }
 
     @FXML
-    private void handleGenerateWithFlightDeck() {
+    private void handleGenerateWithPress() {
+        if (generationTask != null) {
+            return;
+        }
         if (topic == null) {
             setStatus("Choose a topic before generating questions.");
-            setFlightDeckStatus("No parent topic selected.");
+            setPressStatus("No parent topic selected.");
             UiAnimations.validationError(parentTopicLabel);
             return;
         }
 
-        String subject = module == null || module.name().isBlank() ? "Study" : module.name();
-        int requestedCount = flightDeckQuestionCountSpinner.getValue();
+        PressGenerateRequest request;
+        try {
+            request = new PressGenerateRequest(
+                    pressSubjectField.getText(),
+                    pressTopicField.getText(),
+                    pressDifficultyCombo.getValue(),
+                    readIntegerSpinner(pressQuestionCountSpinner, 1, 10, "Press question count"),
+                    pressFormatCombo.getValue()
+            );
+        } catch (IllegalArgumentException e) {
+            setPressStatus(e.getMessage());
+            UiAnimations.validationError(pressSubjectField, pressTopicField, pressQuestionCountSpinner);
+            return;
+        }
 
-        FlightDeckGenerateRequest request = new FlightDeckGenerateRequest(
-                subject,
-                topic.name(),
-                flightDeckDifficultyCombo.getValue(),
-                requestedCount,
-                flightDeckFormatCombo.getValue()
-        );
-
-        setFlightDeckBusy(true);
-        setFlightDeckStatus("Generating editable draft questions with FlightDeck...");
+        setPressBusy(true);
+        setPressStatus("Generating editable draft questions with Press...");
         setStatus("");
 
-        Task<FlightDeckGenerateResponse> task = new Task<>() {
+        Task<PressGenerateResponse> task = new Task<>() {
             @Override
-            protected FlightDeckGenerateResponse call() throws FlightDeckApiException {
-                return flightDeckService.generate(request);
+            protected PressGenerateResponse call() throws PressApiException {
+                return pressService.generate(request);
             }
         };
 
         task.setOnSucceeded(event -> {
-            setFlightDeckBusy(false);
-            applyGeneratedWorksheet(task.getValue(), requestedCount);
+            if (generationTask != task) {
+                return;
+            }
+            generationTask = null;
+            setPressBusy(false);
+            applyGeneratedWorksheet(task.getValue(), request);
         });
 
         task.setOnFailed(event -> {
-            setFlightDeckBusy(false);
-            Throwable error = task.getException();
-
-            if (error != null) {
-                error.printStackTrace();
+            if (generationTask != task) {
+                return;
             }
-
-            String message = error == null
-                    ? "FlightDeck generation failed. You can still create the worksheet manually."
+            generationTask = null;
+            setPressBusy(false);
+            Throwable error = task.getException();
+            String message = error == null || textBlank(error.getMessage())
+                    ? "Press generation failed. You can still create the worksheet manually."
                     : error.getMessage();
 
-            setFlightDeckStatus(message);
+            setPressStatus(message);
             setStatus(message);
         });
 
-        Thread worker = new Thread(task, "flightdeck-generate-worker");
+        generationTask = task;
+        Thread worker = new Thread(task, "press-generate-worker");
         worker.setDaemon(true);
         worker.start();
     }
 
     @FXML
     private void handleSaveWorksheet() {
+        if (generationTask != null) {
+            setStatus("Wait for Press to finish or stop generation before saving.");
+            return;
+        }
         if (topic == null) {
             setStatus("No parent topic selected.");
             return;
@@ -205,6 +236,21 @@ public class WorksheetCreateController {
     @FXML
     private void handleCancel() {
         closeWindow();
+    }
+
+    @FXML
+    private void handleCancelGeneration() {
+        cancelGeneration();
+        setPressStatus("Press generation cancelled. Your draft has been kept.");
+    }
+
+    private void cancelGeneration() {
+        Task<PressGenerateResponse> task = generationTask;
+        generationTask = null;
+        if (task != null) {
+            task.cancel(true);
+        }
+        setPressBusy(false);
     }
 
     private void addQuestionRow() {
@@ -280,7 +326,7 @@ public class WorksheetCreateController {
         VBox imageBox = new VBox(6, imageActions, imagePreview);
         imageBox.getStyleClass().add("question-image-preview");
 
-        Spinner<Integer> maxMarksSpinner = new Spinner<>(1, 100, Math.max(1, maxMarks));
+        Spinner<Integer> maxMarksSpinner = new Spinner<>(1, Math.max(100, maxMarks), Math.max(1, maxMarks));
         maxMarksSpinner.setEditable(true);
         maxMarksSpinner.setUserData("maxMarks");
         maxMarksSpinner.setMaxWidth(220);
@@ -312,30 +358,32 @@ public class WorksheetCreateController {
     }
 
     private void applyGeneratedWorksheet(
-            FlightDeckGenerateResponse response,
-            int requestedCount
+            PressGenerateResponse response,
+            PressGenerateRequest request
     ) {
 
         if (response.questions().isEmpty()) {
-            String message = "FlightDeck did not return any usable questions. Manual creation is still available.";
-            setFlightDeckStatus(message);
+            String message = "Press did not return any usable questions. Manual creation is still available.";
+            setPressStatus(message);
             setStatus(message);
             return;
         }
 
         if (titleField.getText() == null || titleField.getText().isBlank()) {
-            titleField.setText(response.title().isBlank()
-                    ? topic.name() + " Practice"
-                    : response.title());
+            String generatedTitle = response.title().isBlank()
+                    ? request.topic() + " Practice"
+                    : response.title();
+            titleField.setText(generatedTitle.substring(0, Math.min(generatedTitle.length(), 120)));
         }
 
         if (descriptionArea.getText() == null || descriptionArea.getText().isBlank()) {
             descriptionArea.setText(response.description().isBlank()
-                    ? "Generated with FlightDeck. Review and edit before saving."
+                    ? "Generated with Press. Review and edit before saving."
                     : response.description());
         }
 
-        removeSingleBlankQuestionRow();
+        questionsContainer.getChildren().removeIf(child -> child instanceof VBox row && questionRowIsBlank(row));
+        renumberQuestionRows();
 
         response.questions().forEach(question -> {
             QuestionRepository.QuestionDraft draft = question.toQuestionDraft();
@@ -347,28 +395,23 @@ public class WorksheetCreateController {
             );
         });
 
-        String message = response.questions().size() < requestedCount
-                ? "FlightDeck returned " + response.questions().size()
-                        + " of " + requestedCount + " requested questions. Review before saving."
+        String message = response.questions().size() != request.questionCount()
+                ? "Press returned " + response.questions().size()
+                        + " of " + request.questionCount() + " requested questions. Review before saving."
                 : "Generated " + response.questions().size()
                         + " editable questions. Review before saving.";
 
+        if (response.questions().stream().anyMatch(question -> question.toQuestionDraft().markScheme().isBlank())) {
+            message += " Add the missing mark schemes before saving.";
+        }
+        String mode = response.metadata().getOrDefault("mode", "");
+        if (!mode.isBlank() && !"ai".equalsIgnoreCase(mode)) {
+            message += " Press generation mode: " + mode + ".";
+        }
+
         UiAnimations.validationSuccess(questionsContainer);
-        setFlightDeckStatus(message);
+        setPressStatus(message);
         setStatus(message);
-    }
-
-    private void removeSingleBlankQuestionRow() {
-        if (questionsContainer.getChildren().size() != 1
-                || !(questionsContainer.getChildren().get(0) instanceof VBox row)) {
-            return;
-        }
-
-        if (!questionRowIsBlank(row)) {
-            return;
-        }
-
-        questionsContainer.getChildren().clear();
     }
 
     private boolean questionRowIsBlank(VBox row) {
@@ -394,14 +437,19 @@ public class WorksheetCreateController {
         return value == null || value.isBlank();
     }
 
-    private void setFlightDeckBusy(boolean generating) {
-        generateFlightDeckButton.setDisable(generating);
-        flightDeckDifficultyCombo.setDisable(generating);
-        flightDeckQuestionCountSpinner.setDisable(generating);
-        flightDeckFormatCombo.setDisable(generating);
-        flightDeckProgressIndicator.setVisible(generating);
-        flightDeckProgressIndicator.setManaged(generating);
-        generateFlightDeckButton.setText(generating ? "Generating..." : "Generate");
+    private void setPressBusy(boolean generating) {
+        generatePressButton.setDisable(generating);
+        pressSubjectField.setDisable(generating);
+        pressTopicField.setDisable(generating);
+        saveWorksheetButton.setDisable(generating);
+        cancelPressButton.setVisible(generating);
+        cancelPressButton.setManaged(generating);
+        pressDifficultyCombo.setDisable(generating);
+        pressQuestionCountSpinner.setDisable(generating);
+        pressFormatCombo.setDisable(generating);
+        pressProgressIndicator.setVisible(generating);
+        pressProgressIndicator.setManaged(generating);
+        generatePressButton.setText(generating ? "Generating..." : "Generate");
     }
 
     private void chooseQuestionImage(
@@ -501,11 +549,15 @@ public class WorksheetCreateController {
                 throw new IllegalStateException("Question form row is missing fields.");
             }
 
+            SpinnerValueFactory.IntegerSpinnerValueFactory marksFactory =
+                    (SpinnerValueFactory.IntegerSpinnerValueFactory) maxMarksSpinner.getValueFactory();
+            int maxMarks = readIntegerSpinner(maxMarksSpinner, 1, marksFactory.getMax(),
+                    "Question " + (i + 1) + " marks");
             validateQuestionDraftInput(
                     i + 1,
                     promptArea.getText(),
                     markSchemeArea.getText(),
-                    maxMarksSpinner.getValue()
+                    maxMarks
             );
 
             String imagePath = null;
@@ -525,7 +577,7 @@ public class WorksheetCreateController {
             drafts.add(new QuestionRepository.QuestionDraft(
                     promptArea.getText(),
                     markSchemeArea.getText(),
-                    maxMarksSpinner.getValue(),
+                    maxMarks,
                     tags,
                     imagePath
             ));
@@ -554,6 +606,19 @@ public class WorksheetCreateController {
         }
     }
 
+    private static int readIntegerSpinner(Spinner<Integer> spinner, int min, int max, String label) {
+        try {
+            int value = Integer.parseInt(spinner.getEditor().getText().trim());
+            if (value >= min && value <= max) {
+                spinner.getValueFactory().setValue(value);
+                return value;
+            }
+        } catch (NumberFormatException ignored) {
+            // Report malformed input instead of using the spinner's stale committed value.
+        }
+        throw new IllegalArgumentException(label + " must be a whole number between " + min + " and " + max + ".");
+    }
+
     private void renumberQuestionRows() {
         for (int i = 0; i < questionsContainer.getChildren().size(); i++) {
             VBox row = (VBox) questionsContainer.getChildren().get(i);
@@ -580,11 +645,12 @@ public class WorksheetCreateController {
         statusLabel.setText(message);
     }
 
-    private void setFlightDeckStatus(String message) {
-        flightDeckStatusLabel.setText(message == null ? "" : message);
+    private void setPressStatus(String message) {
+        pressStatusLabel.setText(message == null ? "" : message);
     }
 
     private void closeWindow() {
+        cancelGeneration();
         OverlayService.closeFrom(titleField);
     }
 

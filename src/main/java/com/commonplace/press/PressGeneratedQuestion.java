@@ -1,4 +1,4 @@
-package com.commonplace.flightdeck;
+package com.commonplace.press;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.StringJoiner;
 
 import com.commonplace.repository.QuestionRepository;
 
-public record FlightDeckGeneratedQuestion(
+public record PressGeneratedQuestion(
         String prompt,
         String answer,
         String markScheme,
@@ -17,7 +17,7 @@ public record FlightDeckGeneratedQuestion(
         Map<String, String> metadata
 ) {
 
-    public FlightDeckGeneratedQuestion {
+    public PressGeneratedQuestion {
         prompt = blankToEmpty(prompt);
         answer = blankToEmpty(answer);
         markScheme = blankToEmpty(markScheme);
@@ -32,7 +32,7 @@ public record FlightDeckGeneratedQuestion(
                 promptWithOptions(),
                 markSchemeWithAnswer(),
                 maxMarks,
-                format.isBlank() ? "flightdeck" : "flightdeck," + format,
+                format.isBlank() ? "press" : "press," + format,
                 null
         );
     }
@@ -58,12 +58,11 @@ public record FlightDeckGeneratedQuestion(
             joiner.add(markScheme);
         }
 
-        if (!answer.isBlank() && !markScheme.toLowerCase().contains(answer.toLowerCase())) {
+        if (!answer.isBlank() && !markScheme.equalsIgnoreCase(answer)) {
             joiner.add("Answer: " + answer);
         }
 
-        String value = joiner.toString();
-        return value.isBlank() ? "Review generated answer before saving." : value;
+        return joiner.toString();
     }
 
     private static String blankToEmpty(String value) {

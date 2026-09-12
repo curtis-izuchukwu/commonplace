@@ -18,6 +18,8 @@ import javafx.stage.Window;
 public final class AppIcon {
 
     public static final String PNG_RESOURCE = "/com/commonplace/assets/commonplace_icon.png";
+    public static final String TITLE_BAR_ICON_RESOURCE =
+            "/com/commonplace/assets/commonplace_titlebar_icon.png";
     public static final String WINDOWS_ICON_RESOURCE = "/com/commonplace/assets/commonplace_icon.ico";
     public static final String MAC_ICON_RESOURCE = "/com/commonplace/assets/commonplace_icon.icns";
 
@@ -35,6 +37,7 @@ public final class AppIcon {
     };
 
     private static List<Image> javafxIcons;
+    private static Image titleBarIcon;
     private static BufferedImage awtIcon;
     private static boolean attemptedTaskbarIcon;
 
@@ -81,6 +84,26 @@ public final class AppIcon {
     public static Image image() {
         List<Image> icons = images();
         return icons.isEmpty() ? null : icons.get(icons.size() - 1);
+    }
+
+    public static Image titleBarImage() {
+        if (titleBarIcon != null) {
+            return titleBarIcon;
+        }
+
+        URL url = iconUrl(TITLE_BAR_ICON_RESOURCE);
+
+        if (url != null) {
+            Image icon = new Image(url.toExternalForm(), 48, 48, true, true, false);
+
+            if (!icon.isError()) {
+                titleBarIcon = icon;
+                return titleBarIcon;
+            }
+        }
+
+        titleBarIcon = image();
+        return titleBarIcon;
     }
 
     public static void applyToTaskbar() {
