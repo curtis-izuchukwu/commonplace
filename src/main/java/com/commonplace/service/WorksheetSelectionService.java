@@ -1,0 +1,259 @@
+package com.commonplace.service;
+
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import com.commonplace.model.DifficultyLevel;
+import com.commonplace.model.StudyModule;
+import com.commonplace.model.Topic;
+import com.commonplace.model.Worksheet;
+import com.commonplace.repository.AttemptRepository;
+import com.commonplace.repository.DailyRecommendationRepository;
+import com.commonplace.repository.MistakeRepository;
+import com.commonplace.repository.ModuleRepository;
+import com.commonplace.repository.TopicRepository;
+import com.commonplace.repository.WorksheetRepository;
+import com.commonplace.util.WeightedRandomPicker;
+
+public class WorksheetSelectionService {
+
+    private final WorksheetRepository worksheetRepository;
+    private final TopicRepository topicRepository;
+    private final PriorityScoreService priorityScoreService;
+    private final WeightedRandomPicker<WorksheetRecommendation> picker;
+    private final MistakeRepository mistakeRepository;
+    private final ModuleRepository moduleRepository;
+    private final UserSettingsService userSettingsService;
+    private final AttemptRepository attemptRepository;
+    private final DailyRecommendationRepository dailyRecommendationRepository;
+
+    public WorksheetSelectionService() {
+        this(
+                new WorksheetRepository(),
+                new TopicRepository(),
+                new MistakeRepository(),
+                new ModuleRepository(),
+                new UserSettingsService(),
+                new AttemptRepository(),
+                new DailyRecommendationRepository(),
+                new PriorityScoreService(),
+                new WeightedRandomPicker<>()
+        );
+    }
+
+    public WorksheetSelectionService(
+            WorksheetRepository worksheetRepository,
+            TopicRepository topicRepository,
+            MistakeRepository mistakeRepository,
+            ModuleRepository moduleRepository,
+            UserSettingsService userSettingsService,
+            PriorityScoreService priorityScoreService,
+            WeightedRandomPicker<WorksheetRecommendation> picker
+    ) {
+        this(
+                worksheetRepository,
+                topicRepository,
+                mistakeRepository,
+                moduleRepository,
+                userSettingsService,
+                new AttemptRepository(),
+                new DailyRecommendationRepository(),
+                priorityScoreService,
+                picker
+        );
+    }
+
+    public WorksheetSelectionService(
+            WorksheetRepository worksheetRepository,
+            TopicRepository topicRepository,
+            MistakeRepository mistakeRepository,
+            ModuleRepository moduleRepository,
+            UserSettingsService userSettingsService,
+            DailyRecommendationRepository dailyRecommendationRepository,
+            PriorityScoreService priorityScoreService,
+            WeightedRandomPicker<WorksheetRecommendation> picker
+    ) {
+        this(
+                worksheetRepository,
+                topicRepository,
+                mistakeRepository,
+                moduleRepository,
+                userSettingsService,
+                new AttemptRepository(),
+                dailyRecommendationRepository,
+                priorityScoreService,
+                picker
+        );
+    }
+
+    public WorksheetSelectionService(
+            WorksheetRepository worksheetRepository,
+            TopicRepository topicRepository,
+            MistakeRepository mistakeRepository,
+            ModuleRepository moduleRepository,
+            UserSettingsService userSettingsService,
+            AttemptRepository attemptRepository,
+            DailyRecommendationRepository dailyRecommendationRepository,
+            PriorityScoreService priorityScoreService,
+            WeightedRandomPicker<WorksheetRecommendation> picker
+    ) {
+        this.worksheetRepository = worksheetRepository;
+        this.topicRepository = topicRepository;
+        this.mistakeRepository = mistakeRepository;
+        this.moduleRepository = moduleRepository;
+        this.userSettingsService = userSettingsService;
+        this.attemptRepository = attemptRepository;
+        this.dailyRecommendationRepository = dailyRecommendationRepository;
+        this.priorityScoreService = priorityScoreService;
+        this.picker = picker;
+    }
+
+    public Optional<WorksheetRecommendation> recommendWorksheet() throws SQLException {
+        return recommendWorksheet(false);
+    }
+
+    public Optional<WorksheetRecommendation> pickAnotherRecommendation() throws SQLException {
+        return recommendWorksheet(true);
+    }
+
+    private Optional<WorksheetRecommendation> recommendWorksheet(boolean forceNew) throws SQLException {
+        Set<Long> completedTodayWorksheetIds =
+                attemptRepository.findWorksheetIdsCompletedOn(LocalDate.now());
+
+        List<WorksheetRecommendation> recommendations = buildRecommendations().stream()
+                .filter(recommendation ->
+                        !completedTodayWorksheetIds.contains(recommendation.worksheet().id()))
+                .toList();
+
+        if (recommendations.isEmpty()) {
+            dailyRecommendationRepository.clear();
+            return Optional.empty();
+        }
+
+        Optional<Long> cachedWorksheetId = dailyRecommendationRepository.findTodayWorksheetId();
+        Optional<WorksheetRecommendation> cachedRecommendation = cachedWorksheetId
+                .flatMap(id -> recommendations.stream()
+                        .filter(recommendation -> recommendation.worksheet().id() == id)
+                        .findFirst());
+
+        if (!forceNew && cachedRecommendation.isPresent()) {
+            return cachedRecommendation;
+        }
+
+        if (cachedWorksheetId.isPresent() && cachedRecommendation.isEmpty()) {
+            dailyRecommendationRepository.clear();
+        }
+
+        Set<Long> alreadyRecommendedToday = dailyRecommendationRepository.findTodayWorksheetIds();
+        List<WorksheetRecommendation> pickableRecommendations = recommendations.stream()
+                .filter(recommendation ->
+                        !alreadyRecommendedToday.contains(recommendation.worksheet().id()))
+                .toList();
+
+        if (pickableRecommendations.isEmpty()) {
+            return cachedRecommendation;
+        }
+
+        WorksheetRecommendation recommendation = picker.pick(
+                pickableRecommendations,
+                WorksheetRecommendation::priorityScore
+        );
+        dailyRecommendationRepository.saveTodayWorksheetId(recommendation.worksheet().id());
+
+        return Optional.of(recommendation);
+    }
+
+    public List<WorksheetRecommendation> previewPriorities() throws SQLException {
+        return buildRecommendations().stream()
+                .sorted((first, second) -> Integer.compare(
+                        second.priorityScore(),
+                        first.priorityScore()
+                ))
+                .toList();
+    }
+
+    private List<WorksheetRecommendation> buildRecommendations() throws SQLException {
+        List<Worksheet> worksheets = worksheetRepository.findAll();
+        List<WorksheetRecommendation> recommendations = new ArrayList<>();
+        var settings = userSettingsService.load();
+        DifficultyLevel minDifficulty = DifficultyLevel.valueOf(settings.preferredMinDifficulty());
+        DifficultyLevel maxDifficulty = DifficultyLevel.valueOf(settings.preferredMaxDifficulty());
+
+        for (Worksheet worksheet : worksheets) {
+            if (!difficultyAllowed(worksheet.difficulty(), minDifficulty, maxDifficulty)) {
+                continue;
+            }
+
+            Optional<Topic> topic = topicRepository.findById(worksheet.topicId());
+
+            if (topic.isEmpty()) {
+                continue;
+            }
+
+            int unresolvedMistakeCount = settings.includeResolvedMistakesInRecommendations()
+                    ? mistakeRepository.countByWorksheetId(worksheet.id())
+                    : mistakeRepository.countUnresolvedByWorksheetId(worksheet.id());
+
+            int priorityScore = priorityScoreService.calculatePriority(
+                    worksheet,
+                    topic.get(),
+                    unresolvedMistakeCount
+            );
+
+            priorityScore += preferenceBonus(settings.recommendationFocus(), topic.get());
+
+            String explanation = priorityScoreService.explainPriority(
+                    worksheet,
+                    topic.get(),
+                    unresolvedMistakeCount
+            );
+
+            recommendations.add(new WorksheetRecommendation(
+                    worksheet,
+                    topic.get(),
+                    priorityScore,
+                    explanation
+            ));
+        }
+
+        return recommendations;
+    }
+
+    private boolean difficultyAllowed(
+            DifficultyLevel worksheetDifficulty,
+            DifficultyLevel minDifficulty,
+            DifficultyLevel maxDifficulty
+    ) {
+        return worksheetDifficulty.ordinal() >= minDifficulty.ordinal()
+                && worksheetDifficulty.ordinal() <= maxDifficulty.ordinal();
+    }
+
+    private int preferenceBonus(String recommendationFocus, Topic topic) throws SQLException {
+        return switch (recommendationFocus) {
+            case "WEAK_TOPICS" -> (int) Math.round((100.0 - topic.masteryScore()) / 3.0);
+            case "UPCOMING_EXAMS" -> upcomingExamBonus(topic);
+            default -> 0;
+        };
+    }
+
+    private int upcomingExamBonus(Topic topic) throws SQLException {
+        Optional<StudyModule> module = moduleRepository.findById(topic.moduleId());
+
+        if (module.isEmpty() || module.get().examDate() == null) {
+            return 0;
+        }
+
+        long daysUntilExam = ChronoUnit.DAYS.between(LocalDate.now(), module.get().examDate());
+
+        if (daysUntilExam < 0 || daysUntilExam > 30) {
+            return 0;
+        }
+
+        return (int) Math.max(0, 40 - daysUntilExam);
+    }
+}

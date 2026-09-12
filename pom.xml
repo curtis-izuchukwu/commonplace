@@ -4,10 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.pararepilot</groupId>
-    <artifactId>parare-pilot</artifactId>
+    <groupId>com.commonplace</groupId>
+    <artifactId>commonplace</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>PararePilot</name>
+    <name>Commonplace</name>
     <description>Offline-first JavaFX study tracking desktop application.</description>
 
     <properties>
@@ -66,7 +66,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.pararepilot.Main</mainClass>
+                    <mainClass>com.commonplace.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>

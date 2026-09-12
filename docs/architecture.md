@@ -1,6 +1,6 @@
-# PararePilot Architecture
+# Commonplace Architecture
 
-PararePilot is a JavaFX desktop app with a local SQLite database. The codebase is organised around a conventional layered architecture:
+Commonplace is a JavaFX desktop app with a local SQLite database. The codebase is organised around a conventional layered architecture:
 
 | Layer | Responsibility |
 | --- | --- |
@@ -24,14 +24,14 @@ Models are shared across layers as simple data objects.
 
 | Package | Purpose |
 | --- | --- |
-| `com.pararepilot.model` | Records and enums for users, modules, topics, worksheets, attempts, answers, mistakes, settings, and stats |
-| `com.pararepilot.repository` | SQLite schema setup, migrations, and repository classes |
-| `com.pararepilot.service` | Business workflows and app rules |
-| `com.pararepilot.ui` | Shared JavaFX UI helpers |
-| `com.pararepilot.ui.controller` | JavaFX controllers for each view |
-| `com.pararepilot.flightdeck` | FlightDeck API configuration, client, request/response types, and JSON handling |
-| `com.pararepilot.importer` | PDF text/image extraction, OCR adapters, import issues, and worksheet draft parsing |
-| `com.pararepilot.util` | Small utility classes |
+| `com.commonplace.model` | Records and enums for users, modules, topics, worksheets, attempts, answers, mistakes, settings, and stats |
+| `com.commonplace.repository` | SQLite schema setup, migrations, and repository classes |
+| `com.commonplace.service` | Business workflows and app rules |
+| `com.commonplace.ui` | Shared JavaFX UI helpers |
+| `com.commonplace.ui.controller` | JavaFX controllers for each view |
+| `com.commonplace.flightdeck` | FlightDeck API configuration, client, request/response types, and JSON handling |
+| `com.commonplace.importer` | PDF text/image extraction, OCR adapters, import issues, and worksheet draft parsing |
+| `com.commonplace.util` | Small utility classes |
 
 ---
 
@@ -61,7 +61,7 @@ Repositories own SQLite access through JDBC. They should not contain JavaFX logi
 
 | Repository | Purpose |
 | --- | --- |
-| `DatabaseManager` | Creates `~/.pararepilot/appdata.db`, enables foreign keys, sets busy timeout, creates tables, and runs migrations |
+| `DatabaseManager` | Creates `~/.commonplace/appdata.db`, enables foreign keys, sets busy timeout, creates tables, and runs migrations |
 | `UserRepository` | Users and password metadata |
 | `RememberedSessionRepository` | Stay-signed-in session |
 | `UserSettingsRepository` | Per-account settings |
@@ -117,7 +117,7 @@ Services coordinate repositories and enforce application rules.
 | `ModuleTopicService` | Module/topic creation and lookup workflows |
 | `StudyStructureService` | Study structure helpers |
 | `WorksheetCreationService` | Worksheet and question persistence |
-| `QuestionImageStorage` | Copies selected/generated images into `~/.pararepilot/images/` and resolves stored paths |
+| `QuestionImageStorage` | Copies selected/generated images into `~/.commonplace/images/` and resolves stored paths |
 | `FlightDeckWorksheetGenerationService` | Converts FlightDeck responses into editable worksheet data |
 | `WorksheetSelectionService` | Selects and stores daily worksheet recommendations |
 | `PriorityScoreService` | Calculates worksheet priority scores |
@@ -242,12 +242,12 @@ The `importer` package isolates local PDF import.
 Default app data directory:
 
 ```text
-~/.pararepilot/
+~/.commonplace/
 ```
 
 Important paths:
 
 | Path | Purpose |
 | --- | --- |
-| `~/.pararepilot/appdata.db` | SQLite database |
-| `~/.pararepilot/images/` | Copied question images and extracted PDF images |
+| `~/.commonplace/appdata.db` | SQLite database |
+| `~/.commonplace/images/` | Copied question images and extracted PDF images |

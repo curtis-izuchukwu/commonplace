@@ -1,6 +1,6 @@
 # Metropolitan Study Companion
 
-The shared [JavaFX stylesheet](../src/main/resources/com/pararepilot/css/app.css) defines a warm study-room theme. Components use JavaFX looked-up colour tokens so forms, overlays, search, and the dashboard share surfaces and states.
+The shared [JavaFX stylesheet](../src/main/resources/com/commonplace/css/app.css) defines a warm study-room theme. Components use JavaFX looked-up colour tokens so forms, overlays, search, and the dashboard share surfaces and states.
 
 | Role | Dark palette |
 | --- | --- |

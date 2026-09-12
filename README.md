@@ -1,6 +1,6 @@
-# PārarePilot
+# Commonplace
 
-PārarePilot is a local-first JavaFX study app for organising revision material, attempting worksheets, reviewing mistakes, and getting adaptive daily worksheet recommendations.
+Commonplace is a local-first JavaFX study app for organising revision material, attempting worksheets, reviewing mistakes, and getting adaptive daily worksheet recommendations.
 
 It is designed around a simple revision loop:
 
@@ -50,7 +50,7 @@ All study data is stored locally in SQLite.
 
 ## Worksheet Creation
 
-PararePilot supports three worksheet sources:
+Commonplace supports three worksheet sources:
 
 | Source | Description |
 | --- | --- |
@@ -67,13 +67,13 @@ https://flightdeck-api.izuchukwucur.workers.dev
 You can override it with:
 
 ```text
-PARAREPILOT_FLIGHTDECK_API_BASE_URL
+COMMONPLACE_FLIGHTDECK_API_BASE_URL
 ```
 
 or:
 
 ```text
--Dpararepilot.flightdeck.baseUrl=https://your-endpoint.example
+-Dcommonplace.flightdeck.baseUrl=https://your-endpoint.example
 ```
 
 ---
@@ -91,7 +91,7 @@ Each question can have one optional image.
 Images are stored under:
 
 ```text
-~/.pararepilot/images/
+~/.commonplace/images/
 ```
 
 ---
@@ -122,15 +122,15 @@ More detail: [docs/weighted-selection.md](docs/weighted-selection.md)
 Default data directory:
 
 ```text
-~/.pararepilot/
+~/.commonplace/
 ```
 
 Main files:
 
 | Path | Purpose |
 | --- | --- |
-| `~/.pararepilot/appdata.db` | SQLite database |
-| `~/.pararepilot/images/` | Copied question images and extracted PDF images |
+| `~/.commonplace/appdata.db` | SQLite database |
+| `~/.commonplace/images/` | Copied question images and extracted PDF images |
 
 The database is created automatically when the app starts.
 
@@ -167,8 +167,8 @@ mvn --version
 Clone and run:
 
 ```bash
-git clone https://github.com/curtis-izuchukwu/parare-pilot.git
-cd parare-pilot
+git clone https://github.com/curtis-izuchukwu/commonplace.git
+cd commonplace
 mvn javafx:run
 ```
 
@@ -182,7 +182,7 @@ mvn clean test
 
 ## Architecture
 
-PararePilot uses a layered JavaFX architecture:
+Commonplace uses a layered JavaFX architecture:
 
 | Layer | Responsibility |
 | --- | --- |
@@ -209,5 +209,5 @@ More detail: [docs/architecture.md](docs/architecture.md)
 
 | Project | Role |
 | --- | --- |
-| PararePilot | Local-first JavaFX study tracker |
+| Commonplace | Local-first JavaFX study tracker |
 | FlightDeck API | Optional worksheet-generation API |

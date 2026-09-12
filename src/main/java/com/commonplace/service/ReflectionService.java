@@ -1,0 +1,103 @@
+package com.commonplace.service;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import com.commonplace.model.ConfidenceLevel;
+import com.commonplace.model.Worksheet;
+import com.commonplace.model.WorksheetAttempt;
+import com.commonplace.repository.AttemptRepository;
+import com.commonplace.repository.WorksheetRepository;
+
+public class ReflectionService {
+
+    private static final double FAILURE_THRESHOLD_PERCENT = 50.0;
+
+    private final AttemptRepository attemptRepository;
+    private final WorksheetRepository worksheetRepository;
+    private final TopicStatsService topicStatsService;
+    private final GamificationService gamificationService;
+
+    public ReflectionService() {
+        this(
+                new AttemptRepository(),
+                new WorksheetRepository(),
+                new TopicStatsService(),
+                new GamificationService()
+        );
+    }
+
+    public ReflectionService(
+            AttemptRepository attemptRepository,
+            WorksheetRepository worksheetRepository,
+            TopicStatsService topicStatsService,
+            GamificationService gamificationService
+    ) {
+        this.attemptRepository = attemptRepository;
+        this.worksheetRepository = worksheetRepository;
+        this.topicStatsService = topicStatsService;
+        this.gamificationService = gamificationService;
+    }
+
+    public GamificationResult completeReflection(
+            Worksheet worksheet,
+            WorksheetAttempt attempt,
+            ConfidenceLevel confidenceAfter,
+            String mainWeakness,
+            String nextAction,
+            String reflectionNotes
+    ) throws SQLException {
+
+        if (worksheet == null) {
+            throw new IllegalArgumentException("Worksheet cannot be null.");
+        }
+
+        if (attempt == null) {
+            throw new IllegalArgumentException("Attempt cannot be null.");
+        }
+
+        ConfidenceLevel resolvedConfidence = confidenceAfter == null
+                ? ConfidenceLevel.MEDIUM
+                : confidenceAfter;
+
+        attemptRepository.updateReflection(
+                attempt.id(),
+                resolvedConfidence,
+                mainWeakness,
+                nextAction,
+                reflectionNotes
+        );
+
+        updateWorksheetStats(worksheet, attempt);
+        topicStatsService.updateTopicStats(worksheet.topicId(), resolvedConfidence);
+        return gamificationService.awardWorksheetCompletion(attempt);
+    }
+
+    private void updateWorksheetStats(Worksheet worksheet, WorksheetAttempt latestAttempt)
+            throws SQLException {
+
+        List<WorksheetAttempt> attempts = attemptRepository.findByWorksheetId(worksheet.id());
+
+        int timesAttempted = attempts.size();
+
+        double averageScore = attempts.stream()
+                .mapToDouble(WorksheetAttempt::scorePercent)
+                .average()
+                .orElse(latestAttempt.scorePercent());
+
+        int previousFailureStreak = worksheet.failureStreak();
+
+        int failureStreak = latestAttempt.scorePercent() < FAILURE_THRESHOLD_PERCENT
+                ? previousFailureStreak + 1
+                : 0;
+
+        worksheetRepository.updateStats(
+                worksheet.id(),
+                latestAttempt.completedAt(),
+                timesAttempted,
+                latestAttempt.scorePercent(),
+                averageScore,
+                failureStreak
+        );
+    }
+}

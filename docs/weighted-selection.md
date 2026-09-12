@@ -1,6 +1,6 @@
 # Weighted Worksheet Selection
 
-ParārePilot does not simply pick the highest-priority worksheet.
+Commonplace does not simply pick the highest-priority worksheet.
 
 Instead, every worksheet receives a priority score, then the app performs weighted-random selection. This means weaker or neglected worksheets appear more often, while recommendations still feel varied and unpredictable.
 
@@ -93,4 +93,4 @@ Weighted randomness keeps the app adaptive while still giving the user variety. 
 | Highest-priority selection | Targets weak areas, but becomes repetitive  |
 | Weighted-random selection  | Targets weak areas while preserving variety |
 
-ParārePilot uses weighted-random selection because it balances structure with unpredictability.
+Commonplace uses weighted-random selection because it balances structure with unpredictability.
