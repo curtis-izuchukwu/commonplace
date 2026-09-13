@@ -9,7 +9,10 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 
 public final class LevelUi {
 
@@ -62,10 +65,96 @@ public final class LevelUi {
     }
 
     public static Node createPriorityChip(ImportanceLevel importance) {
-        Label chip = new Label("Priority: " + titleCase(importance == null ? "Medium" : importance.name()));
+        Label chip =
+                new Label(
+                        "Priority  "
+                                + displayName(importance == null ? "Medium" : importance.name()));
         chip.getStyleClass().addAll("priority-chip", levelClass(importance));
         UiAnimations.popIn(chip);
         return chip;
+    }
+
+    public static Node createStatCell(String caption, String value) {
+        return createStatCell(caption, value, false);
+    }
+
+    public static Node createStatCell(String caption, String value, boolean emphasized) {
+        Label label = new Label(caption == null ? "" : caption.toUpperCase());
+        label.getStyleClass().add("record-stat-label");
+        Label amount = new Label(value == null || value.isBlank() ? "—" : value.trim());
+        amount.getStyleClass().add("record-stat-value");
+        VBox cell = new VBox(2, label, amount);
+        cell.getStyleClass().add("record-stat-cell");
+        if (emphasized) cell.getStyleClass().add("record-emphasis");
+        return cell;
+    }
+
+    public static Node createPriorityStat(ImportanceLevel importance) {
+        ImportanceLevel resolved = importance == null ? ImportanceLevel.MEDIUM : importance;
+        return createStatCell("Priority", displayName(resolved), resolved == ImportanceLevel.HIGH);
+    }
+
+    public static Node createMasteryStatCell(double percentage) {
+        double mastery = Double.isFinite(percentage) ? Math.max(0, Math.min(100, percentage)) : 0;
+
+        Region fill = new Region();
+        fill.getStyleClass().add("mastery-stat-fill");
+        fill.setMinWidth(0);
+        fill.setMaxWidth(Region.USE_PREF_SIZE);
+        fill.setMaxHeight(Double.MAX_VALUE);
+
+        Label label = new Label("MASTERY");
+        label.getStyleClass().add("record-stat-label");
+        Label amount = new Label(String.format("%.0f%%", mastery));
+        amount.getStyleClass().add("record-stat-value");
+        VBox content = new VBox(2, label, amount);
+        content.getStyleClass().add("mastery-stat-content");
+        content.setMouseTransparent(true);
+
+        StackPane cell = new StackPane(fill, content);
+        cell.getStyleClass().addAll("record-stat-cell", "mastery-stat-cell");
+        cell.setAlignment(Pos.CENTER_LEFT);
+        StackPane.setAlignment(fill, Pos.CENTER_LEFT);
+        StackPane.setAlignment(content, Pos.CENTER_LEFT);
+        fill.prefWidthProperty().bind(cell.widthProperty().multiply(mastery / 100.0));
+        cell.setAccessibleText(String.format("Mastery %.0f%%", mastery));
+        return cell;
+    }
+
+    public static Node createStatusBadge(String value) {
+        Label badge = new Label(value == null || value.isBlank() ? "Status" : value.trim());
+        badge.getStyleClass().add("status-badge");
+        String normalized = badge.getText().toLowerCase();
+        if (normalized.contains("due")
+                || normalized.contains("weak")
+                || normalized.contains("fading")) {
+            badge.getStyleClass().add("status-badge-attention");
+        } else if (normalized.contains("exam") || normalized.contains("priority")) {
+            badge.getStyleClass().add("status-badge-accent");
+        }
+        return badge;
+    }
+
+    public static Node createLedgerRow(String caption, String value) {
+        return createLedgerRow(caption, value, false);
+    }
+
+    public static Node createLedgerRow(String caption, String value, boolean emphasized) {
+        Label label = new Label(caption == null ? "" : caption);
+        label.getStyleClass().add("record-ledger-label");
+        Label amount = new Label(value == null || value.isBlank() ? "—" : value.trim());
+        amount.getStyleClass().add("record-ledger-value");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox row = new HBox(10, label, spacer, amount);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("record-ledger-row");
+        if (emphasized) amount.getStyleClass().add("record-ledger-value-accent");
+        return row;
+    }
+
+    public static String displayName(Object value) {
+        return titleCase(value == null ? "" : value.toString().replace('_', ' '));
     }
 
     private static <T> ListCell<T> createLevelCell() {

@@ -1,9 +1,5 @@
 package com.commonplace.ui.controller;
 
-import java.sql.SQLException;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-
 import com.commonplace.repository.MistakeRepository;
 import com.commonplace.service.MistakeBankService;
 import com.commonplace.ui.AppIcon;
@@ -17,6 +13,10 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class MistakeBankController {
 
@@ -65,24 +65,25 @@ public class MistakeBankController {
 
             boolean showResolved = showResolvedCheckBox.isSelected();
 
-            List<MistakeRepository.MistakeDisplayItem> visibleMistakes = mistakes.stream()
-                    .filter(mistake -> showResolved || !mistake.resolved())
-                    .toList();
+            List<MistakeRepository.MistakeDisplayItem> visibleMistakes =
+                    mistakes.stream()
+                            .filter(mistake -> showResolved || !mistake.resolved())
+                            .toList();
 
             int unresolvedCount = mistakeBankService.countUnresolvedMistakes();
 
             summaryLabel.setText(
-                    unresolvedCount + " unresolved mistake"
+                    unresolvedCount
+                            + " unresolved mistake"
                             + (unresolvedCount == 1 ? "" : "s")
-                            + " in your bank."
-            );
+                            + " in your bank.");
 
             if (visibleMistakes.isEmpty()) {
-                Label emptyLabel = new Label(
-                        showResolved
-                                ? "No mistakes saved yet."
-                                : "No unresolved mistakes. Nice."
-                );
+                Label emptyLabel =
+                        new Label(
+                                showResolved
+                                        ? "No mistakes saved yet."
+                                        : "No unresolved mistakes. Nice.");
                 emptyLabel.getStyleClass().add("muted-text");
                 mistakesList.getChildren().add(emptyLabel);
                 return;
@@ -99,19 +100,21 @@ public class MistakeBankController {
 
     private VBox createMistakeCard(MistakeRepository.MistakeDisplayItem mistake) {
         VBox card = new VBox(10);
-        card.getStyleClass().add(
-                mistake.resolved() ? "mistake-card-resolved" : "mistake-card"
-        );
+        card.getStyleClass().add(mistake.resolved() ? "mistake-card-resolved" : "mistake-card");
 
         Label title = new Label(mistake.topicName() + " - " + mistake.worksheetTitle());
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
-        Label meta = new Label(
-                "Created: " + mistake.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                        + " - Revisited: " + mistake.timesRevisited()
-                        + " - Status: " + (mistake.resolved() ? "Resolved" : "Unresolved")
-        );
+        Label meta =
+                new Label(
+                        "Created: "
+                                + mistake.createdAt()
+                                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                                + " - Revisited: "
+                                + mistake.timesRevisited()
+                                + " - Status: "
+                                + (mistake.resolved() ? "Resolved" : "Unresolved"));
         meta.getStyleClass().add("muted-text");
         meta.setWrapText(true);
 
@@ -138,52 +141,46 @@ public class MistakeBankController {
         Label noteHeading = new Label("Mistake Note");
         noteHeading.getStyleClass().add("small-label");
 
-        Label note = new Label(
-                mistake.mistakeNote() == null || mistake.mistakeNote().isBlank()
-                        ? "No mistake note saved."
-                        : mistake.mistakeNote()
-        );
+        Label note =
+                new Label(
+                        mistake.mistakeNote() == null || mistake.mistakeNote().isBlank()
+                                ? "No mistake note saved."
+                                : mistake.mistakeNote());
         note.setWrapText(true);
         note.getStyleClass().add("muted-text");
 
-        Button revisitButton = new Button("Mark Revisited");
-        revisitButton.setOnAction(event -> handleMarkRevisited(mistake, card));
+        Button revisitButton = new Button("Recall and review");
+        revisitButton.setOnAction(
+                event ->
+                        com.commonplace.ui.LearningUi.reviewMistake(
+                                card,
+                                mistake,
+                                () -> {
+                                    loadMistakes();
+                                    notifyMistakesChanged();
+                                }));
 
         Button resolveButton = new Button(mistake.resolved() ? "Mark Unresolved" : "Mark Resolved");
         resolveButton.setOnAction(event -> handleToggleResolved(mistake, card));
 
         HBox actions = new HBox(10, revisitButton, resolveButton);
 
-        card.getChildren().addAll(
-                title,
-                meta,
-                questionHeading,
-                question,
-                answerHeading,
-                userAnswer,
-                markSchemeHeading,
-                markScheme,
-                noteHeading,
-                note,
-                actions
-        );
+        card.getChildren()
+                .addAll(
+                        title,
+                        meta,
+                        questionHeading,
+                        question,
+                        answerHeading,
+                        userAnswer,
+                        markSchemeHeading,
+                        markScheme,
+                        noteHeading,
+                        note,
+                        actions);
 
         UiAnimations.animateCardEntry(card);
         return card;
-    }
-
-    private void handleMarkRevisited(MistakeRepository.MistakeDisplayItem mistake, VBox card) {
-        try {
-            mistakeBankService.markRevisited(mistake.id());
-            setStatus("Marked mistake as revisited.");
-            UiAnimations.flashGlow(card, "mistake-revisited-flash", () -> {
-                loadMistakes();
-                notifyMistakesChanged();
-            });
-
-        } catch (SQLException e) {
-            showError("Failed to mark mistake as revisited", e.getMessage());
-        }
     }
 
     private void handleToggleResolved(MistakeRepository.MistakeDisplayItem mistake, VBox card) {
@@ -191,23 +188,25 @@ public class MistakeBankController {
             mistakeBankService.setResolved(mistake.id(), !mistake.resolved());
 
             setStatus(
-                    mistake.resolved()
-                            ? "Mistake marked unresolved."
-                            : "Mistake marked resolved."
-            );
+                    mistake.resolved() ? "Mistake marked unresolved." : "Mistake marked resolved.");
 
             if (!mistake.resolved()) {
                 card.getStyleClass().remove("mistake-card");
                 card.getStyleClass().add("mistake-card-resolved");
-                UiAnimations.flashGlow(card, "mistake-resolved-flash", () -> {
-                    loadMistakes();
-                    notifyMistakesChanged();
-                });
+                UiAnimations.flashGlow(
+                        card,
+                        "mistake-resolved-flash",
+                        () -> {
+                            loadMistakes();
+                            notifyMistakesChanged();
+                        });
             } else {
-                UiAnimations.fadeListChange(mistakesList, () -> {
-                    loadMistakes();
-                    notifyMistakesChanged();
-                });
+                UiAnimations.fadeListChange(
+                        mistakesList,
+                        () -> {
+                            loadMistakes();
+                            notifyMistakesChanged();
+                        });
             }
 
         } catch (SQLException e) {

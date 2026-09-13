@@ -1,12 +1,5 @@
 package com.commonplace.ui.controller;
 
-import java.io.IOException;
-import java.sql.SQLException;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
-
 import com.commonplace.model.ConfidenceLevel;
 import com.commonplace.model.ImportanceLevel;
 import com.commonplace.model.StudyModule;
@@ -34,9 +27,18 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class ModulesController {
 
@@ -50,11 +52,11 @@ public class ModulesController {
     @FXML private Label recommendationTitleLabel;
     @FXML private Label recommendationMetaLabel;
     @FXML private HBox recommendationVisualMeta;
-    @FXML private Label recommendationReasonLabel;
+    @FXML private FlowPane recommendationReasonBox;
     @FXML private Button openRecommendationButton;
 
     @FXML private Label selectedModuleTitle;
-    @FXML private Label selectedModuleMeta;
+    @FXML private FlowPane selectedModuleMeta;
 
     @FXML private TextField topicNameField;
     @FXML private TextArea topicDescriptionArea;
@@ -92,14 +94,15 @@ public class ModulesController {
     @FXML
     private void handleAddModule() {
         try {
-            StudyModule createdModule = service.createModule(
-                    moduleNameField.getText(),
-                    moduleDescriptionArea.getText(),
-                    moduleExamDatePicker.getValue(),
-                    moduleImportanceCombo.getValue()
-            );
+            StudyModule createdModule =
+                    service.createModule(
+                            moduleNameField.getText(),
+                            moduleDescriptionArea.getText(),
+                            moduleExamDatePicker.getValue(),
+                            moduleImportanceCombo.getValue());
 
-            UiAnimations.validationSuccess(moduleNameField, moduleDescriptionArea, moduleExamDatePicker);
+            UiAnimations.validationSuccess(
+                    moduleNameField, moduleDescriptionArea, moduleExamDatePicker);
             clearModuleForm();
             selectedModule = createdModule;
 
@@ -126,13 +129,13 @@ public class ModulesController {
         }
 
         try {
-            Topic createdTopic = service.createTopic(
-                    selectedModule.id(),
-                    topicNameField.getText(),
-                    topicDescriptionArea.getText(),
-                    topicImportanceCombo.getValue(),
-                    topicConfidenceCombo.getValue()
-            );
+            Topic createdTopic =
+                    service.createTopic(
+                            selectedModule.id(),
+                            topicNameField.getText(),
+                            topicDescriptionArea.getText(),
+                            topicImportanceCombo.getValue(),
+                            topicConfidenceCombo.getValue());
 
             UiAnimations.validationSuccess(topicNameField, topicDescriptionArea);
             clearTopicForm();
@@ -152,7 +155,8 @@ public class ModulesController {
 
     @FXML
     private void handleRefreshRecommendation() {
-        UiAnimations.animateRecommendationRefresh(recommendationTitleLabel.getParent(), this::refreshRecommendation);
+        UiAnimations.animateRecommendationRefresh(
+                recommendationTitleLabel.getParent(), this::refreshRecommendation);
     }
 
     @FXML
@@ -162,10 +166,7 @@ public class ModulesController {
             return;
         }
 
-        openWorksheetDetail(
-                currentRecommendation.worksheet(),
-                currentRecommendation.topic()
-        );
+        openWorksheetDetail(currentRecommendation.worksheet(), currentRecommendation.topic());
     }
 
     private void loadRecommendation() {
@@ -210,8 +211,8 @@ public class ModulesController {
             UiAnimations.fadeTextChange(
                     recommendationMetaLabel,
                     "Next recommendation unlocks in "
-                            + countdownUntilNextWorksheet(summary.userStats()) + "."
-            );
+                            + countdownUntilNextWorksheet(summary.userStats())
+                            + ".");
             setRecommendationReason("");
             openRecommendationButton.setDisable(true);
             return;
@@ -224,8 +225,7 @@ public class ModulesController {
             UiAnimations.fadeTextChange(recommendationTitleLabel, "No recommendation yet");
             UiAnimations.fadeTextChange(
                     recommendationMetaLabel,
-                    "Create worksheets to unlock adaptive recommendations."
-            );
+                    "Create worksheets to unlock adaptive recommendations.");
             setRecommendationReason("");
             openRecommendationButton.setDisable(true);
             return;
@@ -233,21 +233,21 @@ public class ModulesController {
 
         currentRecommendation = summary.recommendation().get();
 
+        openRecommendationButton.setText("Open worksheet");
         Worksheet worksheet = currentRecommendation.worksheet();
 
         UiAnimations.fadeTextChange(recommendationTitleLabel, worksheet.title());
 
         UiAnimations.fadeTextChange(
-                recommendationMetaLabel,
-                "Topic: " + currentRecommendation.topic().name()
-        );
+                recommendationMetaLabel, "Topic  " + currentRecommendation.topic().name());
 
-        recommendationVisualMeta.getChildren().setAll(
-                LevelUi.createDifficultyIndicator(worksheet.difficulty()),
-                LevelUi.createPriorityChip(worksheet.importance())
-        );
+        recommendationVisualMeta
+                .getChildren()
+                .setAll(
+                        LevelUi.createDifficultyIndicator(worksheet.difficulty()),
+                        LevelUi.createPriorityChip(worksheet.importance()));
 
-        setRecommendationReason("");
+        setRecommendationReason(currentRecommendation.explanation());
         openRecommendationButton.setDisable(false);
         UiAnimations.softPulse(openRecommendationButton);
     }
@@ -257,8 +257,8 @@ public class ModulesController {
             return "a moment";
         }
 
-        LocalDate nextWorksheetDate = stats.lastCompletionDate()
-                .plusDays(stats.worksheetIntervalDays());
+        LocalDate nextWorksheetDate =
+                stats.lastCompletionDate().plusDays(stats.worksheetIntervalDays());
 
         LocalDateTime unlockTime = nextWorksheetDate.atStartOfDay();
         Duration duration = Duration.between(LocalDateTime.now(), unlockTime);
@@ -274,16 +274,20 @@ public class ModulesController {
             return minutes + " minute" + (minutes == 1 ? "" : "s");
         }
 
-        return hours + " hour" + (hours == 1 ? "" : "s")
-                + " " + minutes + " minute" + (minutes == 1 ? "" : "s");
+        return hours
+                + " hour"
+                + (hours == 1 ? "" : "s")
+                + " "
+                + minutes
+                + " minute"
+                + (minutes == 1 ? "" : "s");
     }
 
     private String dailyProgressText(DashboardSummary summary) {
         int dailyGoal = summary.userSettings().dailyWorksheetGoal();
         int completed = Math.min(summary.completedWorksheetsToday(), dailyGoal);
 
-        return completed + "/" + dailyGoal
-                + " worksheet" + (dailyGoal == 1 ? "" : "s");
+        return completed + "/" + dailyGoal + " worksheet" + (dailyGoal == 1 ? "" : "s");
     }
 
     private void loadModules() {
@@ -315,18 +319,22 @@ public class ModulesController {
 
         try {
             int topicCount = service.countTopicsForModule(module.id());
-            double averageMastery = service.getAverageMasteryForModule(module.id());
+            double moduleMastery = service.getAverageMasteryForModule(module.id());
 
-            String examText = module.examDate() == null
-                    ? "No exam date"
-                    : "Exam: " + module.examDate();
-
-            selectedModuleMeta.setText(
-                    examText
-                            + " - Importance: " + module.importance()
-                            + " - Topics: " + topicCount
-                            + " - Average mastery: " + String.format("%.0f%%", averageMastery)
-            );
+            selectedModuleMeta
+                    .getChildren()
+                    .setAll(
+                            LevelUi.createStatCell(
+                                    "Exam",
+                                    module.examDate() == null
+                                            ? "Not set"
+                                            : module.examDate()
+                                                    .format(
+                                                            DateTimeFormatter.ofPattern(
+                                                                    "d MMM uuuu"))),
+                            LevelUi.createStatCell("Topics", Integer.toString(topicCount)),
+                            LevelUi.createMasteryStatCell(moduleMastery),
+                            LevelUi.createPriorityStat(module.importance()));
 
             loadTopicsForSelectedModule();
 
@@ -376,16 +384,15 @@ public class ModulesController {
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
-        Label meta = new Label(buildModuleMeta(module));
-        meta.getStyleClass().add("muted-text");
-        meta.setWrapText(true);
+        VBox meta = buildModuleMeta(module);
 
         Button deleteButton = createDeleteButton();
         deleteButton.setOnMouseClicked(event -> event.consume());
-        deleteButton.setOnAction(event -> {
-            event.consume();
-            deleteModule(module, card);
-        });
+        deleteButton.setOnAction(
+                event -> {
+                    event.consume();
+                    deleteModule(module, card);
+                });
 
         content.getChildren().addAll(title, meta);
         card.getChildren().addAll(content, deleteButton);
@@ -395,23 +402,37 @@ public class ModulesController {
         return card;
     }
 
-    private String buildModuleMeta(StudyModule module) {
+    private VBox buildModuleMeta(StudyModule module) {
+        VBox meta = new VBox();
+        meta.getStyleClass().add("record-ledger");
         try {
             int topicCount = service.countTopicsForModule(module.id());
-            double averageMastery = service.getAverageMasteryForModule(module.id());
-
-            String examText = module.examDate() == null
-                    ? "No exam date"
-                    : "Exam: " + module.examDate();
-
-            return examText
-                    + " - " + module.importance()
-                    + " - " + topicCount + " topics"
-                    + " - " + String.format("%.0f%% mastery", averageMastery);
+            double moduleMastery = service.getAverageMasteryForModule(module.id());
+            meta.getChildren()
+                    .addAll(
+                            LevelUi.createLedgerRow(
+                                    "Exam",
+                                    module.examDate() == null
+                                            ? "Not set"
+                                            : module.examDate()
+                                                    .format(
+                                                            DateTimeFormatter.ofPattern(
+                                                                    "d MMM uuuu"))),
+                            LevelUi.createLedgerRow("Topics", Integer.toString(topicCount)),
+                            LevelUi.createLedgerRow(
+                                    "Mastery", String.format("%.0f%%", moduleMastery)),
+                            LevelUi.createLedgerRow(
+                                    "Priority",
+                                    LevelUi.displayName(module.importance()),
+                                    module.importance() == ImportanceLevel.HIGH));
 
         } catch (SQLException e) {
-            return module.importance().toString();
+            meta.getChildren()
+                    .add(
+                            LevelUi.createLedgerRow(
+                                    "Priority", LevelUi.displayName(module.importance())));
         }
+        return meta;
     }
 
     private StackPane createTopicCard(Topic topic) {
@@ -426,22 +447,24 @@ public class ModulesController {
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
-        Label meta = new Label(
-                "Importance: " + topic.importance()
-                        + " - Confidence: " + topic.confidence()
-                        + " - Mastery: " + String.format("%.0f%%", topic.masteryScore())
-        );
-        meta.getStyleClass().add("muted-text");
-        meta.setWrapText(true);
+        FlowPane meta = new FlowPane(8, 8);
+        meta.getStyleClass().add("record-stat-grid");
+        meta.getChildren()
+                .addAll(
+                        LevelUi.createPriorityStat(topic.importance()),
+                        LevelUi.createStatCell(
+                                "Confidence", LevelUi.displayName(topic.confidence())),
+                        LevelUi.createMasteryStatCell(topic.masteryScore()));
 
         textBox.getChildren().addAll(title, meta);
 
         Button deleteButton = createDeleteButton();
         deleteButton.setOnMouseClicked(event -> event.consume());
-        deleteButton.setOnAction(event -> {
-            event.consume();
-            deleteTopic(topic, card);
-        });
+        deleteButton.setOnAction(
+                event -> {
+                    event.consume();
+                    deleteTopic(topic, card);
+                });
 
         card.getChildren().addAll(textBox, deleteButton);
         StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
@@ -451,7 +474,7 @@ public class ModulesController {
     }
 
     private Button createDeleteButton() {
-        Button button = new Button("X");
+        Button button = new Button("×");
         button.getStyleClass().add("icon-danger-button");
         button.setFocusTraversable(false);
         return button;
@@ -459,12 +482,9 @@ public class ModulesController {
 
     private void openTopicDetail(Topic topic) {
         try {
-            var handle = OverlayService.<TopicDetailController>open(
-                    statusLabel,
-                    "/com/commonplace/fxml/TopicDetailView.fxml",
-                    840,
-                    720
-            );
+            var handle =
+                    OverlayService.<TopicDetailController>open(
+                            statusLabel, "/com/commonplace/fxml/TopicDetailView.fxml", 840, 720);
 
             TopicDetailController controller = handle.controller();
             controller.setTopic(topic, selectedModule);
@@ -477,12 +497,12 @@ public class ModulesController {
 
     private void openWorksheetDetail(Worksheet worksheet, Topic topic) {
         try {
-            var handle = OverlayService.<WorksheetDetailController>open(
-                    statusLabel,
-                    "/com/commonplace/fxml/WorksheetDetailView.fxml",
-                    840,
-                    720
-            );
+            var handle =
+                    OverlayService.<WorksheetDetailController>open(
+                            statusLabel,
+                            "/com/commonplace/fxml/WorksheetDetailView.fxml",
+                            840,
+                            720);
 
             WorksheetDetailController controller = handle.controller();
             controller.setWorksheet(worksheet, topic);
@@ -498,18 +518,24 @@ public class ModulesController {
         try {
             service.deleteModule(module.id());
 
-            UiAnimations.animateCardRemoval(card, () -> {
-                if (selectedModule != null && selectedModule.id() == module.id()) {
-                    selectedModule = null;
-                    selectedModuleTitle.setText("Select a module");
-                    selectedModuleMeta.setText("Create or select a module to start adding topics.");
-                    topicsList.getChildren().clear();
-                }
+            UiAnimations.animateCardRemoval(
+                    card,
+                    () -> {
+                        if (selectedModule != null && selectedModule.id() == module.id()) {
+                            selectedModule = null;
+                            selectedModuleTitle.setText("Select a module");
+                            Label prompt =
+                                    new Label(
+                                            "Create or select a module to start adding topics.");
+                            prompt.getStyleClass().add("muted-text");
+                            selectedModuleMeta.getChildren().setAll(prompt);
+                            topicsList.getChildren().clear();
+                        }
 
-                loadModules();
-                loadRecommendation();
-                setStatus("Module deleted: " + module.name());
-            });
+                        loadModules();
+                        loadRecommendation();
+                        setStatus("Module deleted: " + module.name());
+                    });
 
         } catch (SQLException e) {
             showError("Failed to delete module", e.getMessage());
@@ -520,13 +546,15 @@ public class ModulesController {
         try {
             service.deleteTopic(topic.id());
 
-            UiAnimations.animateCardRemoval(card, () -> {
-                loadTopicsForSelectedModule();
-                loadModules();
-                loadRecommendation();
+            UiAnimations.animateCardRemoval(
+                    card,
+                    () -> {
+                        loadTopicsForSelectedModule();
+                        loadModules();
+                        loadRecommendation();
 
-                setStatus("Topic deleted: " + topic.name());
-            });
+                        setStatus("Topic deleted: " + topic.name());
+                    });
 
         } catch (SQLException e) {
             showError("Failed to delete topic", e.getMessage());
@@ -570,9 +598,18 @@ public class ModulesController {
 
     private void setRecommendationReason(String message) {
         boolean hasMessage = message != null && !message.isBlank();
-        recommendationReasonLabel.setText(hasMessage ? message : "");
-        recommendationReasonLabel.setVisible(hasMessage);
-        recommendationReasonLabel.setManaged(hasMessage);
+        recommendationReasonBox.getChildren().clear();
+        if (hasMessage) {
+            for (String reason : message.split("•")) {
+                if (!reason.isBlank()) {
+                    recommendationReasonBox
+                            .getChildren()
+                            .add(LevelUi.createStatusBadge(reason.trim()));
+                }
+            }
+        }
+        recommendationReasonBox.setVisible(hasMessage);
+        recommendationReasonBox.setManaged(hasMessage);
     }
 
     private void showError(String title, String message) {

@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
@@ -12,7 +13,7 @@
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.commonplace.ui.controller.WorksheetDetailController"
       spacing="14"
-      styleClass="app-root">
+      styleClass="app-root,topic-detail-root">
 
     <padding>
         <Insets top="24" right="24" bottom="24" left="24"/>
@@ -20,9 +21,9 @@
 
     <HBox spacing="12">
         <VBox HBox.hgrow="ALWAYS">
-            <Label fx:id="worksheetTitleLabel" text="Worksheet" styleClass="app-title"/>
+            <Label fx:id="worksheetTitleLabel" text="Worksheet" styleClass="page-title"/>
             <Label fx:id="worksheetMetaLabel"
-                   text="Topic / difficulty / importance"
+                   text="Topic"
                    styleClass="app-subtitle"
                    wrapText="true"/>
         </VBox>
@@ -34,6 +35,11 @@
         <Button text="Close"
                 onAction="#handleClose"/>
     </HBox>
+
+    <FlowPane fx:id="worksheetMetaBox"
+              hgap="8"
+              vgap="8"
+              styleClass="record-stat-grid"/>
 
     <Label fx:id="worksheetDescriptionLabel" text="Description" wrapText="true" styleClass="muted-text"/>
 

@@ -1,26 +1,12 @@
 package com.commonplace.ui.controller;
 
-import java.io.IOException;
-import java.sql.SQLException;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import com.commonplace.model.StudyModule;
 import com.commonplace.model.Topic;
 import com.commonplace.model.UserStats;
 import com.commonplace.model.Worksheet;
 import com.commonplace.repository.AttemptRepository;
-import com.commonplace.service.AccountSession;
 import com.commonplace.service.AccountService;
+import com.commonplace.service.AccountSession;
 import com.commonplace.service.DashboardReminder;
 import com.commonplace.service.DashboardService;
 import com.commonplace.service.DashboardSummary;
@@ -42,7 +28,6 @@ import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.input.KeyCode;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -52,13 +37,29 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DashboardController {
 
@@ -73,7 +74,7 @@ public class DashboardController {
     @FXML private Label recommendationTitleLabel;
     @FXML private Label recommendationMetaLabel;
     @FXML private HBox recommendationVisualMeta;
-    @FXML private Label recommendationReasonLabel;
+    @FXML private FlowPane recommendationReasonBox;
     @FXML private Button openRecommendationButton;
     @FXML private Button pickAnotherButton;
 
@@ -120,7 +121,8 @@ public class DashboardController {
 
     @FXML
     private void handleRefresh() {
-        UiAnimations.animateRecommendationRefresh(recommendationPanel(), this::refreshRecommendation);
+        UiAnimations.animateRecommendationRefresh(
+                recommendationPanel(), this::refreshRecommendation);
     }
 
     @FXML
@@ -130,10 +132,7 @@ public class DashboardController {
             return;
         }
 
-        openWorksheetDetail(
-                currentRecommendation.worksheet(),
-                currentRecommendation.topic()
-        );
+        openWorksheetDetail(currentRecommendation.worksheet(), currentRecommendation.topic());
     }
 
     @FXML
@@ -145,12 +144,13 @@ public class DashboardController {
     @FXML
     private void handleOpenModules() {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/commonplace/fxml/ModulesView.fxml")
-            );
+            FXMLLoader loader =
+                    new FXMLLoader(
+                            getClass().getResource("/com/commonplace/fxml/ModulesView.fxml"));
 
             Parent root = loader.load();
-            UiAnimations.transitionContent(contentHost, root, UiAnimations.SlideDirection.FROM_RIGHT);
+            UiAnimations.transitionContent(
+                    contentHost, root, UiAnimations.SlideDirection.FROM_RIGHT);
             setActivePage(manageModulesButton);
             modulesPageActive = true;
             AppChrome.setBreadcrumb(manageModulesButton.getScene(), "Manage Modules");
@@ -164,17 +164,19 @@ public class DashboardController {
     @FXML
     private void handleOpenMistakeBank() {
         try {
-            var handle = OverlayService.<MistakeBankController>open(
-                    accountMenuButton,
-                    "/com/commonplace/fxml/MistakeBankView.fxml",
-                    920,
-                    760
-            );
+            var handle =
+                    OverlayService.<MistakeBankController>open(
+                            accountMenuButton,
+                            "/com/commonplace/fxml/MistakeBankView.fxml",
+                            920,
+                            760);
             handle.controller().setOnMistakesChanged(this::loadDashboard);
-            handle.controller().setOnClosed(() -> AppChrome.setBreadcrumb(
-                    accountMenuButton.getScene(),
-                    modulesPageActive ? "Manage Modules" : "Dashboard"
-            ));
+            handle.controller()
+                    .setOnClosed(
+                            () ->
+                                    AppChrome.setBreadcrumb(
+                                            accountMenuButton.getScene(),
+                                            modulesPageActive ? "Manage Modules" : "Dashboard"));
             AppChrome.setBreadcrumb(accountMenuButton.getScene(), "Mistake Bank");
 
         } catch (IOException e) {
@@ -190,17 +192,16 @@ public class DashboardController {
     @FXML
     private void handleOpenSettings() {
         try {
-            var handle = OverlayService.<SettingsController>open(
-                    accountMenuButton,
-                    "/com/commonplace/fxml/SettingsView.fxml",
-                    880,
-                    720
-            );
+            var handle =
+                    OverlayService.<SettingsController>open(
+                            accountMenuButton, "/com/commonplace/fxml/SettingsView.fxml", 880, 720);
 
-            handle.controller().setOnSettingsSaved(() -> {
-                applySavedPreferences();
-                refreshActivePage();
-            });
+            handle.controller()
+                    .setOnSettingsSaved(
+                            () -> {
+                                applySavedPreferences();
+                                refreshActivePage();
+                            });
             handle.controller().setOnSwitchAccount(this::switchToLogin);
 
         } catch (IOException e) {
@@ -211,7 +212,8 @@ public class DashboardController {
     @FXML
     private void handleChangePassword() {
         try {
-            OverlayService.open(accountMenuButton, "/com/commonplace/fxml/ChangePasswordView.fxml", 520, 430);
+            OverlayService.open(
+                    accountMenuButton, "/com/commonplace/fxml/ChangePasswordView.fxml", 520, 430);
 
         } catch (IOException e) {
             showError("Failed to open password settings", e.getMessage());
@@ -274,26 +276,23 @@ public class DashboardController {
 
     private void updateChromeDailyChip(DashboardSummary summary) {
         if (accountMenuButton.getScene() == null) {
-            Platform.runLater(() -> {
-                if (accountMenuButton.getScene() != null) {
-                    updateChromeDailyChip(summary);
-                }
-            });
+            Platform.runLater(
+                    () -> {
+                        if (accountMenuButton.getScene() != null) {
+                            updateChromeDailyChip(summary);
+                        }
+                    });
             return;
         }
 
         if (summary.worksheetWindowLocked()) {
             AppChrome.setDailyChip(
                     accountMenuButton.getScene(),
-                    "Next worksheet in " + countdownUntilNextWorksheet(summary.userStats())
-            );
+                    "Next worksheet in " + countdownUntilNextWorksheet(summary.userStats()));
             return;
         }
 
-        AppChrome.setDailyChip(
-                accountMenuButton.getScene(),
-                "Daily " + dailyProgressText(summary)
-        );
+        AppChrome.setDailyChip(accountMenuButton.getScene(), "Daily " + dailyProgressText(summary));
     }
 
     private void updateRecommendation(DashboardSummary summary) {
@@ -309,13 +308,14 @@ public class DashboardController {
             UiAnimations.fadeTextChange(
                     recommendationMetaLabel,
                     "Nice work. Your next recommendation unlocks in "
-                            + countdownUntilNextWorksheet(summary.userStats()) + "."
-            );
+                            + countdownUntilNextWorksheet(summary.userStats())
+                            + ".");
             setRecommendationReason(
-                    "Daily progress: " + dailyProgressText(summary)
-                            + " - Streak: " + summary.userStats().streakCount()
-                            + " day" + (summary.userStats().streakCount() == 1 ? "" : "s")
-            );
+                    "Daily goal  "
+                            + dailyProgressText(summary)
+                            + "  •  "
+                            + summary.userStats().streakCount()
+                            + "-session streak");
             openRecommendationButton.setDisable(true);
             pickAnotherButton.setDisable(true);
 
@@ -331,8 +331,7 @@ public class DashboardController {
             UiAnimations.fadeTextChange(recommendationTitleLabel, "No recommendation yet");
             UiAnimations.fadeTextChange(
                     recommendationMetaLabel,
-                    "Add a worksheet in Manage Modules to choose your next study session."
-            );
+                    "Add a worksheet in Manage Modules to choose your next study session.");
             setRecommendationReason("");
             openRecommendationButton.setDisable(true);
             pickAnotherButton.setDisable(true);
@@ -342,27 +341,27 @@ public class DashboardController {
 
         currentRecommendation = summary.recommendation().get();
 
+        openRecommendationButton.setText("Open worksheet");
         Worksheet worksheet = currentRecommendation.worksheet();
 
         UiAnimations.fadeTextChange(recommendationTitleLabel, worksheet.title());
 
         UiAnimations.fadeTextChange(
-                recommendationMetaLabel,
-                "Topic: " + currentRecommendation.topic().name()
-        );
+                recommendationMetaLabel, "Topic  " + currentRecommendation.topic().name());
 
-        recommendationVisualMeta.getChildren().setAll(
-                LevelUi.createDifficultyIndicator(worksheet.difficulty()),
-                LevelUi.createPriorityChip(worksheet.importance())
-        );
+        recommendationVisualMeta
+                .getChildren()
+                .setAll(
+                        LevelUi.createDifficultyIndicator(worksheet.difficulty()),
+                        LevelUi.createPriorityChip(worksheet.importance()));
 
-        setRecommendationReason("Daily progress: " + dailyProgressText(summary));
+        setRecommendationReason(currentRecommendation.explanation());
         openRecommendationButton.setDisable(false);
     }
 
     private String countdownUntilNextWorksheet(UserStats stats) {
-        LocalDate nextWorksheetDate = stats.lastCompletionDate()
-                .plusDays(stats.worksheetIntervalDays());
+        LocalDate nextWorksheetDate =
+                stats.lastCompletionDate().plusDays(stats.worksheetIntervalDays());
 
         LocalDateTime unlockTime = nextWorksheetDate.atStartOfDay();
         Duration duration = Duration.between(LocalDateTime.now(), unlockTime);
@@ -378,16 +377,20 @@ public class DashboardController {
             return minutes + " minute" + (minutes == 1 ? "" : "s");
         }
 
-        return hours + " hour" + (hours == 1 ? "" : "s")
-                + " " + minutes + " minute" + (minutes == 1 ? "" : "s");
+        return hours
+                + " hour"
+                + (hours == 1 ? "" : "s")
+                + " "
+                + minutes
+                + " minute"
+                + (minutes == 1 ? "" : "s");
     }
 
     private String dailyProgressText(DashboardSummary summary) {
         int dailyGoal = summary.userSettings().dailyWorksheetGoal();
         int completed = Math.min(summary.completedWorksheetsToday(), dailyGoal);
 
-        return completed + "/" + dailyGoal
-                + " worksheet" + (dailyGoal == 1 ? "" : "s");
+        return completed + "/" + dailyGoal + " worksheet" + (dailyGoal == 1 ? "" : "s");
     }
 
     private void updateStats(DashboardSummary summary) {
@@ -399,9 +402,8 @@ public class DashboardController {
 
         int nextRankXp = summary.nextRankXp();
 
-        double targetProgress = nextRankXp <= stats.xp()
-                ? 1.0
-                : (double) stats.xp() / nextRankXp;
+        double targetProgress =
+                new com.commonplace.service.GamificationService().rankProgress(stats.xp());
         UiAnimations.animateProgress(rankProgressBar, targetProgress);
         rankProgressBar.setAccessibleText(stats.xp() + " XP; next rank at " + nextRankXp + " XP");
 
@@ -417,14 +419,14 @@ public class DashboardController {
         lastDisplayedXp = stats.xp();
         lastDisplayedRank = rank;
 
-        streakLabel.setText(stats.streakCount() + " day" + (stats.streakCount() == 1 ? "" : "s"));
+        streakLabel.setText(new com.commonplace.service.GamificationService().streakLabel(stats));
 
         int unresolvedMistakes = summary.unresolvedMistakeCount();
         mistakeCountLabel.setText(unresolvedMistakes + " unresolved");
         mistakeCountLabel.getStyleClass().removeAll("study-record-warning", "study-record-success");
-        mistakeCountLabel.getStyleClass().add(
-                unresolvedMistakes > 0 ? "study-record-warning" : "study-record-success"
-        );
+        mistakeCountLabel
+                .getStyleClass()
+                .add(unresolvedMistakes > 0 ? "study-record-warning" : "study-record-success");
 
         boolean showXpAndRank = summary.userSettings().showXpAndRank();
         rankRecordRow.setVisible(showXpAndRank);
@@ -443,7 +445,9 @@ public class DashboardController {
     }
 
     private void renderExamCalendar() {
-        if (examCalendarGrid == null || examCalendarEvents == null || examCalendarMonthLabel == null) {
+        if (examCalendarGrid == null
+                || examCalendarEvents == null
+                || examCalendarMonthLabel == null) {
             return;
         }
 
@@ -459,17 +463,17 @@ public class DashboardController {
         }
 
         examCalendarMonthLabel.setText(
-                visibleExamMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.UK))
-        );
+                visibleExamMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.UK)));
 
         LocalDate firstOfMonth = visibleExamMonth.atDay(1);
         LocalDate firstOfNextMonth = visibleExamMonth.plusMonths(1).atDay(1);
         LocalDate gridStart = firstOfMonth.minusDays(firstOfMonth.getDayOfWeek().getValue() - 1L);
         int daySlots = (int) ChronoUnit.DAYS.between(gridStart, firstOfNextMonth);
         int visibleCells = (int) Math.ceil(daySlots / 7.0) * 7;
-        Map<LocalDate, List<StudyModule>> examsByDate = latestModules.stream()
-                .filter(module -> module.examDate() != null)
-                .collect(Collectors.groupingBy(StudyModule::examDate));
+        Map<LocalDate, List<StudyModule>> examsByDate =
+                latestModules.stream()
+                        .filter(module -> module.examDate() != null)
+                        .collect(Collectors.groupingBy(StudyModule::examDate));
 
         for (int column = 0; column < 7; column++) {
             LocalDate day = gridStart.plusDays(column);
@@ -527,32 +531,36 @@ public class DashboardController {
             dateHeading.getChildren().add(todayLabel);
         }
         cell.getChildren().add(dateHeading);
-        String examDescription = exams.stream().map(StudyModule::name).collect(Collectors.joining(", "));
-        String accessibleDate = date.format(DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.UK))
-                + (date.isEqual(today) ? ", today" : "")
-                + (date.equals(selectedExamDate) ? ", selected" : "")
-                + (exams.isEmpty() ? ", no exams" : ", exams: " + examDescription);
+        String examDescription =
+                exams.stream().map(StudyModule::name).collect(Collectors.joining(", "));
+        String accessibleDate =
+                date.format(DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.UK))
+                        + (date.isEqual(today) ? ", today" : "")
+                        + (date.equals(selectedExamDate) ? ", selected" : "")
+                        + (exams.isEmpty() ? ", no exams" : ", exams: " + examDescription);
         cell.setAccessibleText(accessibleDate);
         cell.setAccessibleRole(AccessibleRole.BUTTON);
         cell.setFocusTraversable(true);
         cell.setOnMouseClicked(event -> selectExamDate(date));
-        cell.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
-                selectExamDate(date);
-                event.consume();
-            }
-        });
+        cell.setOnKeyPressed(
+                event -> {
+                    if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+                        selectExamDate(date);
+                        event.consume();
+                    }
+                });
         Tooltip.install(cell, new Tooltip(accessibleDate));
 
         exams.stream()
                 .limit(1)
-                .forEach(module -> {
-                    Label examLabel = new Label(module.name());
-                    examLabel.getStyleClass().add("exam-calendar-event-pill");
-                    examLabel.setMaxWidth(Double.MAX_VALUE);
-                    examLabel.setWrapText(false);
-                    cell.getChildren().add(examLabel);
-                });
+                .forEach(
+                        module -> {
+                            Label examLabel = new Label(module.name());
+                            examLabel.getStyleClass().add("exam-calendar-event-pill");
+                            examLabel.setMaxWidth(Double.MAX_VALUE);
+                            examLabel.setWrapText(false);
+                            cell.getChildren().add(examLabel);
+                        });
 
         if (exams.size() > 1) {
             Label moreLabel = new Label("+" + (exams.size() - 1) + " more");
@@ -572,17 +580,23 @@ public class DashboardController {
     private void renderExamEventList() {
         examCalendarEvents.getChildren().clear();
 
-        List<StudyModule> monthExams = latestModules.stream()
-                .filter(module -> module.examDate() != null)
-                .filter(module -> YearMonth.from(module.examDate()).equals(visibleExamMonth))
-                .sorted((first, second) -> first.examDate().compareTo(second.examDate()))
-                .toList();
+        List<StudyModule> monthExams =
+                latestModules.stream()
+                        .filter(module -> module.examDate() != null)
+                        .filter(
+                                module ->
+                                        YearMonth.from(module.examDate()).equals(visibleExamMonth))
+                        .sorted((first, second) -> first.examDate().compareTo(second.examDate()))
+                        .toList();
 
         if (monthExams.isEmpty()) {
             Label emptyLabel = new Label("No exams scheduled this month.");
             emptyLabel.getStyleClass().add("muted-text");
             emptyLabel.setWrapText(true);
-            Label helpLabel = new Label("Add exam dates in Manage Modules when your assessments are confirmed.");
+            Label helpLabel =
+                    new Label(
+                            "Add exam dates in Manage Modules when your assessments are"
+                                    + " confirmed.");
             helpLabel.getStyleClass().add("muted-text");
             helpLabel.setWrapText(true);
             VBox emptyState = new VBox(8, emptyLabel, helpLabel);
@@ -600,7 +614,9 @@ public class DashboardController {
         HBox row = new HBox(10);
         row.getStyleClass().add("exam-event-row");
 
-        Label dateLabel = new Label(module.examDate().format(DateTimeFormatter.ofPattern("d MMM", Locale.UK)));
+        Label dateLabel =
+                new Label(
+                        module.examDate().format(DateTimeFormatter.ofPattern("d MMM", Locale.UK)));
         dateLabel.getStyleClass().add("exam-event-date");
 
         VBox details = new VBox(2);
@@ -687,22 +703,28 @@ public class DashboardController {
     }
 
     private VBox createWeakTopicCard(Topic topic) {
-        VBox card = new VBox(6);
+        VBox card = new VBox(8);
         card.getStyleClass().add("dashboard-mini-card");
 
         Label title = new Label(topic.name());
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
-        Label meta = new Label(
-                "Mastery: " + String.format("%.0f%%", topic.masteryScore())
-                        + " - Confidence: " + topic.confidence()
-                        + " - Importance: " + topic.importance()
-        );
-        meta.getStyleClass().add("muted-text");
-        meta.setWrapText(true);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox heading = new HBox(8, title, spacer, LevelUi.createStatusBadge("Weak area"));
+        heading.setAlignment(Pos.CENTER_LEFT);
 
-        card.getChildren().addAll(title, meta);
+        FlowPane meta = new FlowPane(8, 8);
+        meta.getStyleClass().add("record-stat-grid");
+        meta.getChildren()
+                .addAll(
+                        LevelUi.createMasteryStatCell(topic.masteryScore()),
+                        LevelUi.createStatCell(
+                                "Confidence", LevelUi.displayName(topic.confidence())),
+                        LevelUi.createPriorityStat(topic.importance()));
+
+        card.getChildren().addAll(heading, meta);
         UiAnimations.animateCardEntry(card);
         return card;
     }
@@ -723,42 +745,43 @@ public class DashboardController {
     }
 
     private VBox createRecentAttemptCard(AttemptRepository.RecentAttemptDisplayItem attempt) {
-        VBox card = new VBox(6);
+        VBox card = new VBox(8);
         card.getStyleClass().add("dashboard-mini-card");
 
         Label title = new Label(attempt.worksheetTitle());
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
-        Label meta = new Label(
-                "Topic: " + attempt.topicName()
-                        + " - Score: " + attempt.score()
-                        + "/" + attempt.maxScore()
-                        + " (" + String.format("%.0f%%", attempt.scorePercent()) + ")"
-        );
-        meta.getStyleClass().add("muted-text");
-        meta.setWrapText(true);
+        FlowPane meta = new FlowPane(8, 8);
+        meta.getStyleClass().add("record-stat-grid");
+        meta.getChildren()
+                .addAll(
+                        LevelUi.createStatCell("Topic", attempt.topicName()),
+                        LevelUi.createStatCell(
+                                "Score",
+                                attempt.score()
+                                        + "/"
+                                        + attempt.maxScore()
+                                        + "  "
+                                        + String.format("%.0f%%", attempt.scorePercent())),
+                        LevelUi.createStatCell(
+                                "Completed",
+                                attempt.completedAt()
+                                        .format(DateTimeFormatter.ofPattern("d MMM · HH:mm"))));
 
-        Label date = new Label(
-                "Completed: " + attempt.completedAt().format(
-                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                )
-        );
-        date.getStyleClass().add("muted-text");
-
-        card.getChildren().addAll(title, meta, date);
+        card.getChildren().addAll(title, meta);
         UiAnimations.animateCardEntry(card);
         return card;
     }
 
     private void openWorksheetDetail(Worksheet worksheet, Topic topic) {
         try {
-            var handle = OverlayService.<WorksheetDetailController>open(
-                    openRecommendationButton,
-                    "/com/commonplace/fxml/WorksheetDetailView.fxml",
-                    840,
-                    720
-            );
+            var handle =
+                    OverlayService.<WorksheetDetailController>open(
+                            openRecommendationButton,
+                            "/com/commonplace/fxml/WorksheetDetailView.fxml",
+                            840,
+                            720);
 
             WorksheetDetailController controller = handle.controller();
             controller.setWorksheet(worksheet, topic);
@@ -784,13 +807,23 @@ public class DashboardController {
 
     private void setRecommendationReason(String message) {
         boolean hasMessage = message != null && !message.isBlank();
-        recommendationReasonLabel.setText(hasMessage ? message : "");
-        recommendationReasonLabel.setVisible(hasMessage);
-        recommendationReasonLabel.setManaged(hasMessage);
+        recommendationReasonBox.getChildren().clear();
+        if (hasMessage) {
+            for (String reason : message.split("•")) {
+                if (!reason.isBlank()) {
+                    recommendationReasonBox
+                            .getChildren()
+                            .add(LevelUi.createStatusBadge(reason.trim()));
+                }
+            }
+        }
+        recommendationReasonBox.setVisible(hasMessage);
+        recommendationReasonBox.setManaged(hasMessage);
     }
 
     private void showDashboardPage() {
-        UiAnimations.transitionContent(contentHost, dashboardPane, UiAnimations.SlideDirection.FROM_LEFT);
+        UiAnimations.transitionContent(
+                contentHost, dashboardPane, UiAnimations.SlideDirection.FROM_LEFT);
         setActivePage(dashboardButton);
         modulesPageActive = false;
         AppChrome.setBreadcrumb(dashboardButton.getScene(), "Dashboard");
@@ -806,9 +839,8 @@ public class DashboardController {
     }
 
     private void updateAccountMenu() {
-        String accountText = AccountSession.currentUser()
-                .map(user -> user.username())
-                .orElse("Account");
+        String accountText =
+                AccountSession.currentUser().map(user -> user.username()).orElse("Account");
 
         accountMenuButton.setText(null);
         accountMenuButton.setGraphic(createAccountMenuIcon());
@@ -819,9 +851,7 @@ public class DashboardController {
     }
 
     private void updateWelcomeMessage() {
-        String username = AccountSession.currentUser()
-                .map(user -> user.username())
-                .orElse("");
+        String username = AccountSession.currentUser().map(user -> user.username()).orElse("");
 
         welcomeLabel.setText(username.isBlank() ? "Welcome Back" : "Welcome Back, " + username);
     }
@@ -858,54 +888,46 @@ public class DashboardController {
                 List.of(
                         new AppChrome.Command(
                                 "Dashboard",
-                                "Show recommendations, progress, reminders, weak topics, and recent attempts.",
+                                "Show recommendations, progress, reminders, weak topics, and recent"
+                                        + " attempts.",
                                 "home today progress overview",
-                                this::handleOpenDashboard
-                        ),
+                                this::handleOpenDashboard),
                         new AppChrome.Command(
                                 "Manage Modules",
                                 "Create modules and topics, then manage worksheet generation.",
                                 "modules topics worksheets create edit",
-                                this::handleOpenModules
-                        ),
+                                this::handleOpenModules),
                         new AppChrome.Command(
                                 "Mistake Bank",
                                 "Review unresolved and resolved mistakes.",
                                 "mistakes review errors corrections",
-                                this::handleOpenMistakeBank
-                        ),
+                                this::handleOpenMistakeBank),
                         new AppChrome.Command(
                                 "Open Recommended Worksheet",
                                 "Open the current daily worksheet recommendation.",
                                 "recommendation daily worksheet attempt",
-                                this::handleOpenRecommendation
-                        ),
+                                this::handleOpenRecommendation),
                         new AppChrome.Command(
                                 "Pick Another Worksheet",
                                 "Refresh the recommendation for today.",
                                 "refresh recommendation another",
-                                this::handleRefresh
-                        ),
+                                this::handleRefresh),
                         new AppChrome.Command(
                                 "Settings",
-                                "Open account, appearance, study, notification, and accessibility settings.",
+                                "Open account, appearance, study, notification, and accessibility"
+                                        + " settings.",
                                 "preferences theme accent daily notifications accessibility",
-                                this::handleOpenSettings
-                        ),
+                                this::handleOpenSettings),
                         new AppChrome.Command(
                                 "Change Password",
                                 "Update the current account password.",
                                 "account security password",
-                                this::handleChangePassword
-                        ),
+                                this::handleChangePassword),
                         new AppChrome.Command(
                                 "Switch Account",
                                 "Return to the sign-in screen.",
                                 "log out logout sign in account",
-                                this::handleSwitchAccount
-                        )
-                )
-        );
+                                this::handleSwitchAccount)));
     }
 
     private Node recommendationPanel() {
@@ -917,9 +939,8 @@ public class DashboardController {
             stopDashboardRefreshTimer();
             accountService.signOut();
 
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/commonplace/fxml/LoginView.fxml")
-            );
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/com/commonplace/fxml/LoginView.fxml"));
 
             Parent root = loader.load();
             UiAnimations.installGlobalAnimations(root);
@@ -944,9 +965,9 @@ public class DashboardController {
     }
 
     private void startDashboardRefreshTimer() {
-        dashboardRefreshTimer = new Timeline(
-                new KeyFrame(javafx.util.Duration.minutes(1), event -> loadDashboard())
-        );
+        dashboardRefreshTimer =
+                new Timeline(
+                        new KeyFrame(javafx.util.Duration.minutes(1), event -> loadDashboard()));
         dashboardRefreshTimer.setCycleCount(Timeline.INDEFINITE);
         dashboardRefreshTimer.play();
     }
@@ -958,15 +979,17 @@ public class DashboardController {
     }
 
     private void showError(String title, String message) {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle(title);
-            alert.setHeaderText(title);
-            alert.setContentText(message == null || message.isBlank()
-                    ? "No additional details were provided."
-                    : message);
-            AppIcon.applyTo(alert);
-            alert.show();
-        });
+        Platform.runLater(
+                () -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle(title);
+                    alert.setHeaderText(title);
+                    alert.setContentText(
+                            message == null || message.isBlank()
+                                    ? "No additional details were provided."
+                                    : message);
+                    AppIcon.applyTo(alert);
+                    alert.show();
+                });
     }
 }

@@ -1,11 +1,5 @@
 package com.commonplace.ui.controller;
 
-import java.io.IOException;
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.commonplace.model.Question;
 import com.commonplace.model.Topic;
 import com.commonplace.model.Worksheet;
@@ -14,6 +8,7 @@ import com.commonplace.repository.AnswerRepository;
 import com.commonplace.service.AttemptService;
 import com.commonplace.service.WorksheetCreationService;
 import com.commonplace.ui.AppIcon;
+import com.commonplace.ui.LevelUi;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.QuestionImageViewFactory;
 import com.commonplace.ui.UiAnimations;
@@ -28,6 +23,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AttemptWorksheetController {
 
@@ -44,6 +45,24 @@ public class AttemptWorksheetController {
     private Topic topic;
     private LocalDateTime startedAt;
     private Runnable onAttemptSaved;
+    private WorksheetAttempt savedAttempt;
+    private int savedPracticeXp;
+
+    private static class AnswerState {
+        boolean locked, assisted;
+        long focusedAt, activeNanos;
+
+        void stop() {
+            if (focusedAt != 0) {
+                activeNanos += System.nanoTime() - focusedAt;
+                focusedAt = 0;
+            }
+        }
+
+        int seconds() {
+            return (int) Math.min(3600, activeNanos / 1_000_000_000L);
+        }
+    }
 
     @FXML
     private void initialize() {
@@ -60,35 +79,53 @@ public class AttemptWorksheetController {
         String topicText = topic == null ? "Unknown topic" : topic.name();
 
         worksheetMetaLabel.setText(
-                "Topic: " + topicText
-                        + " - Difficulty: " + worksheet.difficulty()
-                        + " - Importance: " + worksheet.importance()
-        );
+                "Topic  "
+                        + topicText
+                        + "  •  "
+                        + LevelUi.displayName(worksheet.difficulty())
+                        + " difficulty  •  "
+                        + LevelUi.displayName(worksheet.importance())
+                        + " priority");
 
         loadQuestions();
     }
 
     @FXML
     private void handleSubmitAttempt() {
+        if (savedAttempt != null) {
+            openReflection(savedAttempt, savedPracticeXp);
+            return;
+        }
         try {
             List<AnswerRepository.AnswerDraft> drafts = collectAnswerDrafts();
 
-            WorksheetAttempt attempt = attemptService.submitAttempt(
-                    worksheet.id(),
-                    startedAt,
-                    drafts
-            );
+            AttemptService.SubmissionResult submission =
+                    attemptService.submitAttemptWithReward(worksheet.id(), startedAt, drafts);
+            WorksheetAttempt attempt = submission.attempt();
+            savedAttempt = attempt;
+            int xpEarned = submission.practiceReward().xpAwarded();
+            savedPracticeXp = xpEarned;
+            if (onAttemptSaved != null) onAttemptSaved.run();
 
             UiAnimations.fadeTextChange(
                     scorePreviewLabel,
-                    "Score: " + attempt.score()
-                            + "/" + attempt.maxScore()
-                            + " (" + String.format("%.0f%%", attempt.scorePercent()) + ")"
-            );
+                    "Score: "
+                            + attempt.score()
+                            + "/"
+                            + attempt.maxScore()
+                            + " ("
+                            + String.format("%.0f%%", attempt.scorePercent())
+                            + ")");
 
-            setStatus("Attempt saved. Complete reflection to update stats.");
+            setStatus(
+                    xpEarned > 0
+                            ? "Attempt and mastery saved. +"
+                                    + xpEarned
+                                    + " study XP earned. Reflection is optional."
+                            : "Attempt and mastery saved. No new XP for repeated practice or a"
+                                    + " reached daily cap. Reflection is optional.");
 
-            openReflection(attempt);
+            openReflection(attempt, xpEarned);
 
         } catch (IllegalArgumentException e) {
             UiAnimations.validationError(questionsContainer);
@@ -98,23 +135,27 @@ public class AttemptWorksheetController {
         }
     }
 
-    private void openReflection(WorksheetAttempt attempt) {
+    private void openReflection(WorksheetAttempt attempt, int practiceXp) {
         try {
-            var handle = OverlayService.<ReflectionController>open(
-                    worksheetTitleLabel,
-                    "/com/commonplace/fxml/ReflectionView.fxml",
-                    720,
-                    680
-            );
+            var handle =
+                    OverlayService.<ReflectionController>open(
+                            worksheetTitleLabel,
+                            "/com/commonplace/fxml/ReflectionView.fxml",
+                            720,
+                            680);
 
             ReflectionController controller = handle.controller();
-            controller.setContext(worksheet, attempt, () -> {
-                if (onAttemptSaved != null) {
-                    onAttemptSaved.run();
-                }
+            controller.setContext(
+                    worksheet,
+                    attempt,
+                    practiceXp,
+                    () -> {
+                        if (onAttemptSaved != null) {
+                            onAttemptSaved.run();
+                        }
 
-                closeWindow();
-            });
+                        closeWindow();
+                    });
 
         } catch (IOException e) {
             showError("Failed to open reflection screen", e.getMessage());
@@ -153,10 +194,13 @@ public class AttemptWorksheetController {
         card.getStyleClass().add("question-card");
         card.setUserData(question);
 
-        Label heading = new Label(
-                "Question " + question.questionOrder()
-                        + " - " + question.maxMarks() + " marks"
-        );
+        Label heading =
+                new Label(
+                        "Question "
+                                + question.questionOrder()
+                                + " - "
+                                + question.maxMarks()
+                                + " marks");
         heading.getStyleClass().add("card-title");
 
         Label promptLabel = new Label(question.prompt());
@@ -165,12 +209,28 @@ public class AttemptWorksheetController {
         Node imageNode = QuestionImageViewFactory.create(question.imagePath(), 520, 320);
 
         TextArea answerArea = new TextArea();
+        AnswerState answerState = new AnswerState();
+        card.getProperties().put("answerState", answerState);
+        answerArea
+                .focusedProperty()
+                .addListener(
+                        (observable, oldValue, focused) -> {
+                            if (focused && !answerState.locked)
+                                answerState.focusedAt = System.nanoTime();
+                            else answerState.stop();
+                        });
         answerArea.setPromptText("Write your answer here...");
         answerArea.setWrapText(true);
         answerArea.setPrefRowCount(4);
         answerArea.setUserData("answer");
 
-        Button revealButton = new Button("Reveal Mark Scheme");
+        Button revealButton = new Button("Use mark scheme as a hint");
+        Button lockButton = new Button("Lock answer and self-mark");
+        Label evidenceLabel =
+                new Label(
+                        "Self-assessed practice. Lock your answer before viewing the mark scheme.");
+        evidenceLabel.setWrapText(true);
+        evidenceLabel.getStyleClass().add("muted-text");
 
         Label markSchemeHeading = new Label("Mark Scheme");
         markSchemeHeading.getStyleClass().add("small-label");
@@ -183,15 +243,19 @@ public class AttemptWorksheetController {
         markSchemeLabel.setVisible(false);
         markSchemeLabel.setManaged(false);
 
-        revealButton.setOnAction(event -> {
-            markSchemeHeading.setVisible(true);
-            markSchemeHeading.setManaged(true);
-            markSchemeLabel.setVisible(true);
-            markSchemeLabel.setManaged(true);
-            UiAnimations.popIn(markSchemeHeading);
-            UiAnimations.popIn(markSchemeLabel);
-            revealButton.setDisable(true);
-        });
+        revealButton.setOnAction(
+                event -> {
+                    answerState.assisted = true;
+                    evidenceLabel.setText(
+                            "Assisted practice: this attempt contributes less evidence and XP.");
+                    markSchemeHeading.setVisible(true);
+                    markSchemeHeading.setManaged(true);
+                    markSchemeLabel.setVisible(true);
+                    markSchemeLabel.setManaged(true);
+                    UiAnimations.popIn(markSchemeHeading);
+                    UiAnimations.popIn(markSchemeLabel);
+                    revealButton.setDisable(true);
+                });
 
         Label marksLabel = new Label("Awarded marks");
         marksLabel.getStyleClass().add("small-label");
@@ -200,6 +264,29 @@ public class AttemptWorksheetController {
         awardedMarksSpinner.setEditable(true);
         awardedMarksSpinner.setUserData("marks");
         awardedMarksSpinner.setMaxWidth(220);
+        awardedMarksSpinner.setDisable(true);
+        lockButton.setOnAction(
+                event -> {
+                    if (answerArea.getText().isBlank()) {
+                        UiAnimations.validationError(answerArea);
+                        return;
+                    }
+                    answerState.stop();
+                    answerState.locked = true;
+                    answerArea.setEditable(false);
+                    lockButton.setDisable(true);
+                    revealButton.setDisable(true);
+                    markSchemeHeading.setVisible(true);
+                    markSchemeHeading.setManaged(true);
+                    markSchemeLabel.setVisible(true);
+                    markSchemeLabel.setManaged(true);
+                    awardedMarksSpinner.setDisable(false);
+                    evidenceLabel.setText(
+                            answerState.assisted
+                                    ? "Assisted answer locked. Award marks against the scheme."
+                                    : "Original answer locked. Award marks against the scheme;"
+                                            + " results remain self-assessed.");
+                });
 
         CheckBox mistakeCheckBox = new CheckBox("Add to mistake review later");
         mistakeCheckBox.setUserData("mistake");
@@ -216,16 +303,18 @@ public class AttemptWorksheetController {
             card.getChildren().add(imageNode);
         }
 
-        card.getChildren().addAll(
-                answerArea,
-                revealButton,
-                markSchemeHeading,
-                markSchemeLabel,
-                marksLabel,
-                awardedMarksSpinner,
-                mistakeCheckBox,
-                mistakeNoteArea
-        );
+        card.getChildren()
+                .addAll(
+                        answerArea,
+                        evidenceLabel,
+                        lockButton,
+                        revealButton,
+                        markSchemeHeading,
+                        markSchemeLabel,
+                        marksLabel,
+                        awardedMarksSpinner,
+                        mistakeCheckBox,
+                        mistakeNoteArea);
 
         UiAnimations.animateCardEntry(card);
         return card;
@@ -257,27 +346,44 @@ public class AttemptWorksheetController {
                     marksSpinner = typedSpinner;
                 }
 
-                if (child instanceof CheckBox checkBox && "mistake".equals(checkBox.getUserData())) {
+                if (child instanceof CheckBox checkBox
+                        && "mistake".equals(checkBox.getUserData())) {
                     mistakeCheckBox = checkBox;
                 }
 
-                if (child instanceof TextArea textArea && "mistakeNote".equals(textArea.getUserData())) {
+                if (child instanceof TextArea textArea
+                        && "mistakeNote".equals(textArea.getUserData())) {
                     mistakeNoteArea = textArea;
                 }
             }
 
-            if (answerArea == null || marksSpinner == null || mistakeCheckBox == null || mistakeNoteArea == null) {
+            if (answerArea == null
+                    || marksSpinner == null
+                    || mistakeCheckBox == null
+                    || mistakeNoteArea == null) {
                 throw new IllegalStateException("Attempt form row is missing fields.");
             }
 
-            drafts.add(new AnswerRepository.AnswerDraft(
-                    question.id(),
-                    answerArea.getText(),
-                    marksSpinner.getValue(),
-                    question.maxMarks(),
-                    mistakeCheckBox.isSelected(),
-                    mistakeNoteArea.getText()
-            ));
+            AnswerState evidence = (AnswerState) card.getProperties().get("answerState");
+            if (evidence == null || !evidence.locked)
+                throw new IllegalArgumentException(
+                        "Lock answer " + (i + 1) + " before submitting.");
+            try {
+                marksSpinner.commitValue();
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("Enter valid marks for question " + (i + 1));
+            }
+            drafts.add(
+                    new AnswerRepository.AnswerDraft(
+                            question.id(),
+                            answerArea.getText(),
+                            marksSpinner.getValue(),
+                            question.maxMarks(),
+                            mistakeCheckBox.isSelected(),
+                            mistakeNoteArea.getText(),
+                            ((AnswerState) card.getProperties().get("answerState")).assisted,
+                            ((AnswerState) card.getProperties().get("answerState")).seconds(),
+                            true));
         }
 
         return drafts;

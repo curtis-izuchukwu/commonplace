@@ -1,15 +1,15 @@
 package com.commonplace.repository;
 
+import com.commonplace.model.UserStats;
+import com.commonplace.service.AccountSession;
+import com.commonplace.util.DateUtils;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-
-import com.commonplace.model.UserStats;
-import com.commonplace.service.AccountSession;
-import com.commonplace.util.DateUtils;
 
 public class UserStatsRepository {
 
@@ -31,14 +31,15 @@ public class UserStatsRepository {
     }
 
     private UserStats findRaw() throws SQLException {
-        String sql = """
+        String sql =
+                """
                 SELECT xp, streak_count, last_completion_date, worksheet_interval_days
                 FROM user_stats
                 WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
 
@@ -53,7 +54,8 @@ public class UserStatsRepository {
     }
 
     private void ensureStatsRow() throws SQLException {
-        String sql = """
+        String sql =
+                """
                 INSERT OR IGNORE INTO user_stats
                     (user_id, xp, streak_count, worksheet_interval_days)
                 VALUES
@@ -61,7 +63,7 @@ public class UserStatsRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
             stmt.executeUpdate();
@@ -69,14 +71,16 @@ public class UserStatsRepository {
     }
 
     public UserStats addXp(int xpToAdd) throws SQLException {
-        String sql = """
+        ensureStatsRow();
+        String sql =
+                """
                 UPDATE user_stats
                 SET xp = xp + ?
                 WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, Math.max(0, xpToAdd));
             stmt.setLong(2, AccountSession.currentUserId());
@@ -89,11 +93,12 @@ public class UserStatsRepository {
     public UserStats updateStreakForCompletion(LocalDate completionDate) throws SQLException {
         UserStats currentStats = find();
 
-        LocalDate resolvedCompletionDate = completionDate == null
-                ? LocalDate.now()
-                : completionDate;
+        LocalDate resolvedCompletionDate =
+                completionDate == null ? LocalDate.now() : completionDate;
 
         LocalDate lastCompletionDate = currentStats.lastCompletionDate();
+        if (lastCompletionDate != null && resolvedCompletionDate.isBefore(lastCompletionDate))
+            return currentStats;
 
         int newStreak;
 
@@ -111,7 +116,8 @@ public class UserStatsRepository {
             }
         }
 
-        String sql = """
+        String sql =
+                """
                 UPDATE user_stats
                 SET streak_count = ?,
                     last_completion_date = ?
@@ -119,7 +125,7 @@ public class UserStatsRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, newStreak);
             stmt.setString(2, DateUtils.toDatabaseDate(resolvedCompletionDate));
@@ -135,12 +141,7 @@ public class UserStatsRepository {
             return stats;
         }
 
-        return new UserStats(
-                stats.xp(),
-                0,
-                null,
-                stats.worksheetIntervalDays()
-        );
+        return new UserStats(stats.xp(), 0, null, stats.worksheetIntervalDays());
     }
 
     private boolean streakIsStale(UserStats stats, LocalDate today) {
@@ -157,7 +158,8 @@ public class UserStatsRepository {
     }
 
     private void resetExpiredStreak() throws SQLException {
-        String sql = """
+        String sql =
+                """
                 UPDATE user_stats
                 SET streak_count = 0,
                     last_completion_date = NULL
@@ -165,7 +167,7 @@ public class UserStatsRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
             stmt.executeUpdate();
@@ -177,14 +179,15 @@ public class UserStatsRepository {
             throw new IllegalArgumentException("Worksheet interval must be at least 1 day.");
         }
 
-        String sql = """
+        String sql =
+                """
                 UPDATE user_stats
                 SET worksheet_interval_days = ?
                 WHERE user_id = ?;
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, intervalDays);
             stmt.setLong(2, AccountSession.currentUserId());
@@ -195,7 +198,8 @@ public class UserStatsRepository {
     }
 
     public UserStats resetGamificationProgress() throws SQLException {
-        String sql = """
+        String sql =
+                """
                 UPDATE user_stats
                 SET xp = 0,
                     streak_count = 0,
@@ -204,7 +208,7 @@ public class UserStatsRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
             stmt.executeUpdate();
@@ -215,20 +219,15 @@ public class UserStatsRepository {
 
     public UserStats resetTodaysRecommendationWindow() throws SQLException {
         new DailyRecommendationRepository().clear();
-
-        String sql = """
-                UPDATE user_stats
-                SET last_completion_date = NULL
-                WHERE user_id = ?;
-                """;
-
-        try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setLong(1, AccountSession.currentUserId());
-            stmt.executeUpdate();
+        try (Connection c = DatabaseManager.connect();
+                PreparedStatement s =
+                        c.prepareStatement(
+                                "DELETE FROM recommendation_actions WHERE user_id=? AND"
+                                        + " study_date=?")) {
+            s.setLong(1, AccountSession.currentUserId());
+            s.setString(2, LocalDate.now().toString());
+            s.executeUpdate();
         }
-
         return find();
     }
 
@@ -237,7 +236,6 @@ public class UserStatsRepository {
                 rs.getInt("xp"),
                 rs.getInt("streak_count"),
                 DateUtils.fromDatabaseDate(rs.getString("last_completion_date")),
-                rs.getInt("worksheet_interval_days")
-        );
+                rs.getInt("worksheet_interval_days"));
     }
 }
