@@ -1,20 +1,20 @@
 package com.commonplace.service;
 
+import com.commonplace.model.StudyModule;
+import com.commonplace.model.Topic;
+import com.commonplace.model.UserSettings;
+import com.commonplace.model.UserStats;
+import com.commonplace.repository.AttemptRepository;
+import com.commonplace.repository.MistakeRepository;
+import com.commonplace.repository.ModuleRepository;
+import com.commonplace.repository.TopicRepository;
+
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import com.commonplace.model.StudyModule;
-import com.commonplace.model.Topic;
-import com.commonplace.model.UserStats;
-import com.commonplace.model.UserSettings;
-import com.commonplace.repository.AttemptRepository;
-import com.commonplace.repository.MistakeRepository;
-import com.commonplace.repository.ModuleRepository;
-import com.commonplace.repository.TopicRepository;
 
 public class DashboardService {
 
@@ -37,8 +37,7 @@ public class DashboardService {
                 new AttemptRepository(),
                 new MistakeRepository(),
                 new ModuleRepository(),
-                new UserSettingsService()
-        );
+                new UserSettingsService());
     }
 
     public DashboardService(
@@ -48,8 +47,7 @@ public class DashboardService {
             AttemptRepository attemptRepository,
             MistakeRepository mistakeRepository,
             ModuleRepository moduleRepository,
-            UserSettingsService userSettingsService
-    ) {
+            UserSettingsService userSettingsService) {
         this.gamificationService = gamificationService;
         this.worksheetSelectionService = worksheetSelectionService;
         this.topicRepository = topicRepository;
@@ -60,43 +58,43 @@ public class DashboardService {
     }
 
     public DashboardSummary loadDashboard() throws SQLException {
+        new LearningService().refreshAll();
         UserStats userStats = gamificationService.getUserStats();
         UserSettings userSettings = userSettingsService.load();
         String rank = gamificationService.calculateRank(userStats.xp());
         int nextRankXp = gamificationService.xpForNextRank(userStats.xp());
 
-        List<Topic> weakestTopics =
-                topicRepository.findWeakestTopics(WEAKEST_TOPIC_LIMIT);
+        List<Topic> weakestTopics = topicRepository.findWeakestTopics(WEAKEST_TOPIC_LIMIT);
 
         List<AttemptRepository.RecentAttemptDisplayItem> recentAttempts =
                 attemptRepository.findRecentDisplayItems(RECENT_ATTEMPT_LIMIT);
 
         List<StudyModule> modules = moduleRepository.findAll();
 
-        int unresolvedMistakeCount =
-                mistakeRepository.countUnresolved();
+        int unresolvedMistakeCount = mistakeRepository.countUnresolved();
 
-        int completedWorksheetsToday =
-                attemptRepository.countCompletedOn(LocalDate.now());
+        int completedWorksheetsToday = attemptRepository.countCompletedOn(LocalDate.now());
 
-        boolean worksheetWindowLocked = worksheetWindowIsLocked(
-                userStats,
-                userSettings,
-                completedWorksheetsToday
-        );
+        boolean hasEligibleWorksheets =
+                !worksheetSelectionService.previewPriorities().isEmpty();
+        boolean worksheetWindowLocked =
+                hasEligibleWorksheets
+                        && worksheetWindowIsLocked(
+                                userStats, userSettings, completedWorksheetsToday);
 
-        Optional<WorksheetRecommendation> recommendation = worksheetWindowLocked
-                ? Optional.empty()
-                : worksheetSelectionService.recommendWorksheet();
+        Optional<WorksheetRecommendation> recommendation =
+                worksheetWindowLocked
+                        ? Optional.empty()
+                        : worksheetSelectionService.recommendWorksheet();
 
-        List<DashboardReminder> reminders = buildReminders(
-                userStats,
-                userSettings,
-                completedWorksheetsToday,
-                worksheetWindowLocked,
-                unresolvedMistakeCount,
-                modules
-        );
+        List<DashboardReminder> reminders =
+                buildReminders(
+                        userStats,
+                        userSettings,
+                        completedWorksheetsToday,
+                        worksheetWindowLocked,
+                        unresolvedMistakeCount,
+                        modules);
 
         return new DashboardSummary(
                 userStats,
@@ -110,8 +108,7 @@ public class DashboardService {
                 unresolvedMistakeCount,
                 completedWorksheetsToday,
                 worksheetWindowLocked,
-                reminders
-        );
+                reminders);
     }
 
     public DashboardSummary refreshRecommendation() throws SQLException {
@@ -132,8 +129,7 @@ public class DashboardService {
             int completedWorksheetsToday,
             boolean worksheetWindowLocked,
             int unresolvedMistakeCount,
-            List<StudyModule> modules
-    ) {
+            List<StudyModule> modules) {
         List<DashboardReminder> reminders = new ArrayList<>();
         int dailyGoal = settings.dailyWorksheetGoal();
         boolean dailyGoalMet = completedWorksheetsToday >= dailyGoal;
@@ -146,23 +142,27 @@ public class DashboardService {
                 && !worksheetWindowLocked
                 && !dailyGoalMet
                 && !LocalTime.now().isBefore(LocalTime.parse(settings.dailyReminderTime()))) {
-            reminders.add(new DashboardReminder(
-                    "Daily study reminder",
-                    "You have completed " + completedWorksheetsToday + "/"
-                            + dailyGoal + " worksheets today.",
-                    "notification-info"
-            ));
+            reminders.add(
+                    new DashboardReminder(
+                            "Daily study reminder",
+                            "You have completed "
+                                    + completedWorksheetsToday
+                                    + "/"
+                                    + dailyGoal
+                                    + " worksheets today.",
+                            "notification-info"));
         }
 
         if (settings.mistakeReminderEnabled() && unresolvedMistakeCount > 0) {
-            reminders.add(new DashboardReminder(
-                    "Mistake review",
-                    unresolvedMistakeCount + " unresolved mistake"
-                            + (unresolvedMistakeCount == 1 ? "" : "s")
-                            + (unresolvedMistakeCount == 1 ? " is" : " are")
-                            + " waiting in the mistake bank.",
-                    "notification-review"
-            ));
+            reminders.add(
+                    new DashboardReminder(
+                            "Mistake review",
+                            unresolvedMistakeCount
+                                    + " unresolved mistake"
+                                    + (unresolvedMistakeCount == 1 ? "" : "s")
+                                    + (unresolvedMistakeCount == 1 ? " is" : " are")
+                                    + " waiting in the mistake bank.",
+                            "notification-review"));
         }
 
         if (settings.streakReminderEnabled()
@@ -170,35 +170,31 @@ public class DashboardService {
                 && !worksheetWindowLocked
                 && !dailyGoalMet
                 && (completedWorksheetsToday > 0 || streakNeedsWorkToday(stats))) {
-            reminders.add(new DashboardReminder(
-                    "Streak reminder",
-                    "Complete today's worksheet goal to keep your "
-                            + stats.streakCount() + " day streak alive.",
-                    "notification-success"
-            ));
+            reminders.add(
+                    new DashboardReminder(
+                            "Streak reminder",
+                            "Complete today's worksheet goal to keep your "
+                                    + stats.streakCount()
+                                    + " session streak alive.",
+                            "notification-success"));
         }
 
         return reminders;
     }
 
     private boolean worksheetWindowIsLocked(
-            UserStats stats,
-            UserSettings settings,
-            int completedWorksheetsToday
-    ) {
+            UserStats stats, UserSettings settings, int completedWorksheetsToday) {
         if (stats.lastCompletionDate() == null) {
             return false;
         }
 
         LocalDate today = LocalDate.now();
-
         if (stats.lastCompletionDate().isEqual(today)) {
             return completedWorksheetsToday >= settings.dailyWorksheetGoal();
         }
 
-        LocalDate nextWorksheetDate = stats.lastCompletionDate()
-                .plusDays(stats.worksheetIntervalDays());
-
+        LocalDate nextWorksheetDate =
+                stats.lastCompletionDate().plusDays(stats.worksheetIntervalDays());
         return today.isBefore(nextWorksheetDate);
     }
 
@@ -207,8 +203,7 @@ public class DashboardService {
             return true;
         }
 
-        LocalDate nextDueDate = stats.lastCompletionDate()
-                .plusDays(stats.worksheetIntervalDays());
+        LocalDate nextDueDate = stats.lastCompletionDate().plusDays(stats.worksheetIntervalDays());
 
         return !LocalDate.now().isBefore(nextDueDate);
     }

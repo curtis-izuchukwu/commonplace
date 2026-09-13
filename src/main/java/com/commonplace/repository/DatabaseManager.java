@@ -1,6 +1,8 @@
 package com.commonplace.repository;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -10,37 +12,117 @@ import java.sql.Statement;
 
 public final class DatabaseManager {
 
+    private static final ThreadLocal<Connection> TRANSACTION = new ThreadLocal<>();
+
+    @FunctionalInterface
+    public interface SqlWork<T> {
+        T run() throws SQLException;
+    }
+
+    /**
+     * Repositories share one connection during a unit of work; their close() releases only the
+     * lease.
+     */
+    public static <T> T transaction(SqlWork<T> work) throws SQLException {
+        if (TRANSACTION.get() != null) {
+            return work.run();
+        }
+        try (Connection conn = connect()) {
+            conn.setAutoCommit(false);
+            TRANSACTION.set(conn);
+            try {
+                T result = work.run();
+                conn.commit();
+                return result;
+            } catch (SQLException | RuntimeException | Error e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollback) {
+                    e.addSuppressed(rollback);
+                }
+                throw e;
+            } finally {
+                TRANSACTION.remove();
+            }
+        }
+    }
+
     public static final String DB_DIR =
-            System.getProperty("user.home") + File.separator + ".commonplace";
+            System.getProperty(
+                    "commonplace.data.dir",
+                    System.getProperty("user.home") + File.separator + ".commonplace");
 
-    public static final String DB_PATH =
-            DB_DIR + File.separator + "appdata.db";
+    public static final String DB_PATH = DB_DIR + File.separator + "appdata.db";
 
-    public static final String CONNECTION_URL =
-            "jdbc:sqlite:" + DB_PATH;
+    public static final String CONNECTION_URL = "jdbc:sqlite:" + DB_PATH;
 
     private DatabaseManager() {
         // Utility class
     }
 
     public static Connection connect() throws SQLException {
+        Connection shared = TRANSACTION.get();
+        if (shared != null) {
+            return (Connection)
+                    java.lang.reflect.Proxy.newProxyInstance(
+                            DatabaseManager.class.getClassLoader(),
+                            new Class<?>[] {Connection.class},
+                            (proxy, method, args) -> {
+                                if (method.getName().equals("close")) {
+                                    return null;
+                                }
+                                try {
+                                    return method.invoke(shared, args);
+                                } catch (java.lang.reflect.InvocationTargetException e) {
+                                    throw e.getCause();
+                                }
+                            });
+        }
         ensureDatabaseDirectoryExists();
+        boolean databaseAlreadyExisted = Files.isRegularFile(Path.of(DB_PATH));
 
         Connection conn = DriverManager.getConnection(CONNECTION_URL);
         setBusyTimeout(conn);
+        if (databaseAlreadyExisted) {
+            preservePreLearningDatabase(conn);
+        }
         enableForeignKeys(conn);
         initialiseTables(conn);
 
         return conn;
     }
 
+    private static void preservePreLearningDatabase(Connection conn) throws SQLException {
+        Path backup = Path.of(DB_DIR, "appdata.before-learning-v1.db");
+        if (Files.exists(backup) || learningSchemaVersion(conn) >= 1) {
+            return;
+        }
+
+        String escapedPath = backup.toAbsolutePath().toString().replace("'", "''");
+        try (Statement stmt = conn.createStatement()) {
+            // VACUUM INTO creates a consistent SQLite snapshot, including data that
+            // could otherwise still reside in a WAL file.
+            stmt.execute("VACUUM INTO '" + escapedPath + "';");
+        }
+    }
+
+    private static int learningSchemaVersion(Connection conn) throws SQLException {
+        if (!tableExists(conn, "learning_schema")) {
+            return 0;
+        }
+        try (Statement stmt = conn.createStatement();
+                ResultSet rs =
+                        stmt.executeQuery(
+                                "SELECT COALESCE(MAX(version), 0) FROM learning_schema;")) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
     private static void ensureDatabaseDirectoryExists() {
         File directory = new File(DB_DIR);
 
         if (!directory.exists() && !directory.mkdirs()) {
-            throw new IllegalStateException(
-                    "Failed to create database directory: " + DB_DIR
-            );
+            throw new IllegalStateException("Failed to create database directory: " + DB_DIR);
         }
     }
 
@@ -58,207 +140,195 @@ public final class DatabaseManager {
 
     public static void initialiseTables(Connection conn) throws SQLException {
         String[] schemaQueries = {
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                    password_hash TEXT NOT NULL,
-                    password_salt TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS modules (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    exam_date TEXT,
-                    importance TEXT NOT NULL DEFAULT 'MEDIUM',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS topics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    module_id INTEGER NOT NULL,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    importance TEXT NOT NULL DEFAULT 'MEDIUM',
-                    confidence TEXT NOT NULL DEFAULT 'MEDIUM',
-                    mastery_score REAL NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS worksheets (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    topic_id INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    difficulty TEXT NOT NULL DEFAULT 'MEDIUM',
-                    importance TEXT NOT NULL DEFAULT 'MEDIUM',
-                    source TEXT NOT NULL DEFAULT 'manual',
-                    created_at TEXT NOT NULL,
-                    last_attempted_at TEXT,
-                    times_attempted INTEGER NOT NULL DEFAULT 0,
-                    latest_score_percent REAL,
-                    average_score_percent REAL,
-                    failure_streak INTEGER NOT NULL DEFAULT 0,
-                    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS questions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    worksheet_id INTEGER NOT NULL,
-                    prompt TEXT NOT NULL,
-                    mark_scheme TEXT NOT NULL,
-                    max_marks INTEGER NOT NULL,
-                    question_order INTEGER NOT NULL,
-                    tags TEXT,
-                    image_path TEXT,
-                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS worksheet_attempts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    worksheet_id INTEGER NOT NULL,
-                    started_at TEXT NOT NULL,
-                    completed_at TEXT NOT NULL,
-                    score INTEGER NOT NULL,
-                    max_score INTEGER NOT NULL,
-                    score_percent REAL NOT NULL,
-                    confidence_after TEXT NOT NULL,
-                    main_weakness TEXT,
-                    next_action TEXT,
-                    reflection_notes TEXT,
-                    xp_awarded_at TEXT,
-                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS answers (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    attempt_id INTEGER NOT NULL,
-                    question_id INTEGER NOT NULL,
-                    user_answer TEXT NOT NULL,
-                    awarded_marks INTEGER NOT NULL,
-                    max_marks INTEGER NOT NULL,
-                    marked_as_mistake INTEGER NOT NULL DEFAULT 0,
-                    mistake_note TEXT,
-                    FOREIGN KEY (attempt_id) REFERENCES worksheet_attempts(id) ON DELETE CASCADE,
-                    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS mistake_bank (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    topic_id INTEGER NOT NULL,
-                    worksheet_id INTEGER NOT NULL,
-                    question_id INTEGER NOT NULL,
-                    attempt_id INTEGER NOT NULL,
-                    user_answer TEXT NOT NULL,
-                    mark_scheme TEXT NOT NULL,
-                    mistake_note TEXT,
-                    created_at TEXT NOT NULL,
-                    resolved INTEGER NOT NULL DEFAULT 0,
-                    times_revisited INTEGER NOT NULL DEFAULT 0,
-                    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE,
-                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE,
-                    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
-                    FOREIGN KEY (attempt_id) REFERENCES worksheet_attempts(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS user_stats (
-                    user_id INTEGER PRIMARY KEY,
-                    xp INTEGER NOT NULL DEFAULT 0,
-                    streak_count INTEGER NOT NULL DEFAULT 0,
-                    last_completion_date TEXT,
-                    worksheet_interval_days INTEGER NOT NULL DEFAULT 1
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS user_settings (
-                    user_id INTEGER PRIMARY KEY,
-                    theme TEXT NOT NULL DEFAULT 'DARK',
-                    accent_color TEXT NOT NULL DEFAULT 'CYAN',
-                    reduce_motion INTEGER NOT NULL DEFAULT 0,
-                    compact_layout INTEGER NOT NULL DEFAULT 0,
-                    font_size TEXT NOT NULL DEFAULT 'DEFAULT',
-                    daily_worksheet_goal INTEGER NOT NULL DEFAULT 1,
-                    daily_reminder_time TEXT NOT NULL DEFAULT '18:00',
-                    preferred_min_difficulty TEXT NOT NULL DEFAULT 'EASY',
-                    preferred_max_difficulty TEXT NOT NULL DEFAULT 'HARD',
-                    recommendation_focus TEXT NOT NULL DEFAULT 'BALANCED',
-                    include_resolved_mistakes_in_recommendations INTEGER NOT NULL DEFAULT 0,
-                    daily_reminder_enabled INTEGER NOT NULL DEFAULT 0,
-                    exam_reminder_enabled INTEGER NOT NULL DEFAULT 1,
-                    mistake_reminder_enabled INTEGER NOT NULL DEFAULT 1,
-                    streak_reminder_enabled INTEGER NOT NULL DEFAULT 1,
-                    quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
-                    quiet_hours_start TEXT NOT NULL DEFAULT '22:00',
-                    quiet_hours_end TEXT NOT NULL DEFAULT '07:00',
-                    show_xp_and_rank INTEGER NOT NULL DEFAULT 1,
-                    streak_tracking_enabled INTEGER NOT NULL DEFAULT 1,
-                    completion_celebrations_enabled INTEGER NOT NULL DEFAULT 1,
-                    default_module_priority TEXT NOT NULL DEFAULT 'MEDIUM',
-                    archive_completed_modules INTEGER NOT NULL DEFAULT 0,
-                    higher_contrast INTEGER NOT NULL DEFAULT 0,
-                    larger_controls INTEGER NOT NULL DEFAULT 0,
-                    keyboard_hints_enabled INTEGER NOT NULL DEFAULT 0,
-                    screen_reader_labels_enabled INTEGER NOT NULL DEFAULT 1,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS remembered_session (
-                    id INTEGER PRIMARY KEY CHECK (id = 1),
-                    user_id INTEGER NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS daily_recommendations (
-                    user_id INTEGER PRIMARY KEY,
-                    recommendation_date TEXT NOT NULL,
-                    worksheet_id INTEGER NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS daily_recommendation_history (
-                    user_id INTEGER NOT NULL,
-                    recommendation_date TEXT NOT NULL,
-                    worksheet_id INTEGER NOT NULL,
-                    created_at TEXT NOT NULL,
-                    PRIMARY KEY (user_id, recommendation_date, worksheet_id),
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
-                );
-                """
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL,
+                password_salt TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS modules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                name TEXT NOT NULL,
+                description TEXT,
+                exam_date TEXT,
+                importance TEXT NOT NULL DEFAULT 'MEDIUM',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS topics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                module_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                importance TEXT NOT NULL DEFAULT 'MEDIUM',
+                confidence TEXT NOT NULL DEFAULT 'MEDIUM',
+                mastery_score REAL NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS worksheets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                difficulty TEXT NOT NULL DEFAULT 'MEDIUM',
+                importance TEXT NOT NULL DEFAULT 'MEDIUM',
+                source TEXT NOT NULL DEFAULT 'manual',
+                created_at TEXT NOT NULL,
+                last_attempted_at TEXT,
+                times_attempted INTEGER NOT NULL DEFAULT 0,
+                latest_score_percent REAL,
+                average_score_percent REAL,
+                failure_streak INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS questions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worksheet_id INTEGER NOT NULL,
+                prompt TEXT NOT NULL,
+                mark_scheme TEXT NOT NULL,
+                max_marks INTEGER NOT NULL,
+                question_order INTEGER NOT NULL,
+                tags TEXT,
+                image_path TEXT,
+                FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS worksheet_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worksheet_id INTEGER NOT NULL,
+                started_at TEXT NOT NULL,
+                completed_at TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                max_score INTEGER NOT NULL,
+                score_percent REAL NOT NULL,
+                confidence_after TEXT NOT NULL,
+                main_weakness TEXT,
+                next_action TEXT,
+                reflection_notes TEXT,
+                xp_awarded_at TEXT,
+                FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS answers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                attempt_id INTEGER NOT NULL,
+                question_id INTEGER NOT NULL,
+                user_answer TEXT NOT NULL,
+                awarded_marks INTEGER NOT NULL,
+                max_marks INTEGER NOT NULL,
+                marked_as_mistake INTEGER NOT NULL DEFAULT 0,
+                mistake_note TEXT,
+                FOREIGN KEY (attempt_id) REFERENCES worksheet_attempts(id) ON DELETE CASCADE,
+                FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS mistake_bank (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic_id INTEGER NOT NULL,
+                worksheet_id INTEGER NOT NULL,
+                question_id INTEGER NOT NULL,
+                attempt_id INTEGER NOT NULL,
+                user_answer TEXT NOT NULL,
+                mark_scheme TEXT NOT NULL,
+                mistake_note TEXT,
+                created_at TEXT NOT NULL,
+                resolved INTEGER NOT NULL DEFAULT 0,
+                times_revisited INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE,
+                FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE,
+                FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+                FOREIGN KEY (attempt_id) REFERENCES worksheet_attempts(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS user_stats (
+                user_id INTEGER PRIMARY KEY,
+                xp INTEGER NOT NULL DEFAULT 0,
+                streak_count INTEGER NOT NULL DEFAULT 0,
+                last_completion_date TEXT,
+                worksheet_interval_days INTEGER NOT NULL DEFAULT 1
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS user_settings (
+                user_id INTEGER PRIMARY KEY,
+                theme TEXT NOT NULL DEFAULT 'DARK',
+                accent_color TEXT NOT NULL DEFAULT 'CYAN',
+                reduce_motion INTEGER NOT NULL DEFAULT 0,
+                compact_layout INTEGER NOT NULL DEFAULT 0,
+                font_size TEXT NOT NULL DEFAULT 'DEFAULT',
+                daily_worksheet_goal INTEGER NOT NULL DEFAULT 1,
+                daily_reminder_time TEXT NOT NULL DEFAULT '18:00',
+                preferred_min_difficulty TEXT NOT NULL DEFAULT 'EASY',
+                preferred_max_difficulty TEXT NOT NULL DEFAULT 'HARD',
+                recommendation_focus TEXT NOT NULL DEFAULT 'BALANCED',
+                include_resolved_mistakes_in_recommendations INTEGER NOT NULL DEFAULT 0,
+                daily_reminder_enabled INTEGER NOT NULL DEFAULT 0,
+                exam_reminder_enabled INTEGER NOT NULL DEFAULT 1,
+                mistake_reminder_enabled INTEGER NOT NULL DEFAULT 1,
+                streak_reminder_enabled INTEGER NOT NULL DEFAULT 1,
+                quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
+                quiet_hours_start TEXT NOT NULL DEFAULT '22:00',
+                quiet_hours_end TEXT NOT NULL DEFAULT '07:00',
+                show_xp_and_rank INTEGER NOT NULL DEFAULT 1,
+                streak_tracking_enabled INTEGER NOT NULL DEFAULT 1,
+                completion_celebrations_enabled INTEGER NOT NULL DEFAULT 1,
+                default_module_priority TEXT NOT NULL DEFAULT 'MEDIUM',
+                archive_completed_modules INTEGER NOT NULL DEFAULT 0,
+                higher_contrast INTEGER NOT NULL DEFAULT 0,
+                larger_controls INTEGER NOT NULL DEFAULT 0,
+                keyboard_hints_enabled INTEGER NOT NULL DEFAULT 0,
+                screen_reader_labels_enabled INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS remembered_session (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                user_id INTEGER NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS daily_recommendations (
+                user_id INTEGER PRIMARY KEY,
+                recommendation_date TEXT NOT NULL,
+                worksheet_id INTEGER NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS daily_recommendation_history (
+                user_id INTEGER NOT NULL,
+                recommendation_date TEXT NOT NULL,
+                worksheet_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (user_id, recommendation_date, worksheet_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (worksheet_id) REFERENCES worksheets(id) ON DELETE CASCADE
+            );
+            """
         };
 
         try (Statement stmt = conn.createStatement()) {
@@ -276,28 +346,52 @@ public final class DatabaseManager {
         addColumnIfMissing(conn, "worksheet_attempts", "xp_awarded_at", "TEXT");
         addColumnIfMissing(conn, "user_settings", "compact_layout", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing(conn, "user_settings", "font_size", "TEXT NOT NULL DEFAULT 'DEFAULT'");
-        addColumnIfMissing(conn, "user_settings", "preferred_min_difficulty", "TEXT NOT NULL DEFAULT 'EASY'");
-        addColumnIfMissing(conn, "user_settings", "preferred_max_difficulty", "TEXT NOT NULL DEFAULT 'HARD'");
-        addColumnIfMissing(conn, "user_settings", "recommendation_focus", "TEXT NOT NULL DEFAULT 'BALANCED'");
-        addColumnIfMissing(conn, "user_settings", "include_resolved_mistakes_in_recommendations", "INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(conn, "user_settings", "quiet_hours_enabled", "INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(conn, "user_settings", "quiet_hours_start", "TEXT NOT NULL DEFAULT '22:00'");
-        addColumnIfMissing(conn, "user_settings", "quiet_hours_end", "TEXT NOT NULL DEFAULT '07:00'");
+        addColumnIfMissing(
+                conn, "user_settings", "preferred_min_difficulty", "TEXT NOT NULL DEFAULT 'EASY'");
+        addColumnIfMissing(
+                conn, "user_settings", "preferred_max_difficulty", "TEXT NOT NULL DEFAULT 'HARD'");
+        addColumnIfMissing(
+                conn, "user_settings", "recommendation_focus", "TEXT NOT NULL DEFAULT 'BALANCED'");
+        addColumnIfMissing(
+                conn,
+                "user_settings",
+                "include_resolved_mistakes_in_recommendations",
+                "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+                conn, "user_settings", "quiet_hours_enabled", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+                conn, "user_settings", "quiet_hours_start", "TEXT NOT NULL DEFAULT '22:00'");
+        addColumnIfMissing(
+                conn, "user_settings", "quiet_hours_end", "TEXT NOT NULL DEFAULT '07:00'");
         addColumnIfMissing(conn, "user_settings", "show_xp_and_rank", "INTEGER NOT NULL DEFAULT 1");
-        addColumnIfMissing(conn, "user_settings", "streak_tracking_enabled", "INTEGER NOT NULL DEFAULT 1");
-        addColumnIfMissing(conn, "user_settings", "completion_celebrations_enabled", "INTEGER NOT NULL DEFAULT 1");
-        addColumnIfMissing(conn, "user_settings", "default_module_priority", "TEXT NOT NULL DEFAULT 'MEDIUM'");
-        addColumnIfMissing(conn, "user_settings", "archive_completed_modules", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+                conn, "user_settings", "streak_tracking_enabled", "INTEGER NOT NULL DEFAULT 1");
+        addColumnIfMissing(
+                conn,
+                "user_settings",
+                "completion_celebrations_enabled",
+                "INTEGER NOT NULL DEFAULT 1");
+        addColumnIfMissing(
+                conn, "user_settings", "default_module_priority", "TEXT NOT NULL DEFAULT 'MEDIUM'");
+        addColumnIfMissing(
+                conn, "user_settings", "archive_completed_modules", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing(conn, "user_settings", "higher_contrast", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing(conn, "user_settings", "larger_controls", "INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(conn, "user_settings", "keyboard_hints_enabled", "INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(conn, "user_settings", "screen_reader_labels_enabled", "INTEGER NOT NULL DEFAULT 1");
+        addColumnIfMissing(
+                conn, "user_settings", "keyboard_hints_enabled", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+                conn,
+                "user_settings",
+                "screen_reader_labels_enabled",
+                "INTEGER NOT NULL DEFAULT 1");
         migrateUserStatsTableIfNeeded(conn);
         backfillDailyRecommendationHistory(conn);
+        LearningSchema.migrate(conn);
     }
 
     private static void backfillDailyRecommendationHistory(Connection conn) throws SQLException {
-        String sql = """
+        String sql =
+                """
                 INSERT OR IGNORE INTO daily_recommendation_history
                     (user_id, recommendation_date, worksheet_id, created_at)
                 SELECT user_id, recommendation_date, worksheet_id, updated_at
@@ -320,11 +414,8 @@ public final class DatabaseManager {
     }
 
     private static void addColumnIfMissing(
-            Connection conn,
-            String tableName,
-            String columnName,
-            String definition
-    ) throws SQLException {
+            Connection conn, String tableName, String columnName, String definition)
+            throws SQLException {
 
         if (columnExists(conn, tableName, columnName)) {
             return;
@@ -332,8 +423,13 @@ public final class DatabaseManager {
 
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(
-                    "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + definition + ";"
-            );
+                    "ALTER TABLE "
+                            + tableName
+                            + " ADD COLUMN "
+                            + columnName
+                            + " "
+                            + definition
+                            + ";");
         }
     }
 
@@ -348,14 +444,15 @@ public final class DatabaseManager {
         int worksheetIntervalDays = 1;
 
         if (tableExists(conn, "user_stats")) {
-            String sql = """
+            String sql =
+                    """
                     SELECT xp, streak_count, last_completion_date, worksheet_interval_days
                     FROM user_stats
                     WHERE id = 1;
                     """;
 
             try (PreparedStatement stmt = conn.prepareStatement(sql);
-                 ResultSet rs = stmt.executeQuery()) {
+                    ResultSet rs = stmt.executeQuery()) {
 
                 if (rs.next()) {
                     xp = rs.getInt("xp");
@@ -368,7 +465,8 @@ public final class DatabaseManager {
 
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("ALTER TABLE user_stats RENAME TO user_stats_legacy;");
-            stmt.executeUpdate("""
+            stmt.executeUpdate(
+                    """
                     CREATE TABLE user_stats (
                         user_id INTEGER PRIMARY KEY,
                         xp INTEGER NOT NULL DEFAULT 0,
@@ -379,7 +477,8 @@ public final class DatabaseManager {
                     """);
         }
 
-        String insertLegacySql = """
+        String insertLegacySql =
+                """
                 INSERT INTO user_stats
                     (user_id, xp, streak_count, last_completion_date, worksheet_interval_days)
                 VALUES
@@ -400,7 +499,8 @@ public final class DatabaseManager {
     }
 
     private static boolean tableExists(Connection conn, String tableName) throws SQLException {
-        String sql = """
+        String sql =
+                """
                 SELECT 1
                 FROM sqlite_master
                 WHERE type = 'table'
@@ -416,14 +516,11 @@ public final class DatabaseManager {
         }
     }
 
-    private static boolean columnExists(
-            Connection conn,
-            String tableName,
-            String columnName
-    ) throws SQLException {
+    private static boolean columnExists(Connection conn, String tableName, String columnName)
+            throws SQLException {
 
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ");")) {
+                ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ");")) {
 
             while (rs.next()) {
                 if (columnName.equalsIgnoreCase(rs.getString("name"))) {

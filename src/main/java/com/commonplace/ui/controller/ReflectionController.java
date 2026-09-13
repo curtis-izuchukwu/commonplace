@@ -1,8 +1,5 @@
 package com.commonplace.ui.controller;
 
-import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.commonplace.model.ConfidenceLevel;
 import com.commonplace.model.UserSettings;
 import com.commonplace.model.Worksheet;
@@ -16,8 +13,8 @@ import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.UiAnimations;
 
 import javafx.application.Platform;
-import javafx.geometry.Pos;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -29,6 +26,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+
+import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ReflectionController {
 
@@ -44,6 +44,7 @@ public class ReflectionController {
 
     private Worksheet worksheet;
     private WorksheetAttempt attempt;
+    private int practiceXp;
     private Runnable onReflectionSaved;
 
     @FXML
@@ -56,35 +57,35 @@ public class ReflectionController {
     public void setContext(
             Worksheet worksheet,
             WorksheetAttempt attempt,
-            Runnable onReflectionSaved
-    ) {
+            int practiceXp,
+            Runnable onReflectionSaved) {
         this.worksheet = worksheet;
         this.attempt = attempt;
+        this.practiceXp = Math.max(0, practiceXp);
         this.onReflectionSaved = onReflectionSaved;
 
         summaryLabel.setText(
                 worksheet.title()
-                        + " - Score: "
+                        + "  •  Score "
                         + attempt.score()
                         + "/"
                         + attempt.maxScore()
                         + " ("
                         + String.format("%.0f%%", attempt.scorePercent())
-                        + ")"
-        );
+                        + ")");
     }
 
     @FXML
     private void handleSaveReflection() {
         try {
-            GamificationResult result = reflectionService.completeReflection(
-                    worksheet,
-                    attempt,
-                    confidenceCombo.getValue(),
-                    mainWeaknessArea.getText(),
-                    nextActionArea.getText(),
-                    reflectionNotesArea.getText()
-            );
+            GamificationResult result =
+                    reflectionService.completeReflection(
+                            worksheet,
+                            attempt,
+                            confidenceCombo.getValue(),
+                            mainWeaknessArea.getText(),
+                            nextActionArea.getText(),
+                            reflectionNotesArea.getText());
 
             finishAfterCompletion(result);
 
@@ -99,14 +100,14 @@ public class ReflectionController {
     @FXML
     private void handleSkipReflection() {
         try {
-            GamificationResult result = reflectionService.completeReflection(
-                    worksheet,
-                    attempt,
-                    ConfidenceLevel.MEDIUM,
-                    null,
-                    null,
-                    "Reflection skipped."
-            );
+            GamificationResult result =
+                    reflectionService.completeReflection(
+                            worksheet,
+                            attempt,
+                            ConfidenceLevel.MEDIUM,
+                            null,
+                            null,
+                            "Reflection skipped.");
 
             finishAfterCompletion(result);
 
@@ -158,13 +159,23 @@ public class ReflectionController {
         Label eyebrow = new Label("Worksheet complete");
         eyebrow.getStyleClass().add("xp-reward-eyebrow");
 
-        Label title = new Label("Reflection saved");
+        int totalXp = practiceXp + result.xpAwarded();
+
+        Label title = new Label(totalXp > 0 ? "Rewards saved" : "Worksheet saved");
         title.getStyleClass().add("xp-reward-title");
 
-        Label xpAwarded = new Label("+" + result.xpAwarded() + " XP");
+        Label xpAwarded = new Label("+" + totalXp + " XP");
         xpAwarded.getStyleClass().add("xp-reward-amount");
 
-        Label rank = new Label("Rank: " + result.rank());
+        Label breakdown =
+                new Label(
+                        "Practice +"
+                                + practiceXp
+                                + " · Reflection +"
+                                + result.xpAwarded());
+        breakdown.getStyleClass().add("muted-text");
+
+        Label rank = new Label("Study habit: " + result.rank());
         rank.getStyleClass().add("xp-reward-rank");
 
         Button okButton = new Button("OK");
@@ -176,7 +187,7 @@ public class ReflectionController {
         actions.setAlignment(Pos.CENTER_RIGHT);
         actions.getStyleClass().add("xp-reward-actions");
 
-        content.getChildren().setAll(eyebrow, title, xpAwarded, rank, actions);
+        content.getChildren().setAll(eyebrow, title, xpAwarded, breakdown, rank, actions);
         content.setOnMouseClicked(event -> event.consume());
 
         StackPane scrim = new StackPane(content);
@@ -186,24 +197,29 @@ public class ReflectionController {
 
         AtomicBoolean dismissed = new AtomicBoolean(false);
 
-        Runnable closeReward = () -> {
-            if (!dismissed.compareAndSet(false, true)) {
-                return;
-            }
+        Runnable closeReward =
+                () -> {
+                    if (!dismissed.compareAndSet(false, true)) {
+                        return;
+                    }
 
-            UiAnimations.animateOverlayClose(scrim, () -> {
-                rootStack.getChildren().remove(scrim);
-                onDismiss.run();
-            });
-        };
+                    UiAnimations.animateOverlayClose(
+                            scrim,
+                            () -> {
+                                rootStack.getChildren().remove(scrim);
+                                onDismiss.run();
+                            });
+                };
 
         okButton.setOnAction(event -> closeReward.run());
-        scrim.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                closeReward.run();
-                event.consume();
-            }
-        });
+        scrim.addEventFilter(
+                KeyEvent.KEY_PRESSED,
+                event -> {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        closeReward.run();
+                        event.consume();
+                    }
+                });
 
         rootStack.getChildren().add(scrim);
         UiAnimations.animateOverlayOpen(scrim, content);

@@ -102,7 +102,7 @@
 
                 <VBox spacing="10" styleClass="settings-panel" GridPane.columnIndex="0" GridPane.rowIndex="2">
                     <Label text="Gamification" styleClass="section-title"/>
-                    <CheckBox fx:id="showXpAndRankCheckBox" text="Show XP and rank"/>
+                    <CheckBox fx:id="showXpAndRankCheckBox" text="Show XP and study habit"/>
                     <CheckBox fx:id="streakTrackingCheckBox" text="Enable streak tracking"/>
                     <CheckBox fx:id="completionCelebrationsCheckBox" text="Enable completion celebrations"/>
                     <Button text="Reset Gamification Progress"

@@ -83,12 +83,12 @@
                                     <HBox fx:id="recommendationVisualMeta"
                                           spacing="10"
                                           alignment="CENTER_LEFT"/>
-                                    <Label fx:id="recommendationReasonLabel"
-                                           text=""
-                                           styleClass="muted-text,recommendation-progress"
-                                           visible="false"
-                                           managed="false"
-                                           wrapText="true"/>
+                                    <FlowPane fx:id="recommendationReasonBox"
+                                              hgap="8"
+                                              vgap="6"
+                                              styleClass="recommendation-statuses"
+                                              visible="false"
+                                              managed="false"/>
 
                                     <FlowPane hgap="10" vgap="8" styleClass="dashboard-actions">
                                         <Button text="Open recommendation"
@@ -106,9 +106,9 @@
                                     <Label text="Progress" styleClass="section-title"/>
 
                                     <HBox fx:id="rankRecordRow" alignment="CENTER_LEFT" styleClass="study-record-row">
-                                        <Label text="Rank" styleClass="study-record-label"/>
+                                        <Label text="Study habit" styleClass="study-record-label"/>
                                         <Region HBox.hgrow="ALWAYS"/>
-                                        <Label fx:id="rankLabel" text="Novice" styleClass="study-record-value"/>
+                                        <Label fx:id="rankLabel" text="Getting started" styleClass="study-record-value"/>
                                     </HBox>
 
                                     <VBox fx:id="xpRecordGroup" spacing="5" styleClass="study-record-group">
@@ -123,7 +123,7 @@
                                     <HBox fx:id="streakRecordRow" alignment="CENTER_LEFT" styleClass="study-record-row">
                                         <Label text="Streak" styleClass="study-record-label"/>
                                         <Region HBox.hgrow="ALWAYS"/>
-                                        <Label fx:id="streakLabel" text="0 days" styleClass="study-record-value"/>
+                                        <Label fx:id="streakLabel" text="0 study sessions" styleClass="study-record-value"/>
                                     </HBox>
 
                                     <HBox alignment="CENTER_LEFT" styleClass="study-record-row">

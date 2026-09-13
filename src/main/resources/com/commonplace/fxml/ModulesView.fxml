@@ -9,6 +9,7 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
@@ -83,12 +84,12 @@
                             </HBox>
                         </HBox>
 
-                        <Label fx:id="recommendationReasonLabel"
-                               text=""
-                               styleClass="muted-text"
-                               visible="false"
-                               managed="false"
-                               wrapText="true"/>
+                        <FlowPane fx:id="recommendationReasonBox"
+                                  hgap="8"
+                                  vgap="6"
+                                  styleClass="recommendation-statuses"
+                                  visible="false"
+                                  managed="false"/>
                     </VBox>
 
                     <Separator/>
@@ -96,10 +97,14 @@
                            text="Select a module"
                            styleClass="section-title"/>
 
-                    <Label fx:id="selectedModuleMeta"
-                           text="Create or select a module to start adding topics."
-                           styleClass="muted-text"
-                           wrapText="true"/>
+                    <FlowPane fx:id="selectedModuleMeta"
+                              hgap="8"
+                              vgap="8"
+                              styleClass="record-stat-grid">
+                        <Label text="Create or select a module to start adding topics."
+                               styleClass="muted-text"
+                               wrapText="true"/>
+                    </FlowPane>
 
                     <HBox spacing="20" VBox.vgrow="ALWAYS">
                         <VBox spacing="12"

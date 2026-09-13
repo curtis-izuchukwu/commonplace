@@ -17,14 +17,14 @@ All study data is stored locally in SQLite.
 ## Features
 
 - Local accounts with sign in, remembered sessions, password changes, and account switching.
-- Module and topic management with exam dates, priorities, confidence, and mastery tracking.
+- Module and topic management with exam dates, priorities, confidence, and automatic evidence-based mastery.
 - Worksheet creation by manual entry, optional Press generation, or local PDF import.
 - Optional image attachments for individual worksheet questions.
 - In-app worksheet attempts with answer fields, mark scheme reveal, self-marking, and mistake notes.
-- Reflection flow after each attempt.
-- Mistake bank with revisit and resolved states.
-- Daily adaptive worksheet recommendations based on scores, confidence, difficulty, importance, failure streaks, and mistakes.
-- Dashboard with the current recommendation, progress, streak, weak topics, recent attempts, and exam calendar.
+- Optional reflection flow after each attempt; completion, mastery, and practice XP save first.
+- Mistake bank with active-recall review, assistance tracking, and resolved states.
+- Deterministic adaptive recommendations based on mastery, evidence certainty, retention, difficulty fit, exam urgency, diversity, and mistakes.
+- Dashboard with the current recommendation, evidence-based progress, study habit, session streak, weak topics, recent attempts, and exam calendar.
 - Settings for study preferences, notifications, gamification, data backup, and accessibility.
 - Local backup export/import.
 
@@ -112,24 +112,23 @@ Images are stored under:
 
 ---
 
-## Recommendations
+## Learning Model and Recommendations
 
-Recommendations use weighted selection rather than always choosing the single highest-scoring worksheet.
+Mastery is estimated automatically from question-level performance, marks, difficulty, independent
+recall, active time, spacing, consistency, trend, and retention. Distinct questions, worksheets,
+study focuses, and study dates establish breadth, while repeated copies of the same prompt add very
+little evidence. No syllabus setup or question mapping is required.
 
-The score considers:
+The recommendation engine deterministically ranks only worksheets you have already created. It
+considers mastery, uncertainty, retention due dates, difficulty readiness, exam urgency, importance,
+recent variety, and unresolved mistakes. Press generation remains available as a deliberate action
+from the worksheet creation screen, where you choose its subject and specific topic.
 
-- Time since last attempt.
-- Latest score.
-- Topic confidence.
-- Worksheet difficulty.
-- Worksheet and topic importance.
-- Failure streak.
-- Linked unresolved mistakes.
-- User study preferences.
+XP records study effort, not knowledge. It is awarded for novel, independently completed practice,
+meaningful optional reflection, and successful unassisted mistake recall, with idempotency and daily
+caps to prevent farming. Study-habit labels and streaks describe consistency rather than ability.
 
-The app also tracks daily recommendation history so the same worksheet is not recommended twice in one day.
-
-More detail: [docs/weighted-selection.md](docs/weighted-selection.md)
+More detail: [docs/adaptive learning and recommendations](docs/weighted-selection.md)
 
 ---
 
@@ -147,6 +146,7 @@ Main files:
 | --- | --- |
 | `~/.commonplace/appdata.db` | SQLite database |
 | `~/.commonplace/images/` | Copied question images and extracted PDF images |
+| `~/.commonplace/appdata.before-learning-v1.db` | One-time pre-upgrade safety copy when an older database is migrated |
 
 The database is created automatically when the app starts.
 

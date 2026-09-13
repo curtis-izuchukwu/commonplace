@@ -1,15 +1,15 @@
 package com.commonplace.service;
 
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.util.List;
-
 import com.commonplace.model.ConfidenceLevel;
 import com.commonplace.model.ImportanceLevel;
 import com.commonplace.model.StudyModule;
 import com.commonplace.model.Topic;
 import com.commonplace.repository.ModuleRepository;
 import com.commonplace.repository.TopicRepository;
+
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.List;
 
 public class ModuleTopicService {
 
@@ -28,19 +28,15 @@ public class ModuleTopicService {
     public ModuleTopicService(
             ModuleRepository moduleRepository,
             TopicRepository topicRepository,
-            UserSettingsService userSettingsService
-    ) {
+            UserSettingsService userSettingsService) {
         this.moduleRepository = moduleRepository;
         this.topicRepository = topicRepository;
         this.userSettingsService = userSettingsService;
     }
 
     public StudyModule createModule(
-            String name,
-            String description,
-            LocalDate examDate,
-            ImportanceLevel importance
-    ) throws SQLException {
+            String name, String description, LocalDate examDate, ImportanceLevel importance)
+            throws SQLException {
 
         validateName(name, "Module name");
 
@@ -48,8 +44,7 @@ public class ModuleTopicService {
                 name,
                 description,
                 examDate,
-                importance == null ? defaultModulePriority() : importance
-        );
+                importance == null ? defaultModulePriority() : importance);
     }
 
     public List<StudyModule> getAllModules() throws SQLException {
@@ -75,8 +70,8 @@ public class ModuleTopicService {
             String name,
             String description,
             ImportanceLevel importance,
-            ConfidenceLevel confidence
-    ) throws SQLException {
+            ConfidenceLevel confidence)
+            throws SQLException {
 
         validateName(name, "Topic name");
 
@@ -85,11 +80,11 @@ public class ModuleTopicService {
                 name,
                 description,
                 importance == null ? ImportanceLevel.MEDIUM : importance,
-                confidence == null ? ConfidenceLevel.MEDIUM : confidence
-        );
+                confidence == null ? ConfidenceLevel.MEDIUM : confidence);
     }
 
     public List<Topic> getTopicsForModule(long moduleId) throws SQLException {
+        new LearningService().refreshAll();
         return topicRepository.findByModuleId(moduleId);
     }
 
@@ -102,7 +97,7 @@ public class ModuleTopicService {
     }
 
     public double getAverageMasteryForModule(long moduleId) throws SQLException {
-        return topicRepository.averageMasteryByModuleId(moduleId);
+        return new LearningService().moduleMastery(moduleId);
     }
 
     private void validateName(String value, String fieldName) {

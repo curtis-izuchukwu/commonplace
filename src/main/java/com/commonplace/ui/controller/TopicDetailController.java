@@ -1,14 +1,11 @@
 package com.commonplace.ui.controller;
 
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
-
 import com.commonplace.model.StudyModule;
 import com.commonplace.model.Topic;
 import com.commonplace.model.Worksheet;
 import com.commonplace.service.WorksheetCreationService;
 import com.commonplace.ui.AppIcon;
+import com.commonplace.ui.LevelUi;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.UiAnimations;
 
@@ -20,8 +17,16 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TitledPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class TopicDetailController {
 
@@ -29,8 +34,10 @@ public class TopicDetailController {
     @FXML private Label moduleNameLabel;
     @FXML private ProgressBar masteryProgressBar;
     @FXML private Label masteryLabel;
-    @FXML private Label importanceLabel;
-    @FXML private Label confidenceLabel;
+    @FXML private Label masteryValueLabel;
+    @FXML private TitledPane evidencePane;
+    @FXML private VBox learningEvidenceBox;
+    @FXML private FlowPane topicMetaBox;
     @FXML private Label descriptionLabel;
     @FXML private VBox worksheetsList;
     @FXML private Label statusLabel;
@@ -54,24 +61,25 @@ public class TopicDetailController {
         moduleNameLabel.setText(
                 parentModule == null
                         ? "No parent module loaded"
-                        : "Module: " + parentModule.name()
-        );
+                        : "Module  " + parentModule.name());
 
         double mastery = Math.max(0, Math.min(topic.masteryScore(), 100));
 
         UiAnimations.animateProgress(masteryProgressBar, mastery / 100.0);
-        masteryLabel.setText(String.format("%.0f%% mastery", mastery));
-
-        importanceLabel.setText("Importance: " + topic.importance());
-        confidenceLabel.setText("Confidence: " + topic.confidence());
+        masteryValueLabel.setText(String.format("%.0f%%", mastery));
+        masteryLabel.setText("Loading evidence…");
+        topicMetaBox
+                .getChildren()
+                .setAll(
+                        LevelUi.createPriorityStat(topic.importance()),
+                        LevelUi.createStatCell(
+                                "Confidence", LevelUi.displayName(topic.confidence())));
 
         String description = topic.description();
-
-        descriptionLabel.setText(
-                description == null || description.isBlank()
-                        ? "No description yet."
-                        : description
-        );
+        boolean hasDescription = description != null && !description.isBlank();
+        descriptionLabel.setText(hasDescription ? description.trim() : "");
+        descriptionLabel.setVisible(hasDescription);
+        descriptionLabel.setManaged(hasDescription);
 
         loadWorksheets();
     }
@@ -85,18 +93,21 @@ public class TopicDetailController {
         }
 
         try {
-            var handle = OverlayService.<WorksheetCreateController>open(
-                    topicNameLabel,
-                    "/com/commonplace/fxml/WorksheetCreateView.fxml",
-                    1120,
-                    760
-            );
+            var handle =
+                    OverlayService.<WorksheetCreateController>open(
+                            topicNameLabel,
+                            "/com/commonplace/fxml/WorksheetCreateView.fxml",
+                            1120,
+                            760);
 
             WorksheetCreateController controller = handle.controller();
-            controller.setTopic(topic, parentModule, () -> {
-                loadWorksheets();
-                notifyDataChanged();
-            });
+            controller.setTopic(
+                    topic,
+                    parentModule,
+                    () -> {
+                        loadWorksheets();
+                        notifyDataChanged();
+                    });
 
         } catch (IOException e) {
             showError("Failed to open worksheet creation", e.getMessage());
@@ -104,6 +115,7 @@ public class TopicDetailController {
     }
 
     private void loadWorksheets() {
+        refreshLearning();
         worksheetsList.getChildren().clear();
 
         if (topic == null) {
@@ -117,7 +129,9 @@ public class TopicDetailController {
             List<Worksheet> worksheets = worksheetService.getWorksheetsForTopic(topic.id());
 
             if (worksheets.isEmpty()) {
-                Label emptyLabel = new Label("No worksheets yet. Add one to start building practice material.");
+                Label emptyLabel =
+                        new Label(
+                                "No worksheets yet. Add one to start building practice material.");
                 emptyLabel.getStyleClass().add("muted-text");
                 worksheetsList.getChildren().add(emptyLabel);
                 return;
@@ -141,18 +155,21 @@ public class TopicDetailController {
         }
 
         try {
-            var handle = OverlayService.<ImportWorksheetController>open(
-                    topicNameLabel,
-                    "/com/commonplace/fxml/ImportWorksheetView.fxml",
-                    900,
-                    780
-            );
+            var handle =
+                    OverlayService.<ImportWorksheetController>open(
+                            topicNameLabel,
+                            "/com/commonplace/fxml/ImportWorksheetView.fxml",
+                            900,
+                            780);
 
             ImportWorksheetController controller = handle.controller();
-            controller.setInitialSelection(parentModule, topic, () -> {
-                loadWorksheets();
-                notifyDataChanged();
-            });
+            controller.setInitialSelection(
+                    parentModule,
+                    topic,
+                    () -> {
+                        loadWorksheets();
+                        notifyDataChanged();
+                    });
 
         } catch (IOException e) {
             showError("Failed to open PDF import", e.getMessage());
@@ -171,23 +188,31 @@ public class TopicDetailController {
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
-        Label meta = new Label(
-                "Difficulty: " + worksheet.difficulty()
-                        + " - Importance: " + worksheet.importance()
-                        + " - Attempts: " + worksheet.timesAttempted()
-                        + " - Latest score: " + formatScore(worksheet.latestScorePercent())
-        );
-        meta.getStyleClass().add("muted-text");
-        meta.setWrapText(true);
+        FlowPane meta = new FlowPane(8, 8);
+        meta.getStyleClass().add("record-stat-grid");
+        meta.getChildren()
+                .addAll(
+                        LevelUi.createStatCell(
+                                "Difficulty", LevelUi.displayName(worksheet.difficulty())),
+                        LevelUi.createPriorityStat(worksheet.importance()),
+                        LevelUi.createStatCell(
+                                "Attempts", Integer.toString(worksheet.timesAttempted())));
+        if (worksheet.latestScorePercent() != null) {
+            meta.getChildren()
+                    .add(
+                            LevelUi.createStatCell(
+                                    "Latest", formatScore(worksheet.latestScorePercent())));
+        }
 
         textBox.getChildren().addAll(title, meta);
 
         Button deleteButton = createDeleteButton();
         deleteButton.setOnMouseClicked(event -> event.consume());
-        deleteButton.setOnAction(event -> {
-            event.consume();
-            deleteWorksheet(worksheet, card);
-        });
+        deleteButton.setOnAction(
+                event -> {
+                    event.consume();
+                    deleteWorksheet(worksheet, card);
+                });
 
         card.getChildren().addAll(textBox, deleteButton);
         StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
@@ -197,7 +222,7 @@ public class TopicDetailController {
     }
 
     private Button createDeleteButton() {
-        Button button = new Button("x");
+        Button button = new Button("×");
         button.getStyleClass().add("icon-danger-button");
         button.setFocusTraversable(false);
         return button;
@@ -205,19 +230,20 @@ public class TopicDetailController {
 
     private void openWorksheetDetail(Worksheet worksheet) {
         try {
-            var handle = OverlayService.<WorksheetDetailController>open(
-                    topicNameLabel,
-                    "/com/commonplace/fxml/WorksheetDetailView.fxml",
-                    840,
-                    720
-            );
+            var handle =
+                    OverlayService.<WorksheetDetailController>open(
+                            topicNameLabel,
+                            "/com/commonplace/fxml/WorksheetDetailView.fxml",
+                            840,
+                            720);
 
             WorksheetDetailController controller = handle.controller();
             controller.setWorksheet(worksheet, topic);
-            controller.setOnWorksheetUpdated(() -> {
-                loadWorksheets();
-                notifyDataChanged();
-            });
+            controller.setOnWorksheetUpdated(
+                    () -> {
+                        loadWorksheets();
+                        notifyDataChanged();
+                    });
 
         } catch (IOException e) {
             showError("Failed to open worksheet detail", e.getMessage());
@@ -227,11 +253,13 @@ public class TopicDetailController {
     private void deleteWorksheet(Worksheet worksheet, Node card) {
         try {
             worksheetService.deleteWorksheet(worksheet.id());
-            UiAnimations.animateCardRemoval(card, () -> {
-                loadWorksheets();
-                notifyDataChanged();
-                setStatus("Worksheet deleted: " + worksheet.title());
-            });
+            UiAnimations.animateCardRemoval(
+                    card,
+                    () -> {
+                        loadWorksheets();
+                        notifyDataChanged();
+                        setStatus("Worksheet deleted: " + worksheet.title());
+                    });
 
         } catch (SQLException e) {
             showError("Failed to delete worksheet", e.getMessage());
@@ -250,6 +278,72 @@ public class TopicDetailController {
         if (onDataChanged != null) {
             onDataChanged.run();
         }
+    }
+
+    private void refreshLearning() {
+        if (topic == null || learningEvidenceBox == null) return;
+        try {
+            var progress = new com.commonplace.service.LearningService().topic(topic.id());
+            UiAnimations.animateProgress(masteryProgressBar, progress.mastery() / 100);
+            masteryValueLabel.setText(String.format("%.0f%%", progress.mastery()));
+            learningEvidenceBox.getChildren().clear();
+
+            var evidence = progress.estimate();
+            masteryLabel.setText(evidence.certainty());
+            evidencePane.setText("View supporting evidence");
+
+            FlowPane metrics = new FlowPane(8, 8);
+            metrics.getStyleClass().add("evidence-metrics");
+            metrics.getChildren()
+                    .addAll(
+                            evidenceMetric(
+                                    "Recent score",
+                                    evidence.attempts() == 0
+                                            ? "—"
+                                            : String.format("%.0f%%", evidence.performance())),
+                            evidenceMetric(
+                                    "Retention",
+                                    evidence.attempts() == 0
+                                            ? "—"
+                                            : String.format("%.0f%%", evidence.retention() * 100)),
+                            evidenceMetric(
+                                    "Questions", Integer.toString(evidence.uniqueQuestions())),
+                            evidenceMetric(
+                                    "Worksheets", Integer.toString(evidence.uniqueWorksheets())),
+                            evidenceMetric("Study areas", Integer.toString(evidence.uniqueScopes())),
+                            evidenceMetric("Study days", Integer.toString(evidence.studyDays())));
+
+            Label review =
+                    new Label(
+                            evidence.lastAt() == null
+                                    ? "Complete varied worksheets to begin building this estimate."
+                                    : evidence.dueAt().isAfter(LocalDate.now())
+                                            ? "Next review  "
+                                                    + evidence.dueAt()
+                                                            .format(
+                                                                    DateTimeFormatter.ofPattern(
+                                                                            "d MMM"))
+                                            : "Review due now");
+            review.setWrapText(true);
+            review.getStyleClass().add("evidence-review");
+
+            Label note = new Label("Repeated prompts are discounted automatically.");
+            note.getStyleClass().add("muted-text");
+
+            learningEvidenceBox.getChildren().addAll(metrics, review, note);
+        } catch (SQLException e) {
+            setStatus("Could not load learning evidence: " + e.getMessage());
+        }
+    }
+
+    private VBox evidenceMetric(String label, String value) {
+        Label caption = new Label(label.toUpperCase());
+        caption.getStyleClass().add("evidence-metric-label");
+        Label amount = new Label(value);
+        amount.getStyleClass().add("evidence-metric-value");
+        VBox metric = new VBox(2, caption, amount);
+        metric.getStyleClass().add("evidence-metric");
+        return metric;
     }
 
     private void setStatus(String message) {

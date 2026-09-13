@@ -1,5 +1,10 @@
 package com.commonplace.repository;
 
+import com.commonplace.model.ConfidenceLevel;
+import com.commonplace.model.WorksheetAttempt;
+import com.commonplace.service.AccountSession;
+import com.commonplace.util.DateUtils;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,11 +18,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import com.commonplace.model.ConfidenceLevel;
-import com.commonplace.model.WorksheetAttempt;
-import com.commonplace.service.AccountSession;
-import com.commonplace.util.DateUtils;
-
 public class AttemptRepository {
 
     public WorksheetAttempt create(
@@ -30,10 +30,11 @@ public class AttemptRepository {
             ConfidenceLevel confidenceAfter,
             String mainWeakness,
             String nextAction,
-            String reflectionNotes
-    ) throws SQLException {
+            String reflectionNotes)
+            throws SQLException {
 
-        String sql = """
+        String sql =
+                """
                 INSERT INTO worksheet_attempts
                     (worksheet_id, started_at, completed_at, score, max_score,
                      score_percent, confidence_after, main_weakness, next_action, reflection_notes)
@@ -42,7 +43,8 @@ public class AttemptRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt =
+                        conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setLong(1, worksheetId);
             stmt.setString(2, DateUtils.toDatabaseDateTime(startedAt));
@@ -60,7 +62,10 @@ public class AttemptRepository {
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     return findById(keys.getLong(1))
-                            .orElseThrow(() -> new SQLException("Created attempt could not be reloaded."));
+                            .orElseThrow(
+                                    () ->
+                                            new SQLException(
+                                                    "Created attempt could not be reloaded."));
                 }
             }
 
@@ -69,23 +74,24 @@ public class AttemptRepository {
     }
 
     public Optional<WorksheetAttempt> findById(long id) throws SQLException {
-        String sql = """
-                SELECT id, worksheet_id, started_at, completed_at, score, max_score,
-                       score_percent, confidence_after, main_weakness, next_action, reflection_notes
-                FROM worksheet_attempts
-                WHERE id = ?
-                  AND EXISTS (
-                      SELECT 1
-                      FROM worksheets w
-                      JOIN topics t ON t.id = w.topic_id
-                      JOIN modules m ON m.id = t.module_id
-                      WHERE w.id = worksheet_attempts.worksheet_id
-                        AND m.user_id = ?
-                  );
-                """;
+        String sql =
+                """
+SELECT id, worksheet_id, started_at, completed_at, score, max_score,
+       score_percent, confidence_after, main_weakness, next_action, reflection_notes
+FROM worksheet_attempts
+WHERE id = ?
+  AND EXISTS (
+      SELECT 1
+      FROM worksheets w
+      JOIN topics t ON t.id = w.topic_id
+      JOIN modules m ON m.id = t.module_id
+      WHERE w.id = worksheet_attempts.worksheet_id
+        AND m.user_id = ?
+  );
+""";
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
             stmt.setLong(2, AccountSession.currentUserId());
@@ -101,26 +107,27 @@ public class AttemptRepository {
     }
 
     public List<WorksheetAttempt> findByWorksheetId(long worksheetId) throws SQLException {
-        String sql = """
-                SELECT id, worksheet_id, started_at, completed_at, score, max_score,
-                       score_percent, confidence_after, main_weakness, next_action, reflection_notes
-                FROM worksheet_attempts
-                WHERE worksheet_id = ?
-                  AND EXISTS (
-                      SELECT 1
-                      FROM worksheets w
-                      JOIN topics t ON t.id = w.topic_id
-                      JOIN modules m ON m.id = t.module_id
-                      WHERE w.id = worksheet_attempts.worksheet_id
-                        AND m.user_id = ?
-                  )
-                ORDER BY completed_at DESC;
-                """;
+        String sql =
+                """
+SELECT id, worksheet_id, started_at, completed_at, score, max_score,
+       score_percent, confidence_after, main_weakness, next_action, reflection_notes
+FROM worksheet_attempts
+WHERE worksheet_id = ?
+  AND EXISTS (
+      SELECT 1
+      FROM worksheets w
+      JOIN topics t ON t.id = w.topic_id
+      JOIN modules m ON m.id = t.module_id
+      WHERE w.id = worksheet_attempts.worksheet_id
+        AND m.user_id = ?
+  )
+ORDER BY completed_at DESC;
+""";
 
         List<WorksheetAttempt> attempts = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, worksheetId);
             stmt.setLong(2, AccountSession.currentUserId());
@@ -147,8 +154,7 @@ public class AttemptRepository {
                 ConfidenceLevel.valueOf(rs.getString("confidence_after")),
                 rs.getString("main_weakness"),
                 rs.getString("next_action"),
-                rs.getString("reflection_notes")
-        );
+                rs.getString("reflection_notes"));
     }
 
     private String blankToNull(String value) {
@@ -158,15 +164,17 @@ public class AttemptRepository {
 
         return value.trim();
     }
+
     public void updateReflection(
             long attemptId,
             ConfidenceLevel confidenceAfter,
             String mainWeakness,
             String nextAction,
-            String reflectionNotes
-    ) throws SQLException {
+            String reflectionNotes)
+            throws SQLException {
 
-        String sql = """
+        String sql =
+                """
                 UPDATE worksheet_attempts
                 SET confidence_after = ?,
                     main_weakness = ?,
@@ -184,7 +192,7 @@ public class AttemptRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, confidenceAfter.name());
             stmt.setString(2, blankToNull(mainWeakness));
@@ -200,7 +208,8 @@ public class AttemptRepository {
     public boolean markXpAwardedIfPending(long attemptId, LocalDateTime awardedAt)
             throws SQLException {
 
-        String sql = """
+        String sql =
+                """
                 UPDATE worksheet_attempts
                 SET xp_awarded_at = ?
                 WHERE id = ?
@@ -216,7 +225,7 @@ public class AttemptRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, DateUtils.toDatabaseDateTime(awardedAt));
             stmt.setLong(2, attemptId);
@@ -235,7 +244,8 @@ public class AttemptRepository {
 
         String placeholders = String.join(",", worksheetIds.stream().map(id -> "?").toList());
 
-        String sql = """
+        String sql =
+                """
                 SELECT id, worksheet_id, started_at, completed_at, score, max_score,
                     score_percent, confidence_after, main_weakness, next_action, reflection_notes
                 FROM worksheet_attempts
@@ -250,12 +260,13 @@ public class AttemptRepository {
                   )
                 ORDER BY completed_at DESC
                 LIMIT ?;
-                """.formatted(placeholders);
+                """
+                        .formatted(placeholders);
 
         List<WorksheetAttempt> attempts = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             int index = 1;
 
@@ -277,7 +288,8 @@ public class AttemptRepository {
     }
 
     public List<RecentAttemptDisplayItem> findRecentDisplayItems(int limit) throws SQLException {
-        String sql = """
+        String sql =
+                """
                 SELECT
                     wa.id AS attempt_id,
                     wa.worksheet_id,
@@ -301,25 +313,25 @@ public class AttemptRepository {
         List<RecentAttemptDisplayItem> attempts = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.connect();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
             stmt.setInt(2, limit);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    attempts.add(new RecentAttemptDisplayItem(
-                            rs.getLong("attempt_id"),
-                            rs.getLong("worksheet_id"),
-                            rs.getLong("topic_id"),
-                            rs.getString("worksheet_title"),
-                            rs.getString("topic_name"),
-                            DateUtils.fromDatabaseDateTime(rs.getString("completed_at")),
-                            rs.getInt("score"),
-                            rs.getInt("max_score"),
-                            rs.getDouble("score_percent"),
-                            ConfidenceLevel.valueOf(rs.getString("confidence_after"))
-                    ));
+                    attempts.add(
+                            new RecentAttemptDisplayItem(
+                                    rs.getLong("attempt_id"),
+                                    rs.getLong("worksheet_id"),
+                                    rs.getLong("topic_id"),
+                                    rs.getString("worksheet_title"),
+                                    rs.getString("topic_name"),
+                                    DateUtils.fromDatabaseDateTime(rs.getString("completed_at")),
+                                    rs.getInt("score"),
+                                    rs.getInt("max_score"),
+                                    rs.getDouble("score_percent"),
+                                    ConfidenceLevel.valueOf(rs.getString("confidence_after"))));
                 }
             }
         }
@@ -331,8 +343,9 @@ public class AttemptRepository {
         LocalDateTime startOfDay = completionDate.atStartOfDay();
         LocalDateTime startOfNextDay = completionDate.plusDays(1).atStartOfDay();
 
-        String sql = """
-                SELECT COUNT(*) AS attempt_count
+        String sql =
+                """
+                SELECT COUNT(DISTINCT wa.worksheet_id) AS attempt_count
                 FROM worksheet_attempts wa
                 JOIN worksheets w ON w.id = wa.worksheet_id
                 JOIN topics t ON t.id = w.topic_id
@@ -343,7 +356,7 @@ public class AttemptRepository {
                 """;
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
             stmt.setString(2, DateUtils.toDatabaseDateTime(startOfDay));
@@ -359,7 +372,8 @@ public class AttemptRepository {
         LocalDateTime startOfDay = completionDate.atStartOfDay();
         LocalDateTime startOfNextDay = completionDate.plusDays(1).atStartOfDay();
 
-        String sql = """
+        String sql =
+                """
                 SELECT DISTINCT wa.worksheet_id
                 FROM worksheet_attempts wa
                 JOIN worksheets w ON w.id = wa.worksheet_id
@@ -373,7 +387,7 @@ public class AttemptRepository {
         Set<Long> worksheetIds = new HashSet<>();
 
         try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, AccountSession.currentUserId());
             stmt.setString(2, DateUtils.toDatabaseDateTime(startOfDay));
@@ -388,7 +402,7 @@ public class AttemptRepository {
 
         return worksheetIds;
     }
-    
+
     public record RecentAttemptDisplayItem(
             long attemptId,
             long worksheetId,
@@ -399,7 +413,5 @@ public class AttemptRepository {
             int score,
             int maxScore,
             double scorePercent,
-            ConfidenceLevel confidenceAfter
-    ) {
-    }
+            ConfidenceLevel confidenceAfter) {}
 }

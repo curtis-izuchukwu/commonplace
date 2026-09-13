@@ -6,14 +6,17 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.commonplace.ui.controller.TopicDetailController"
-      spacing="14"
-      styleClass="app-root">
+      spacing="18"
+      styleClass="app-root,topic-detail-root">
 
     <padding>
         <Insets top="24" right="24" bottom="24" left="24"/>
@@ -21,7 +24,7 @@
 
     <HBox spacing="12">
         <VBox HBox.hgrow="ALWAYS">
-            <Label fx:id="topicNameLabel" text="Topic" styleClass="app-title"/>
+            <Label fx:id="topicNameLabel" text="Topic" styleClass="page-title"/>
             <Label fx:id="moduleNameLabel"
                    text="Parent module"
                    styleClass="app-subtitle"
@@ -31,18 +34,40 @@
         <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>
     </HBox>
 
-    <Label text="Mastery" styleClass="section-title"/>
-    <ProgressBar fx:id="masteryProgressBar" prefWidth="420"/>
-    <Label fx:id="masteryLabel" text="0%" styleClass="muted-text"/>
+    <VBox spacing="10" styleClass="topic-mastery-card">
+        <HBox alignment="CENTER_LEFT">
+            <VBox spacing="2">
+                <Label text="MASTERY ESTIMATE" styleClass="section-eyebrow"/>
+                <Label fx:id="masteryLabel" text="Limited evidence" styleClass="mastery-caption"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="masteryValueLabel" text="0%" styleClass="mastery-value"/>
+        </HBox>
+        <ProgressBar fx:id="masteryProgressBar" maxWidth="Infinity"/>
+        <TitledPane fx:id="evidencePane"
+                    text="View supporting evidence"
+                    expanded="false"
+                    styleClass="evidence-pane">
+            <content>
+                <VBox fx:id="learningEvidenceBox" spacing="12" styleClass="evidence-content"/>
+            </content>
+        </TitledPane>
+    </VBox>
 
-    <Label fx:id="importanceLabel" text="Importance" styleClass="muted-text"/>
-    <Label fx:id="confidenceLabel" text="Confidence" styleClass="muted-text"/>
-    <Label fx:id="descriptionLabel" text="Description" wrapText="true" styleClass="muted-text"/>
+    <FlowPane fx:id="topicMetaBox"
+              hgap="8"
+              vgap="8"
+              styleClass="record-stat-grid"/>
+    <Label fx:id="descriptionLabel"
+           text="Description"
+           wrapText="true"
+           styleClass="topic-description"/>
 
     <Separator/>
 
     <HBox spacing="12">
-        <Label text="Worksheets" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+        <Label text="Worksheets" styleClass="section-title"/>
+        <Region HBox.hgrow="ALWAYS"/>
         <Button text="Import from PDF (Beta)"
                 onAction="#handleImportWorksheet"/>
         <Button text="Add Worksheet"

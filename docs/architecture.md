@@ -43,7 +43,7 @@ Models are plain Java records/enums. They should not contain SQL, JavaFX, or wor
 | --- | --- |
 | `User` | Local account identity |
 | `UserSettings` | Per-account settings |
-| `UserStats` | XP, streaks, and worksheet interval |
+| `UserStats` | Study XP, session streaks, and worksheet interval |
 | `StudyModule` | Module, priority, and optional exam date |
 | `Topic` | Topic metadata, confidence, importance, and mastery |
 | `Worksheet` | Worksheet metadata and attempt statistics |
@@ -74,6 +74,7 @@ Repositories own SQLite access through JDBC. They should not contain JavaFX logi
 | `AnswerRepository` | Attempt answers |
 | `MistakeRepository` | Mistake bank items |
 | `DailyRecommendationRepository` | Current daily recommendation and same-day recommendation history |
+| `LearningRepository` | Automatic topic/worksheet evidence, saved worksheet scopes, mistake risk, and evidence metadata |
 
 ### SQLite Data
 
@@ -94,12 +95,18 @@ The main tables are:
 | `mistake_bank` | Stored mistakes |
 | `daily_recommendations` | Current recommendation for a user/day |
 | `daily_recommendation_history` | Worksheets already recommended to a user on a date |
+| `xp_events` | Idempotent, categorized XP ledger |
+| `mistake_reviews` | Active-recall review evidence, including assistance |
+| `recommendation_actions` | Same-day worksheet and targeted-generation choices |
 
 SQLite connections are created through `DatabaseManager.connect()`, which applies:
 
 - `PRAGMA foreign_keys = ON`
 - `PRAGMA busy_timeout = 5000`
 - table creation and safe migrations
+
+The learning migration is additive and creates a one-time
+`~/.commonplace/appdata.before-learning-v1.db` safety copy before upgrading an older database.
 
 ---
 
@@ -119,32 +126,34 @@ Services coordinate repositories and enforce application rules.
 | `WorksheetCreationService` | Worksheet and question persistence |
 | `QuestionImageStorage` | Copies selected/generated images into `~/.commonplace/images/` and resolves stored paths |
 | `PressWorksheetGenerationService` | Optional generation boundary; resolves API configuration only when requested |
-| `WorksheetSelectionService` | Selects and stores daily worksheet recommendations |
-| `PriorityScoreService` | Calculates worksheet priority scores |
-| `AttemptService` | Creates attempts and persists answers |
-| `ReflectionService` | Completes attempts, updates stats, stores mistakes, and awards XP |
-| `TopicStatsService` | Updates topic confidence and mastery |
-| `GamificationService` | XP, ranks, streaks, and reward calculations |
-| `MistakeBankService` | Mistake review, revisit, and resolve workflows |
+| `LearningModel` | Converts question-level performance, spacing, difficulty, assistance, and recall into evidence and retention estimates |
+| `LearningService` | Calculates automatic worksheet, topic, and module mastery, breadth, certainty, retention, and review dates |
+| `WorksheetSelectionService` | Deterministically selects among eligible saved worksheets |
+| `PriorityScoreService` | Calculates normalized, explainable recommendation priority |
+| `AttemptService` | Atomically validates and persists complete attempts, evidence, statistics, mistakes, and XP |
+| `ReflectionService` | Stores optional reflection and awards bounded reflection XP |
+| `TopicStatsService` | Updates self-reported confidence separately from evidence-based mastery |
+| `GamificationService` | Idempotent XP ledger, study-habit bands, and session streaks |
+| `MistakeBankService` | Mistake revisit, active recall, assistance, resolve, and reward workflows |
 | `DashboardService` | Aggregates dashboard summary data |
 
 ### Recommendation Flow
 
-1. `DashboardService` asks `WorksheetSelectionService` for the current daily recommendation.
-2. `WorksheetSelectionService` loads eligible worksheets and related context.
-3. `PriorityScoreService` calculates weighted priority scores.
-4. `WeightedRandomPicker` selects a worksheet from the weighted candidates.
-5. `DailyRecommendationRepository` stores the current recommendation and writes same-day history.
-6. Future refreshes avoid recommending a worksheet already used that day.
+1. `DashboardService` asks `WorksheetSelectionService` for the current recommendation.
+2. `WorksheetSelectionService` loads automatic topic/worksheet mastery, uncertainty, retention, saved scope, preferences, history, and mistakes.
+3. `PriorityScoreService` scores each eligible saved worksheet on normalized factors and produces a matching explanation.
+4. The highest-priority unused worksheet is selected deterministically; **Pick another** advances through the ranked alternatives.
+5. If no eligible saved worksheet exists, no recommendation is shown. Press generation remains a user-initiated worksheet creation action.
+6. `recommendation_actions` records same-day worksheet choices. Meeting the daily goal pauses automatic recommendations until the configured worksheet interval refreshes, without blocking manually opened practice.
 
 ### Attempt and Reflection Flow
 
 1. User opens a worksheet from the dashboard, module manager, or topic detail.
-2. `AttemptService` creates a completed attempt record and answer records.
-3. `ReflectionService` applies reflection data.
-4. Worksheet stats and topic mastery are updated.
-5. Marked mistakes are written to `mistake_bank`.
-6. XP, rank progress, streaks, and daily completion state are updated.
+2. The user writes and locks each answer before revealing its mark scheme; hints are recorded as assistance.
+3. `AttemptService` validates the complete question set and saves the attempt, answers, mistakes, statistics, learning evidence, and practice XP in one transaction.
+4. `LearningService` refreshes automatic mastery, evidence breadth, certainty, retention, topic mastery, and module mastery.
+5. The saved attempt is immediately complete. `ReflectionService` can subsequently add optional reflection and small bounded XP.
+6. Mistake-bank active recall supplies later evidence and earns XP only for successful unassisted retrieval.
 
 ### Import and Generation Flow
 

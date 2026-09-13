@@ -1,17 +1,12 @@
 package com.commonplace.ui.controller;
 
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-
 import com.commonplace.model.Question;
 import com.commonplace.model.Topic;
 import com.commonplace.model.Worksheet;
-import com.commonplace.service.WorksheetRecommendation;
 import com.commonplace.service.WorksheetCreationService;
+import com.commonplace.service.WorksheetRecommendation;
 import com.commonplace.ui.AppIcon;
+import com.commonplace.ui.LevelUi;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.QuestionImageViewFactory;
 import com.commonplace.ui.UiAnimations;
@@ -20,12 +15,20 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 public class WorksheetDetailController {
 
     @FXML private Label worksheetTitleLabel;
     @FXML private Label worksheetMetaLabel;
+    @FXML private FlowPane worksheetMetaBox;
     @FXML private Label worksheetDescriptionLabel;
     @FXML private VBox recommendationDetailsPanel;
     @FXML private Label recommendationDetailsLabel;
@@ -49,18 +52,14 @@ public class WorksheetDetailController {
 
         String topicText = topic == null ? "Unknown topic" : topic.name();
 
-        worksheetMetaLabel.setText(
-                "Topic: " + topicText
-                        + " - Difficulty: " + worksheet.difficulty()
-                        + " - Importance: " + worksheet.importance()
-                        + " - Questions: loading..."
-        );
+        worksheetMetaLabel.setText("Topic  " + topicText);
+        updateMetadata(null);
 
-        worksheetDescriptionLabel.setText(
-                worksheet.description() == null || worksheet.description().isBlank()
-                        ? "No description yet."
-                        : worksheet.description()
-        );
+        boolean hasDescription =
+                worksheet.description() != null && !worksheet.description().isBlank();
+        worksheetDescriptionLabel.setText(hasDescription ? worksheet.description().trim() : "");
+        worksheetDescriptionLabel.setVisible(hasDescription);
+        worksheetDescriptionLabel.setManaged(hasDescription);
 
         loadQuestions();
     }
@@ -77,16 +76,17 @@ public class WorksheetDetailController {
         Topic recommendedTopic = recommendation.topic();
 
         recommendationDetailsLabel.setText(
-                "Priority score: " + recommendation.priorityScore() + "/100"
-                        + "\nLast attempt: " + lastAttemptText(recommendedWorksheet)
-                        + "\nLatest score: " + formatScore(recommendedWorksheet.latestScorePercent())
-                        + "\nTopic confidence: " + recommendedTopic.confidence()
-                        + "\nDifficulty: " + recommendedWorksheet.difficulty()
-                        + "\nWorksheet priority: " + recommendedWorksheet.importance()
-                        + "\nTopic priority: " + recommendedTopic.importance()
-                        + "\nFailure streak: " + recommendedWorksheet.failureStreak()
-                        + "\n\nRecommendation breakdown: " + recommendation.explanation()
-        );
+                recommendation.explanation()
+                        + "\n\nMatch  "
+                        + recommendation.priorityScore()
+                        + "/100"
+                        + "  •  Last attempt  "
+                        + lastAttemptText(recommendedWorksheet)
+                        + "  •  Latest  "
+                        + formatScore(recommendedWorksheet.latestScorePercent())
+                        + "  •  "
+                        + LevelUi.displayName(recommendedTopic.confidence())
+                        + " confidence");
 
         recommendationDetailsPanel.setVisible(true);
         recommendationDetailsPanel.setManaged(true);
@@ -102,21 +102,24 @@ public class WorksheetDetailController {
         }
 
         try {
-            var handle = OverlayService.<AttemptWorksheetController>open(
-                    worksheetTitleLabel,
-                    "/com/commonplace/fxml/AttemptWorksheetView.fxml",
-                    900,
-                    780
-            );
+            var handle =
+                    OverlayService.<AttemptWorksheetController>open(
+                            worksheetTitleLabel,
+                            "/com/commonplace/fxml/AttemptWorksheetView.fxml",
+                            900,
+                            780);
 
             AttemptWorksheetController controller = handle.controller();
-            controller.setWorksheet(worksheet, topic, () -> {
-                loadQuestions();
+            controller.setWorksheet(
+                    worksheet,
+                    topic,
+                    () -> {
+                        loadQuestions();
 
-                if (onWorksheetUpdated != null) {
-                    onWorksheetUpdated.run();
-                }
-            });
+                        if (onWorksheetUpdated != null) {
+                            onWorksheetUpdated.run();
+                        }
+                    });
 
         } catch (IOException e) {
             showError("Failed to open attempt screen", e.getMessage());
@@ -129,14 +132,7 @@ public class WorksheetDetailController {
         try {
             List<Question> questions = service.getQuestionsForWorksheet(worksheet.id());
 
-            String topicText = topic == null ? "Unknown topic" : topic.name();
-
-            worksheetMetaLabel.setText(
-                    "Topic: " + topicText
-                            + " - Difficulty: " + worksheet.difficulty()
-                            + " - Importance: " + worksheet.importance()
-                            + " - Questions: " + questions.size()
-            );
+            updateMetadata(questions.size());
 
             if (questions.isEmpty()) {
                 Label emptyLabel = new Label("No questions saved for this worksheet.");
@@ -160,7 +156,13 @@ public class WorksheetDetailController {
         VBox card = new VBox(8);
         card.getStyleClass().add("question-card");
 
-        Label heading = new Label("Question " + question.questionOrder() + " - " + question.maxMarks() + " marks");
+        Label heading =
+                new Label(
+                        "Question "
+                                + question.questionOrder()
+                                + "  •  "
+                                + question.maxMarks()
+                                + " marks");
         heading.getStyleClass().add("card-title");
 
         Label prompt = new Label(question.prompt());
@@ -187,6 +189,20 @@ public class WorksheetDetailController {
         return card;
     }
 
+    private void updateMetadata(Integer questionCount) {
+        worksheetMetaBox
+                .getChildren()
+                .setAll(
+                        LevelUi.createStatCell(
+                                "Difficulty", LevelUi.displayName(worksheet.difficulty())),
+                        LevelUi.createPriorityStat(worksheet.importance()),
+                        LevelUi.createStatCell(
+                                "Questions",
+                                questionCount == null ? "…" : Integer.toString(questionCount)),
+                        LevelUi.createStatCell(
+                                "Attempts", Integer.toString(worksheet.timesAttempted())));
+    }
+
     @FXML
     private void handleClose() {
         OverlayService.closeFrom(worksheetTitleLabel);
@@ -197,10 +213,8 @@ public class WorksheetDetailController {
             return "Never attempted";
         }
 
-        long days = ChronoUnit.DAYS.between(
-                worksheet.lastAttemptedAt().toLocalDate(),
-                LocalDate.now()
-        );
+        long days =
+                ChronoUnit.DAYS.between(worksheet.lastAttemptedAt().toLocalDate(), LocalDate.now());
 
         if (days <= 0) {
             return "Today";

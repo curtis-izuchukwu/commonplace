@@ -1,14 +1,7 @@
 package com.commonplace.service;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.util.List;
-import java.util.UUID;
-import java.util.function.ToIntFunction;
-
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Test;
 
 import com.commonplace.model.ConfidenceLevel;
 import com.commonplace.model.DifficultyLevel;
@@ -28,6 +21,14 @@ import com.commonplace.repository.WorksheetRepository;
 import com.commonplace.util.DateUtils;
 import com.commonplace.util.WeightedRandomPicker;
 
+import org.junit.jupiter.api.Test;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.ToIntFunction;
+
 class WorksheetSelectionServiceTest {
 
     @Test
@@ -35,11 +36,9 @@ class WorksheetSelectionServiceTest {
         User user = null;
 
         try {
-            user = new UserRepository().create(
-                    "recommendation-test-" + UUID.randomUUID(),
-                    "hash",
-                    "salt"
-            );
+            user =
+                    new UserRepository()
+                            .create("recommendation-test-" + UUID.randomUUID(), "hash", "salt");
             AccountSession.signIn(user);
 
             ModuleRepository moduleRepository = new ModuleRepository();
@@ -49,66 +48,71 @@ class WorksheetSelectionServiceTest {
             DailyRecommendationRepository dailyRecommendationRepository =
                     new DailyRecommendationRepository();
 
-            StudyModule module = moduleRepository.create(
-                    "Recommendation Module",
-                    "Temporary recommendation test module",
-                    null,
-                    ImportanceLevel.HIGH
-            );
+            StudyModule module =
+                    moduleRepository.create(
+                            "Recommendation Module",
+                            "Temporary recommendation test module",
+                            null,
+                            ImportanceLevel.HIGH);
 
-            Topic topic = topicRepository.create(
-                    module.id(),
-                    "Recommendation Topic",
-                    "Temporary recommendation test topic",
-                    ImportanceLevel.HIGH,
-                    ConfidenceLevel.LOW
-            );
+            Topic topic =
+                    topicRepository.create(
+                            module.id(),
+                            "Recommendation Topic",
+                            "Temporary recommendation test topic",
+                            ImportanceLevel.HIGH,
+                            ConfidenceLevel.LOW);
 
-            Worksheet firstWorksheet = worksheetRepository.create(
-                    topic.id(),
-                    "Recommendation A",
-                    "",
-                    DifficultyLevel.MEDIUM,
-                    ImportanceLevel.HIGH
-            );
+            Worksheet firstWorksheet =
+                    worksheetRepository.create(
+                            topic.id(),
+                            "Recommendation A",
+                            "",
+                            DifficultyLevel.MEDIUM,
+                            ImportanceLevel.HIGH);
 
-            Worksheet secondWorksheet = worksheetRepository.create(
-                    topic.id(),
-                    "Recommendation B",
-                    "",
-                    DifficultyLevel.MEDIUM,
-                    ImportanceLevel.HIGH
-            );
+            Worksheet secondWorksheet =
+                    worksheetRepository.create(
+                            topic.id(),
+                            "Recommendation B",
+                            "",
+                            DifficultyLevel.MEDIUM,
+                            ImportanceLevel.HIGH);
 
-            Worksheet thirdWorksheet = worksheetRepository.create(
-                    topic.id(),
-                    "Recommendation C",
-                    "",
-                    DifficultyLevel.MEDIUM,
-                    ImportanceLevel.HIGH
-            );
+            Worksheet thirdWorksheet =
+                    worksheetRepository.create(
+                            topic.id(),
+                            "Recommendation C",
+                            "",
+                            DifficultyLevel.MEDIUM,
+                            ImportanceLevel.HIGH);
 
-            WorksheetSelectionService service = new WorksheetSelectionService(
-                    worksheetRepository,
-                    topicRepository,
-                    new MistakeRepository(),
-                    moduleRepository,
-                    new UserSettingsService(),
-                    attemptRepository,
-                    dailyRecommendationRepository,
-                    new PriorityScoreService(),
-                    new FirstItemPicker()
-            );
+            for (var w : List.of(firstWorksheet, secondWorksheet, thirdWorksheet)) {
+                new com.commonplace.repository.QuestionRepository()
+                        .createMany(
+                                w.id(),
+                                List.of(
+                                        new com.commonplace.repository.QuestionRepository
+                                                .QuestionDraft(
+                                                w.title() + " question", "Answer", 3, null)));
+            }
+            WorksheetSelectionService service =
+                    new WorksheetSelectionService(
+                            worksheetRepository,
+                            topicRepository,
+                            new MistakeRepository(),
+                            moduleRepository,
+                            new UserSettingsService(),
+                            attemptRepository,
+                            dailyRecommendationRepository,
+                            new PriorityScoreService(),
+                            new FirstItemPicker());
 
-            long firstRecommendationId = service.recommendWorksheet()
-                    .orElseThrow()
-                    .worksheet()
-                    .id();
+            long firstRecommendationId =
+                    service.recommendWorksheet().orElseThrow().worksheet().id();
 
-            long secondRecommendationId = service.pickAnotherRecommendation()
-                    .orElseThrow()
-                    .worksheet()
-                    .id();
+            long secondRecommendationId =
+                    service.pickAnotherRecommendation().orElseThrow().worksheet().id();
 
             attemptRepository.create(
                     firstRecommendationId,
@@ -120,18 +124,14 @@ class WorksheetSelectionServiceTest {
                     ConfidenceLevel.HIGH,
                     null,
                     null,
-                    null
-            );
+                    null);
 
-            long thirdRecommendationId = service.pickAnotherRecommendation()
-                    .orElseThrow()
-                    .worksheet()
-                    .id();
+            long thirdRecommendationId =
+                    service.pickAnotherRecommendation().orElseThrow().worksheet().id();
 
             assertTrue(
                     List.of(firstWorksheet.id(), secondWorksheet.id(), thirdWorksheet.id())
-                            .contains(firstRecommendationId)
-            );
+                            .contains(firstRecommendationId));
             assertNotEquals(firstRecommendationId, secondRecommendationId);
             assertNotEquals(firstRecommendationId, thirdRecommendationId);
             assertNotEquals(secondRecommendationId, thirdRecommendationId);
@@ -153,7 +153,8 @@ class WorksheetSelectionServiceTest {
             deleteByUserId(conn, "user_stats", userId);
             deleteByUserId(conn, "modules", userId);
 
-            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM users WHERE id = ?;")) {
+            try (PreparedStatement stmt =
+                    conn.prepareStatement("DELETE FROM users WHERE id = ?;")) {
                 stmt.setLong(1, userId);
                 stmt.executeUpdate();
             }
@@ -161,8 +162,8 @@ class WorksheetSelectionServiceTest {
     }
 
     private void deleteByUserId(Connection conn, String tableName, long userId) throws Exception {
-        try (PreparedStatement stmt = conn.prepareStatement(
-                "DELETE FROM " + tableName + " WHERE user_id = ?;")) {
+        try (PreparedStatement stmt =
+                conn.prepareStatement("DELETE FROM " + tableName + " WHERE user_id = ?;")) {
 
             stmt.setLong(1, userId);
             stmt.executeUpdate();
@@ -174,8 +175,7 @@ class WorksheetSelectionServiceTest {
         @Override
         public WorksheetRecommendation pick(
                 List<WorksheetRecommendation> items,
-                ToIntFunction<WorksheetRecommendation> weightFunction
-        ) {
+                ToIntFunction<WorksheetRecommendation> weightFunction) {
             if (items == null || items.isEmpty()) {
                 throw new IllegalArgumentException("Cannot pick from an empty list.");
             }
