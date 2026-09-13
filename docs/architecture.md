@@ -1,279 +1,328 @@
 # Commonplace Architecture
 
-Commonplace is a JavaFX desktop app with a local SQLite database. The codebase is organised around a conventional layered architecture:
+Commonplace is a Java 21 desktop application built with JavaFX and backed by a local SQLite database. Its core study workflows are local; Press worksheet generation is the only online application service.
 
-| Layer | Responsibility |
-| --- | --- |
-| UI | JavaFX FXML, controllers, overlays, app chrome, preferences, animations, and display helpers |
-| Service | Application workflows, business rules, account/session logic, recommendations, attempts, reflection, imports, and generation |
-| Repository | JDBC access to SQLite |
-| Model | Plain Java records and enums used across the app |
-| External adapters | Press API client and local PDF/OCR import helpers |
-
-The intended dependency direction is:
+## System overview
 
 ```text
-UI -> Services -> Repositories -> SQLite
+JavaFX views and controllers
+            |
+            v
+Application services and learning rules
+            |
+            v
+Repositories and transaction boundary
+            |
+            v
+        SQLite database
+
+External boundaries:
+  Press HTTP API
+  Local PDF files
+  Tesseract or Windows OCR
+  Local question-image store
 ```
 
-Models are shared across layers as simple data objects.
+The dependency direction is intentionally one way. Models are shared data records; repositories do not depend on JavaFX; services coordinate persistence and business rules; controllers translate user actions into service calls.
 
----
+## Runtime and bootstrap
 
-## Packages
+`com.commonplace.Main` is the JavaFX entry point. Startup performs the following work:
 
-| Package | Purpose |
+1. Try to restore the remembered local account.
+2. Load either `LoginView.fxml` or `DashboardView.fxml`.
+3. Wrap the view in `AppChrome`, which owns the title bar, application icon, window controls, breadcrumb, daily-progress chip, and command palette.
+4. Apply the shared stylesheet and size the window to the current display's usable bounds.
+
+`DatabaseManager.connect()` creates the application directory, opens SQLite, configures the connection, initialises missing tables, and applies additive migrations.
+
+## Source layout
+
+| Package | Responsibility |
 | --- | --- |
-| `com.commonplace.model` | Records and enums for users, modules, topics, worksheets, attempts, answers, mistakes, settings, and stats |
-| `com.commonplace.repository` | SQLite schema setup, migrations, and repository classes |
-| `com.commonplace.service` | Business workflows and app rules |
-| `com.commonplace.ui` | Shared JavaFX UI helpers |
-| `com.commonplace.ui.controller` | JavaFX controllers for each view |
-| `com.commonplace.press` | Press API configuration, client, request/response types, and JSON handling |
-| `com.commonplace.importer` | PDF text/image extraction, OCR adapters, import issues, and worksheet draft parsing |
-| `com.commonplace.util` | Small utility classes |
+| `com.commonplace.model` | Immutable records and enums for accounts, study structure, attempts, settings, and display data |
+| `com.commonplace.repository` | SQLite schema, migrations, account-scoped queries, and persistence operations |
+| `com.commonplace.service` | Account, study, attempt, learning, XP, recommendation, reflection, backup, and mistake workflows |
+| `com.commonplace.ui` | App chrome, overlays, preferences, icons, animations, image rendering, and shared metadata components |
+| `com.commonplace.ui.controller` | FXML controllers and screen-level interaction |
+| `com.commonplace.press` | Press configuration, HTTP transport, request/response models, and JSON handling |
+| `com.commonplace.importer` | PDF text/image extraction, OCR selection, draft parsing, and import diagnostics |
+| `com.commonplace.util` | Date helpers and small reusable utilities |
 
----
+Resources are under `src/main/resources/com/commonplace/`:
 
-## Model Layer
+| Directory | Contents |
+| --- | --- |
+| `fxml/` | Application views |
+| `css/` | Shared theme and component styles |
+| `assets/` | Application icons, Press symbol, and visual textures |
 
-Models are plain Java records/enums. They should not contain SQL, JavaFX, or workflow logic.
+## Domain model
 
 | Model | Purpose |
 | --- | --- |
 | `User` | Local account identity |
-| `UserSettings` | Per-account settings |
-| `UserStats` | Study XP, session streaks, and worksheet interval |
-| `StudyModule` | Module, priority, and optional exam date |
-| `Topic` | Topic metadata, confidence, importance, and mastery |
-| `Worksheet` | Worksheet metadata and attempt statistics |
-| `Question` | Prompt, mark scheme, max marks, order, tags, and optional image path |
-| `WorksheetAttempt` | Completed worksheet attempt summary |
-| `Answer` | Submitted answer, awarded marks, and mistake note |
-| `MistakeBankItem` | Stored mistake review item |
-| `DifficultyLevel`, `ImportanceLevel`, `ConfidenceLevel` | Shared enums for study metadata |
+| `UserSettings` | Per-account appearance, study, reminder, recommendation, gamification, and accessibility settings |
+| `UserStats` | XP, session streak, last completion date, and worksheet interval |
+| `StudyModule` | Module metadata, priority, and optional exam date |
+| `Topic` | Topic metadata, learner confidence, importance, and cached mastery estimate |
+| `Worksheet` | Worksheet metadata, source, attempt counts, and score summaries |
+| `Question` | Prompt, mark scheme, maximum marks, order, tags, and optional image |
+| `WorksheetAttempt` | Completed attempt score, timing, confidence, and reflection fields |
+| `Answer` | Submitted answer, self-marking result, and mistake state; additional learning fields remain available through repository evidence queries |
+| `MistakeBankItem` | Saved mistake review record |
+| `DifficultyLevel`, `ImportanceLevel`, `ConfidenceLevel` | Shared study metadata enums |
 
----
+Mastery is calculated from answer and recall evidence. The `mastery_score` stored on `topics` is a refreshed cache used by list and dashboard queries, not a manually maintained field.
 
-## Repository Layer
+## SQLite persistence
 
-Repositories own SQLite access through JDBC. They should not contain JavaFX logic or UI decisions.
+The default database is `~/.commonplace/appdata.db`. Set the JVM property `commonplace.data.dir` to use a different application directory.
 
-| Repository | Purpose |
+Every new connection receives:
+
+```sql
+PRAGMA foreign_keys = ON;
+PRAGMA busy_timeout = 5000;
+```
+
+### Tables
+
+| Table | Responsibility |
 | --- | --- |
-| `DatabaseManager` | Creates `~/.commonplace/appdata.db`, enables foreign keys, sets busy timeout, creates tables, and runs migrations |
-| `UserRepository` | Users and password metadata |
-| `RememberedSessionRepository` | Stay-signed-in session |
-| `UserSettingsRepository` | Per-account settings |
-| `UserStatsRepository` | XP, streaks, worksheet interval, and recommendation-window helpers |
-| `ModuleRepository` | Modules |
-| `TopicRepository` | Topics |
-| `WorksheetRepository` | Worksheets and worksheet statistics |
-| `QuestionRepository` | Worksheet questions and optional image paths |
-| `AttemptRepository` | Worksheet attempts |
-| `AnswerRepository` | Attempt answers |
-| `MistakeRepository` | Mistake bank items |
-| `DailyRecommendationRepository` | Current daily recommendation and same-day recommendation history |
-| `LearningRepository` | Automatic topic/worksheet evidence, saved worksheet scopes, mistake risk, and evidence metadata |
+| `users` | Local account credentials and timestamps |
+| `remembered_session` | The single remembered sign-in |
+| `user_settings` | Per-account application preferences |
+| `user_stats` | XP, streak, last completion date, and recommendation interval |
+| `modules` | Account-owned modules |
+| `topics` | Topics belonging to modules |
+| `worksheets` | Worksheets, study scope, generation subject, and score summaries |
+| `questions` | Prompts, mark schemes, order, tags, images, and assessed difficulty |
+| `worksheet_attempts` | Completed attempt summaries and optional reflection |
+| `answers` | Question-level answer, marks, mistake, assistance, timing, and evidence fields |
+| `mistake_bank` | Mistakes saved from attempts |
+| `mistake_reviews` | Active-recall answers, outcomes, and assistance state |
+| `xp_events` | Idempotent, categorised XP ledger |
+| `daily_recommendations` | Current saved recommendation for an account |
+| `daily_recommendation_history` | Historical same-day recommendation rows retained for compatibility |
+| `recommendation_actions` | Ordered same-day recommendation choices used for deterministic cycling |
+| `learning_schema` | Applied learning-schema versions |
 
-### SQLite Data
+Foreign-key cascades remove dependent topics, worksheets, questions, attempts, answers, mistakes, and review evidence when their owning structure is deleted.
 
-The main tables are:
+### Account isolation
 
-| Table | Purpose |
+Repositories scope records to `AccountSession.currentUserId()`. Queries for nested entities join back through topics and modules to verify ownership. Services reject IDs that are not available to the signed-in account.
+
+### Transactions
+
+`DatabaseManager.transaction()` supplies one shared connection to every repository call in the unit of work. Repository `close()` calls release a proxy lease rather than closing the underlying transaction connection. Successful work commits; SQL exceptions, runtime exceptions, and errors roll back.
+
+The complete attempt workflow is transactional: validation, attempt creation, answers, mistake records, worksheet statistics, mastery refresh, XP event creation, and streak updates either commit together or roll back together. Reflection is intentionally separate because an attempt is complete before reflection begins.
+
+### Migration safety
+
+Schema evolution is additive. `DatabaseManager` adds older settings and image columns when missing, migrates the legacy global `user_stats` row to per-account rows, backfills recommendation history, and then runs `LearningSchema`.
+
+Before an older database receives its first learning migration, `VACUUM INTO` creates a consistent one-time copy at:
+
+```text
+~/.commonplace/appdata.before-learning-v1.db
+```
+
+`LearningSchema` currently adds question difficulty, answer assistance and timing fields, worksheet scope, generation subject, XP events, mistake reviews, recommendation actions, and supporting indexes. Existing attempts are retained and are never replayed for XP.
+
+## Service layer
+
+### Accounts and preferences
+
+| Service | Responsibility |
 | --- | --- |
-| `users` | Local accounts |
-| `remembered_session` | Current remembered account |
-| `user_settings` | Per-account settings |
-| `user_stats` | XP, streaks, and worksheet interval |
-| `modules` | Study modules |
-| `topics` | Module topics |
-| `worksheets` | Worksheets and score history |
-| `questions` | Questions, mark schemes, marks, order, tags, and image paths |
-| `worksheet_attempts` | Completed attempts and reflection fields |
-| `answers` | User answers and marking data |
-| `mistake_bank` | Stored mistakes |
-| `daily_recommendations` | Current recommendation for a user/day |
-| `daily_recommendation_history` | Worksheets already recommended to a user on a date |
-| `xp_events` | Idempotent, categorized XP ledger |
-| `mistake_reviews` | Active-recall review evidence, including assistance |
-| `recommendation_actions` | Same-day worksheet and targeted-generation choices |
-
-SQLite connections are created through `DatabaseManager.connect()`, which applies:
-
-- `PRAGMA foreign_keys = ON`
-- `PRAGMA busy_timeout = 5000`
-- table creation and safe migrations
-
-The learning migration is additive and creates a one-time
-`~/.commonplace/appdata.before-learning-v1.db` safety copy before upgrading an older database.
-
----
-
-## Service Layer
-
-Services coordinate repositories and enforce application rules.
-
-| Service | Purpose |
-| --- | --- |
-| `AccountService` | Account creation, sign in, sign out, remembered sessions, and password changes |
+| `AccountService` | Account creation, sign-in, sign-out, remembered sessions, and password changes |
+| `AccountSession` | Current in-memory account context |
 | `PasswordHasher` | Password hashing and verification |
-| `AccountSession` | In-memory current user context |
-| `UserSettingsService` | Loads and saves settings |
-| `DataManagementService` | Database export/import and current-account data clearing |
-| `ModuleTopicService` | Module/topic creation and lookup workflows |
-| `StudyStructureService` | Study structure helpers |
-| `WorksheetCreationService` | Worksheet and question persistence |
-| `QuestionImageStorage` | Copies selected/generated images into `~/.commonplace/images/` and resolves stored paths |
-| `PressWorksheetGenerationService` | Optional generation boundary; resolves API configuration only when requested |
-| `LearningModel` | Converts question-level performance, spacing, difficulty, assistance, and recall into evidence and retention estimates |
-| `LearningService` | Calculates automatic worksheet, topic, and module mastery, breadth, certainty, retention, and review dates |
-| `WorksheetSelectionService` | Deterministically selects among eligible saved worksheets |
-| `PriorityScoreService` | Calculates normalized, explainable recommendation priority |
-| `AttemptService` | Atomically validates and persists complete attempts, evidence, statistics, mistakes, and XP |
-| `ReflectionService` | Stores optional reflection and awards bounded reflection XP |
-| `TopicStatsService` | Updates self-reported confidence separately from evidence-based mastery |
-| `GamificationService` | Idempotent XP ledger, study-habit bands, and session streaks |
-| `MistakeBankService` | Mistake revisit, active recall, assistance, resolve, and reward workflows |
-| `DashboardService` | Aggregates dashboard summary data |
+| `UserSettingsService` | Validation and persistence of per-account settings |
+| `DataManagementService` | Database export/import and current-account study-data clearing |
 
-### Recommendation Flow
+### Study structure and content
 
-1. `DashboardService` asks `WorksheetSelectionService` for the current recommendation.
-2. `WorksheetSelectionService` loads automatic topic/worksheet mastery, uncertainty, retention, saved scope, preferences, history, and mistakes.
-3. `PriorityScoreService` scores each eligible saved worksheet on normalized factors and produces a matching explanation.
-4. The highest-priority unused worksheet is selected deterministically; **Pick another** advances through the ranked alternatives.
-5. If no eligible saved worksheet exists, no recommendation is shown. Press generation remains a user-initiated worksheet creation action.
-6. `recommendation_actions` records same-day worksheet choices. Meeting the daily goal pauses automatic recommendations until the configured worksheet interval refreshes, without blocking manually opened practice.
-
-### Attempt and Reflection Flow
-
-1. User opens a worksheet from the dashboard, module manager, or topic detail.
-2. The user writes and locks each answer before revealing its mark scheme; hints are recorded as assistance.
-3. `AttemptService` validates the complete question set and saves the attempt, answers, mistakes, statistics, learning evidence, and practice XP in one transaction.
-4. `LearningService` refreshes automatic mastery, evidence breadth, certainty, retention, topic mastery, and module mastery.
-5. The saved attempt is immediately complete. `ReflectionService` can subsequently add optional reflection and small bounded XP.
-6. Mistake-bank active recall supplies later evidence and earns XP only for successful unassisted retrieval.
-
-### Import and Generation Flow
-
-Manual creation, Press generation, and PDF import all end by saving normal worksheets/questions through the worksheet creation path.
-
-| Source | Main classes |
+| Service | Responsibility |
 | --- | --- |
-| Manual | `WorksheetCreateController`, `WorksheetCreationService` |
-| Press | `PressApiClient`, `PressWorksheetGenerationService`, `WorksheetCreateController` |
-| PDF import | `PdfImportService`, `PdfTextExtractionService`, `PdfImageExtractionService`, OCR services, `WorksheetDraftParser`, `ImportWorksheetController` |
+| `ModuleTopicService` | Module and topic creation, lookup, counts, and deletion |
+| `StudyStructureService` | Module/topic lists used by import workflows |
+| `WorksheetCreationService` | Worksheet/question validation, persistence, scope, lookup, and deletion |
+| `QuestionImageStorage` | Copying PNG/JPEG files into the application image directory and resolving stored paths |
 
-Question images are copied into local app data before the question is saved.
+### Learning and recommendations
 
----
+| Service | Responsibility |
+| --- | --- |
+| `LearningModel` | Pure evidence weighting, mastery, retention, breadth, trend, consistency, weakness, and due-date calculations |
+| `LearningService` | Account-scoped worksheet/topic estimates, cached topic refresh, and module aggregation |
+| `TopicStatsService` | Learner confidence updates without directly setting mastery |
+| `PriorityScoreService` | Normalised recommendation scoring and explanation generation |
+| `WorksheetSelectionService` | Eligibility filtering, deterministic ranking, stable current selection, and “Pick another” cycling |
+| `DashboardService` | Dashboard aggregate, recommendation lock state, reminders, weak topics, attempts, exams, and study record |
 
-## UI Layer
+The complete calculation and selection behaviour is documented in [Automatic mastery, XP, and recommendations](learning-model.md).
 
-FXML files define views; controllers handle user actions and call services. Controllers should not write SQL directly.
+### Attempts, reflection, and mistakes
+
+| Service | Responsibility |
+| --- | --- |
+| `AttemptService` | Complete-attempt validation and transactional submission |
+| `ReflectionService` | Optional reflection, confidence update, worksheet summaries, and bounded reflection XP |
+| `GamificationService` | Practice, reflection, and recall XP; caps; study-habit bands; and streaks |
+| `MistakeBankService` | Mistake queries, active-recall review, resolved state, mastery refresh, and recall XP |
+
+## Major workflows
+
+### Worksheet attempt
+
+```text
+AttemptWorksheetController
+        |
+        v
+AttemptService.submitAttemptWithReward
+        |
+        +-- validate the complete worksheet question set
+        +-- create worksheet_attempts row
+        +-- create answers rows
+        +-- create selected mistake_bank rows
+        +-- refresh worksheet score statistics
+        +-- refresh topic mastery
+        +-- create an idempotent practice XP event
+        +-- update the session streak when the daily goal is met
+```
+
+### Recommendation
+
+```text
+DashboardService
+    |
+    +-- refresh cached topic mastery
+    +-- load settings, stats, attempts, mistakes, modules, and reminders
+    +-- determine whether the daily recommendation window is locked
+    +-- WorksheetSelectionService
+            |
+            +-- filter eligible saved worksheets
+            +-- build automatic learning signals
+            +-- PriorityScoreService.evaluate
+            +-- sort deterministically
+            +-- preserve or advance the current recommendation
+```
+
+### Worksheet sources
+
+Manual creation, Press generation, and PDF import all converge on `WorksheetCreationService`. After saving, the source no longer changes the attempt, mastery, mistake, or recommendation workflows.
+
+| Source | Main boundary |
+| --- | --- |
+| Manual | `WorksheetCreateController` creates editable question drafts |
+| Press | `PressWorksheetGenerationService` calls `PressApiClient` and maps the response to editable drafts |
+| PDF | `PdfImportService` extracts and parses a local document before `ImportWorksheetController` presents the draft |
+
+## JavaFX UI
+
+FXML declares screen structure while controllers own screen state and event handling.
 
 | View | Controller | Purpose |
 | --- | --- | --- |
-| `LoginView.fxml` | `LoginController` | Sign in and account creation |
-| `DashboardView.fxml` | `DashboardController` | Dashboard, navigation, recommendation, progress, recent activity, and exam calendar |
-| `ModulesView.fxml` | `ModulesController` | Module/topic management and module recommendation panel |
-| `TopicDetailView.fxml` | `TopicDetailController` | Topic details and worksheet list |
-| `WorksheetCreateView.fxml` | `WorksheetCreateController` | Manual and Press worksheet creation |
-| `ImportWorksheetView.fxml` | `ImportWorksheetController` | PDF import and review |
-| `WorksheetDetailView.fxml` | `WorksheetDetailController` | Worksheet details and recommendation explanation |
-| `AttemptWorksheetView.fxml` | `AttemptWorksheetController` | Worksheet attempts |
-| `ReflectionView.fxml` | `ReflectionController` | Post-attempt reflection |
-| `MistakeBankView.fxml` | `MistakeBankController` | Mistake review |
-| `SettingsView.fxml` | `SettingsController` | Account, study, notification, gamification, data, and accessibility settings |
-| `ChangePasswordView.fxml` | `ChangePasswordController` | Password changes |
+| `LoginView.fxml` | `LoginController` | Sign-in and account creation |
+| `DashboardView.fxml` | `DashboardController` | Home dashboard and navigation |
+| `ModulesView.fxml` | `ModulesController` | Module, topic, and recommendation management |
+| `TopicDetailView.fxml` | `TopicDetailController` | Mastery evidence and worksheet list |
+| `WorksheetCreateView.fxml` | `WorksheetCreateController` | Manual and Press worksheet authoring |
+| `ImportWorksheetView.fxml` | `ImportWorksheetController` | Local PDF selection and draft review |
+| `WorksheetDetailView.fxml` | `WorksheetDetailController` | Worksheet record, recommendation explanation, and mark schemes |
+| `AttemptWorksheetView.fxml` | `AttemptWorksheetController` | Locked-answer self-marking flow |
+| `ReflectionView.fxml` | `ReflectionController` | Optional post-attempt reflection |
+| `MistakeBankView.fxml` | `MistakeBankController` | Mistake recall and resolution |
+| `SettingsView.fxml` | `SettingsController` | Account-specific configuration and data tools |
+| `ChangePasswordView.fxml` | `ChangePasswordController` | Password update |
 
-Shared UI helpers:
+### Shared UI components
 
-| Class | Purpose |
+| Class | Responsibility |
 | --- | --- |
-| `AppChrome` | Main window wrapper, title bar, command palette, and window controls |
-| `AppIcon` | Shared app icon loading/application |
-| `AppPreferences` | Applies saved settings to JavaFX roots/scenes |
-| `OverlayService` | Opens and closes in-app overlay views |
-| `UiAnimations` | Shared animation/feedback helpers |
-| `LevelUi` | Difficulty/priority visual helpers |
-| `QuestionImageViewFactory` | JavaFX image previews and missing-image fallback |
+| `AppChrome` | Window frame, title bar, daily chip, command palette, dragging, resizing, and window controls |
+| `AppIcon` | Runtime window, taskbar, dialog, and title-bar icons |
+| `AppPreferences` | Theme, accent, typography, motion, contrast, and control-size classes |
+| `OverlayService` | Modal in-app view lifecycle |
+| `UiAnimations` | Motion, transitions, feedback, and reduced-motion handling |
+| `LevelUi` | Difficulty indicators, recommendation badges, record stat cells, mastery fills, and ledger rows |
+| `LearningUi` | Mastery evidence presentation and mistake-recall interaction |
+| `QuestionImageViewFactory` | Question image display and missing-image fallback |
 
----
+Metadata has three visual roles: recommendation/status badges for immediate scanning, stat cells or ledger rows for stable study records, and muted text for descriptions. Mastery stat cells use a theme-aware translucent fill proportional to the percentage.
 
-## External Adapters
+## External boundaries
 
 ### Press
 
-The `press` package isolates online worksheet generation.
+`PressApiConfig` resolves the base URL from the `commonplace.press.baseUrl` JVM property, then `COMMONPLACE_PRESS_API_BASE_URL`, then the deployed default. `PressApiClient` posts JSON to `/generate` with a 10-second connection timeout and 90-second request timeout.
 
-| Class | Purpose |
-| --- | --- |
-| `PressApiConfig` | Base URL from system property, environment variable, or default endpoint |
-| `PressApiClient` | HTTP client for `/generate` |
-| `PressGenerateRequest` | Generation request |
-| `PressGenerateResponse` | Generation response |
-| `PressGeneratedQuestion` | Generated question DTO |
-| `PressQuestionFormat` | Supported question format enum |
-| `PressJson` | Lightweight JSON handling |
-
-`POST /generate` sends `subject`, `topic`, `difficulty`, `questionCount` (1–10), and `format`
-(`short-answer` or `long-answer`). The deployed response contains `metadata` and a `questions` array;
-each question provides `question`, `answer`, `markScheme` (an array of marking points), `marks`, and `type`.
-The adapter retains marking points as separate lines and the model answer in `QuestionDraft.markScheme`,
-and tags new drafts with `press` and their format. Existing saved questions need no migration.
-
-`WorksheetCreateController` takes the API subject and topic exclusively from the user-entered
-Press fields (80 and 120 characters maximum). The module and saved topic are only used for local
-organisation; they are not automatically added to generation requests. The captured request topic
-supplies a suggested worksheet title when Press returns no title. Saving still uses the original local topic ID.
-
-The JavaFX controller owns one cancellable background task. It validates editable spinners before
-sending or saving, preserves existing drafts, and prevents saving while generation is pending.
-Closing the editor or stopping generation interrupts the request. The HTTP adapter has a 10-second
-connection timeout and 90-second request timeout, surfaces API errors, and does not automatically
-retry POST requests. No API history is fetched; Commonplace's local worksheets remain the source of truth.
-
-### PDF/OCR Import
-
-The `importer` package isolates local PDF import.
-
-| Class/group | Purpose |
-| --- | --- |
-| `PdfTextExtractionService` | Selectable text extraction |
-| `PdfImageExtractionService` | Embedded image extraction |
-| `OcrService` implementations | Optional OCR fallback |
-| `WorksheetDraftParser` | Converts extracted text/images into editable question drafts |
-| `ImportedWorksheetDraft`, `ImportedQuestionDraft` | Draft models shown in the import review UI |
-| `ImportIssue` | Import warnings/info for the user |
-
----
-
-## Rules and Boundaries
-
-| Rule | Reason |
-| --- | --- |
-| Models stay simple | They are shared data objects |
-| Controllers stay UI-focused | UI code should not own persistence or scoring rules |
-| Services own workflows | Business behaviour belongs in one testable layer |
-| Repositories own persistence | SQL and schema details stay in one layer |
-| Import/API adapters stay isolated | External parsing and network details should not leak into controllers |
-| Local files are stored under app data | User-selected question images should not rely on original absolute paths |
-
----
-
-## Data Location
-
-Default app data directory:
+The request contains only:
 
 ```text
-~/.commonplace/
+subject, topic, difficulty, questionCount, format
 ```
 
-Important paths:
+The module name, saved local topic, existing worksheets, answers, and question images are not sent. The response adapter accepts the generated question, model answer, marking-point array, marks, and type, then retains the marking points in the editable local draft.
 
-| Path | Purpose |
-| --- | --- |
-| `~/.commonplace/appdata.db` | SQLite database |
-| `~/.commonplace/images/` | Copied question images and extracted PDF images |
+The controller owns one cancellable background task. It blocks saving while generation is active, preserves existing draft questions, and surfaces transport or response errors without retrying the POST automatically.
+
+### PDF and OCR
+
+`PdfTextExtractionService` and `PdfImageExtractionService` use PDFBox. `WorksheetDraftParser` converts extracted content into an editable draft with import issues rather than treating parsing as authoritative.
+
+When a PDF contains little selectable text, rendered page images are passed to `LocalOcrService`. It selects the first available engine in this order:
+
+1. Tesseract command-line OCR;
+2. Windows Runtime OCR through PowerShell;
+3. a no-op result with a visible warning when neither engine is available.
+
+OCR and parsing stay local.
+
+### Local images
+
+Question images are copied into `<data-directory>/images/` and stored in SQLite as relative paths. Legacy absolute paths can still be resolved. PNG, JPG, and JPEG are supported. Missing files produce a UI fallback rather than aborting the worksheet view.
+
+## Testing
+
+Tests are organised alongside the production packages and cover repositories, migrations, learning calculations, XP safeguards, selection behaviour, Press transport and parsing, PDF parsing/OCR boundaries, and JavaFX controllers.
+
+The Maven Surefire configuration sets `commonplace.data.dir` to `target/test-data`, isolating automated tests from the normal profile.
+
+```bash
+mvn test
+```
+
+JavaFX tests require an available desktop display:
+
+```bash
+mvn test "-Dcommonplace.uiTest=true"
+```
+
+Live Press requests are excluded unless explicitly enabled:
+
+```bash
+mvn test "-Dcommonplace.uiTest=true" "-Dcommonplace.press.liveTest=true"
+```
+
+`DocumentationScreenshotTest` renders the checked-in screenshot gallery from the current FXML and seeded data. It runs only when requested and should use a dedicated data directory:
+
+```bash
+mvn test "-Dcommonplace.docs.screenshots=true" "-Dtest=DocumentationScreenshotTest" "-Dcommonplace.data.dir=target/docs-data"
+```
+
+## Design constraints
+
+- Mastery is derived from evidence; confidence remains learner-reported.
+- XP events must remain idempotent and bounded.
+- Recommendation generation must rank existing worksheets only.
+- Press subject and generation topic must remain explicit user inputs.
+- Account-owned data must be checked through the module ownership chain.
+- Multi-record study workflows must use `DatabaseManager.transaction()`.
+- External content always enters as an editable draft.
+- Database backups and image backups remain separate until a bundled backup format is introduced.
