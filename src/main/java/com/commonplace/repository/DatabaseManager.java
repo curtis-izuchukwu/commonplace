@@ -186,6 +186,8 @@ public final class DatabaseManager {
                 difficulty TEXT NOT NULL DEFAULT 'MEDIUM',
                 importance TEXT NOT NULL DEFAULT 'MEDIUM',
                 source TEXT NOT NULL DEFAULT 'manual',
+                pdf_path TEXT,
+                mark_scheme_pdf_path TEXT,
                 created_at TEXT NOT NULL,
                 last_attempted_at TEXT,
                 times_attempted INTEGER NOT NULL DEFAULT 0,
@@ -343,6 +345,8 @@ public final class DatabaseManager {
     private static void migrateExistingSchema(Connection conn) throws SQLException {
         addColumnIfMissing(conn, "modules", "user_id", "INTEGER");
         addColumnIfMissing(conn, "questions", "image_path", "TEXT");
+        addColumnIfMissing(conn, "worksheets", "pdf_path", "TEXT");
+        addColumnIfMissing(conn, "worksheets", "mark_scheme_pdf_path", "TEXT");
         addColumnIfMissing(conn, "worksheet_attempts", "xp_awarded_at", "TEXT");
         addColumnIfMissing(conn, "user_settings", "compact_layout", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing(conn, "user_settings", "font_size", "TEXT NOT NULL DEFAULT 'DEFAULT'");

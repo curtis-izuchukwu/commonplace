@@ -68,8 +68,10 @@
     <HBox spacing="12">
         <Label text="Worksheets" styleClass="section-title"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button text="Import from PDF (Beta)"
+        <Button text="Extract PDF (Beta)"
                 onAction="#handleImportWorksheet"/>
+        <Button text="Add PDF Worksheet"
+                onAction="#handleAddPdfWorksheet"/>
         <Button text="Add Worksheet"
                 onAction="#handleAddWorksheet"
                 styleClass="primary-button"/>

@@ -617,6 +617,203 @@
     -fx-padding: 6 0 2 0;
 }
 
+.pdf-worksheet-card {
+    -fx-border-color: -app-accent-border-soft;
+}
+
+.pdf-worksheet-icon {
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-alignment: center;
+    -fx-background-color: -app-action;
+    -fx-background-radius: 5;
+    -fx-border-color: -app-action-border;
+    -fx-border-radius: 5;
+    -fx-text-fill: -app-action-text;
+    -fx-font-size: 9px;
+    -fx-font-weight: 800;
+}
+
+.pdf-document-view {
+    -fx-min-height: 330;
+    -fx-spacing: 10;
+}
+
+.pdf-score-panel {
+    -fx-background-color: -app-elevated;
+    -fx-background-radius: 8;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 8;
+    -fx-padding: 10;
+}
+
+.pdf-viewer-heading {
+    -fx-padding: 0 2 0 2;
+}
+
+.pdf-fullscreen-button {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-text-fill: -app-accent-text;
+}
+
+.pdf-fullscreen-button:hover {
+    -fx-background-color: -app-hover;
+    -fx-border-color: -app-accent-border-strong;
+}
+
+.pdf-tab-pane {
+    -fx-background-color: transparent;
+    -fx-tab-min-height: 38;
+    -fx-tab-max-height: 38;
+    -fx-open-tab-animation: none;
+    -fx-close-tab-animation: none;
+    -fx-padding: 0;
+}
+
+.pdf-tab-pane > .tab-header-area {
+    -fx-padding: 0;
+}
+
+.pdf-tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: -app-elevated;
+    -fx-background-radius: 8 8 0 0;
+    -fx-border-color: -app-border;
+    -fx-border-width: 1 1 0 1;
+    -fx-border-radius: 8 8 0 0;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region {
+    -fx-padding: 5 5 0 5;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6 6 0 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-border-radius: 0;
+    -fx-padding: 0 16 0 16;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region > .tab:hover {
+    -fx-background-color: -app-hover;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-text-fill: -app-muted;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+    -fx-text-fill: -app-accent-text;
+}
+
+.pdf-tab-pane > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-color: transparent;
+}
+
+.pdf-tab-pane > .tab-content-area {
+    -fx-background-color: -app-panel;
+    -fx-background-radius: 0 0 8 8;
+    -fx-border-color: -app-border;
+    -fx-border-width: 0 1 1 1;
+    -fx-border-radius: 0 0 8 8;
+    -fx-padding: 10;
+}
+
+.pdf-viewer-toolbar {
+    -fx-background-color: -app-elevated;
+    -fx-background-radius: 7;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 7;
+    -fx-padding: 9 10 9 10;
+}
+
+.pdf-toolbar-readout {
+    -fx-background-color: -app-field;
+    -fx-background-radius: 999;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 999;
+    -fx-text-fill: -app-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-padding: 6 10 6 10;
+}
+
+.pdf-icon-button {
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-max-width: 34;
+    -fx-padding: 7 0 7 0;
+}
+
+.pdf-viewer-scroll {
+    -fx-background-color: -app-charcoal;
+    -fx-background-insets: 0;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 8;
+    -fx-padding: 0;
+}
+
+.pdf-viewer-scroll > .viewport {
+    -fx-background-color: -app-charcoal;
+}
+
+.pdf-page-surface {
+    -fx-background-color: -app-charcoal;
+}
+
+.pdf-page-card {
+    -fx-alignment: top-center;
+}
+
+.pdf-page-sheet {
+    -fx-background-color: white;
+    -fx-border-color: rgba(15, 17, 16, 0.34);
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 18, 0.16, 0, 5);
+}
+
+.pdf-page-number {
+    -fx-background-color: -app-elevated;
+    -fx-background-radius: 999;
+    -fx-border-color: -app-border;
+    -fx-border-radius: 999;
+    -fx-text-fill: -app-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-padding: 3 8 3 8;
+}
+
+.pdf-page-surface .image-view {
+    -fx-effect: none;
+}
+
+.overlay-scrim.pdf-fullscreen-scrim {
+    -fx-padding: 0;
+}
+
+.pdf-fullscreen-mode {
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.pdf-fullscreen-mode .pdf-tab-pane > .tab-content-area {
+    -fx-padding: 12;
+}
+
 .clickable-card {
     -fx-cursor: hand;
 }

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.commonplace.ui.controller.PdfWorksheetCreateController"
+      fx:id="pdfWorksheetRoot"
+      spacing="16"
+      styleClass="app-root,topic-detail-root">
+
+    <padding>
+        <Insets top="24" right="24" bottom="24" left="24"/>
+    </padding>
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <VBox spacing="3" HBox.hgrow="ALWAYS">
+            <Label text="Add PDF Worksheet" styleClass="page-title"/>
+            <Label fx:id="parentTopicLabel"
+                   text="Module and topic"
+                   styleClass="app-subtitle"
+                   wrapText="true"/>
+        </VBox>
+        <Button text="Cancel" onAction="#handleCancel"/>
+    </HBox>
+
+    <VBox spacing="8" styleClass="settings-panel">
+        <Label text="Worksheet PDF" styleClass="section-title"/>
+        <Label text="The original document is copied into Commonplace and shown in the built-in viewer."
+               styleClass="muted-text"
+               wrapText="true"/>
+        <HBox spacing="10">
+            <TextField fx:id="worksheetPdfField"
+                       promptText="Choose the worksheet PDF"
+                       editable="false"
+                       HBox.hgrow="ALWAYS"/>
+            <Button text="Browse" onAction="#handleChooseWorksheetPdf"/>
+        </HBox>
+    </VBox>
+
+    <VBox spacing="8" styleClass="settings-panel">
+        <Label text="Mark scheme PDF (optional)" styleClass="section-title"/>
+        <Label text="When supplied, the mark scheme opens in its own tab beside the worksheet."
+               styleClass="muted-text"
+               wrapText="true"/>
+        <HBox spacing="10">
+            <TextField fx:id="markSchemePdfField"
+                       promptText="No mark scheme selected"
+                       editable="false"
+                       HBox.hgrow="ALWAYS"/>
+            <Button text="Browse" onAction="#handleChooseMarkSchemePdf"/>
+            <Button text="Clear" onAction="#handleClearMarkScheme"/>
+        </HBox>
+    </VBox>
+
+    <HBox spacing="10">
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Worksheet title" styleClass="small-label"/>
+            <TextField fx:id="titleField" promptText="Worksheet title"/>
+        </VBox>
+        <VBox spacing="6">
+            <Label text="Difficulty" styleClass="small-label"/>
+            <ComboBox fx:id="difficultyCombo" prefWidth="150"/>
+        </VBox>
+        <VBox spacing="6">
+            <Label text="Priority" styleClass="small-label"/>
+            <ComboBox fx:id="importanceCombo" prefWidth="150"/>
+        </VBox>
+    </HBox>
+
+    <VBox spacing="6">
+        <Label text="Description (optional)" styleClass="small-label"/>
+        <TextArea fx:id="descriptionArea"
+                  promptText="Notes about this worksheet"
+                  prefRowCount="3"
+                  wrapText="true"/>
+    </VBox>
+
+    <Region VBox.vgrow="ALWAYS"/>
+
+    <Label fx:id="statusLabel" text="" styleClass="status-text" wrapText="true"/>
+
+    <HBox spacing="10">
+        <Button fx:id="saveButton"
+                text="Save PDF Worksheet"
+                onAction="#handleSave"
+                styleClass="primary-button"/>
+        <Button text="Cancel" onAction="#handleCancel"/>
+    </HBox>
+</VBox>

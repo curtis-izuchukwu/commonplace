@@ -9,7 +9,8 @@ Study records stay in a local SQLite database. An internet connection is require
 ## The study loop
 
 1. Create a module and add the topics you are studying.
-2. Create a worksheet manually, generate an editable draft with Press, or import a PDF.
+2. Create a worksheet manually, generate an editable draft with Press, extract a PDF, or add a
+   PDF worksheet for pen-and-paper practice.
 3. Answer every question before revealing its mark scheme and self-mark the attempt.
 4. Save useful mistakes and optionally reflect on what to do next.
 5. Return to the dashboard for the next recommendation and review schedule.
@@ -29,6 +30,8 @@ Commonplace deliberately keeps mastery, XP, and recommendations separate:
 - Manual worksheet creation with question-level marks, difficulty, mark schemes, and optional images.
 - Press generation for editable short-answer or long-answer worksheet drafts.
 - Local PDF import with text extraction, image extraction, and optional local OCR.
+- Pen-and-paper PDF worksheets with an in-app page viewer, an optional mark-scheme PDF tab, and
+  optional overall-score tracking.
 - Structured attempts that require answers to be locked before the mark scheme is revealed.
 - Self-marking, assistance tracking, mistake notes, and optional post-attempt reflection.
 - A mistake bank with active-recall review, assistance tracking, and resolved states.
@@ -124,6 +127,20 @@ Generation runs on a background task with a 10-second connection timeout and a 9
 
 PDF import extracts selectable text and embedded images locally, then opens an editable review screen. For image-only documents, Commonplace tries Tesseract first and Windows OCR second when either is available. Import quality depends on the source document, so every draft must be reviewed before saving.
 
+### PDF worksheets
+
+Use **Add PDF Worksheet** from a topic when the original document should remain intact for
+pen-and-paper work. The worksheet PDF is displayed page by page inside Commonplace rather than
+being processed by OCR. An optional mark-scheme PDF is tied to the same worksheet and opens in a
+separate viewer tab. The viewer includes a full-screen reading mode that can be closed with its
+on-screen control or the Escape key. It keeps one centred sheet at normal zoom and forms a
+responsive multi-page spread as the user zooms out.
+
+PDF worksheets do not contain per-question answer fields or marking controls. Recording an
+overall mark is optional. Merely opening or viewing a PDF awards no XP; saving an overall mark
+creates a completed attempt and can award practice XP. Because they contain no saved questions,
+PDF worksheets are not included in adaptive worksheet recommendations.
+
 ## Learning and recommendations
 
 Commonplace estimates mastery from question-level evidence rather than a single worksheet score. Marks, assessed difficulty, independent recall, assistance, active time, prompt repetition, spacing, retention, consistency, and breadth all influence the estimate. Repeating the same prompts on the same day contributes very little new evidence.
@@ -144,9 +161,10 @@ The default application directory is:
 | --- | --- |
 | `~/.commonplace/appdata.db` | Accounts, study structure, attempts, learning evidence, XP, and settings |
 | `~/.commonplace/images/` | Copied question images and images extracted from PDFs |
+| `~/.commonplace/pdfs/` | Copied PDF worksheets and their optional mark schemes |
 | `~/.commonplace/appdata.before-learning-v1.db` | One-time safety copy created before the first learning-schema migration of an older database |
 
-Settings can export or import the SQLite database. Import replaces the current database and returns to sign-in. The database export does not bundle the `images` directory, so copy that directory separately when a backup must include question images.
+Settings can export or import the SQLite database. Import replaces the current database and returns to sign-in. The database export does not bundle the `images` or `pdfs` directories, so copy those directories separately when a backup must include question images or PDF worksheets.
 
 For isolated development or test profiles, set the JVM property `commonplace.data.dir` to a dedicated directory.
 
@@ -194,7 +212,7 @@ mvn test "-Dcommonplace.docs.screenshots=true" "-Dtest=DocumentationScreenshotTe
 
 - Account deletion is not implemented. Individual account study data can be cleared from Settings.
 - Cloud sync and multi-device conflict resolution are not available.
-- Database backups do not include copied question images.
+- Database backups do not include copied question images or PDF worksheets.
 - PDF parsing and OCR can require manual correction.
 - Press generation requires network access; all other core study workflows are local.
 

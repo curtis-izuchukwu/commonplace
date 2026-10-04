@@ -218,7 +218,46 @@ WHERE m.user_id=? AND wa.id<=? ORDER BY wa.completed_at,wa.id,a.id
                 }
             }
         }
+        if (current.isEmpty()) {
+            return calculatePdfWorksheetXp(a);
+        }
         return (int) Math.round(Math.min(120, xp));
+    }
+
+    private int calculatePdfWorksheetXp(WorksheetAttempt attempt) throws SQLException {
+        String sql =
+                """
+                SELECT w.source, w.difficulty,
+                       (SELECT COUNT(*)
+                        FROM worksheet_attempts earlier
+                        WHERE earlier.worksheet_id = wa.worksheet_id
+                          AND earlier.id < wa.id
+                          AND substr(earlier.completed_at, 1, 10) =
+                              substr(wa.completed_at, 1, 10)) AS earlier_today
+                FROM worksheet_attempts wa
+                JOIN worksheets w ON w.id = wa.worksheet_id
+                JOIN topics t ON t.id = w.topic_id
+                JOIN modules m ON m.id = t.module_id
+                WHERE wa.id = ? AND m.user_id = ?;
+                """;
+        try (Connection connection = DatabaseManager.connect();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, attempt.id());
+            statement.setLong(2, AccountSession.currentUserId());
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next() || !"pdf".equalsIgnoreCase(result.getString("source"))) {
+                    return 0;
+                }
+                if (result.getInt("earlier_today") > 0) {
+                    return 5;
+                }
+                return switch (result.getString("difficulty")) {
+                    case "EASY" -> 25;
+                    case "HARD" -> 40;
+                    default -> 30;
+                };
+            }
+        }
     }
 
     private GamificationResult result(int amount) throws SQLException {
