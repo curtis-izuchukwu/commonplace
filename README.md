@@ -71,6 +71,22 @@ mvn javafx:run
 
 The database and copied question images are created automatically on first use.
 
+## Windows executable
+
+Build a self-contained Windows application from PowerShell:
+
+```powershell
+.\package-windows.ps1
+```
+
+The executable is created at `dist\Commonplace\Commonplace.exe`. It includes a
+private Java runtime, so the packaged app does not require Java or Maven on the
+computer where it runs. Keep the complete `dist\Commonplace` directory together;
+the executable uses the adjacent `app` and `runtime` directories.
+
+To keep Commonplace on the taskbar, open `Commonplace.exe`, right-click its
+taskbar icon, and choose **Pin to taskbar**.
+
 ## Worksheet creation
 
 ### Manual
