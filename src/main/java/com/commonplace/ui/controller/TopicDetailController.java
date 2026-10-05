@@ -19,6 +19,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
@@ -176,9 +177,41 @@ public class TopicDetailController {
         }
     }
 
+    @FXML
+    private void handleAddPdfWorksheet() {
+        if (topic == null) {
+            UiAnimations.validationError(topicNameLabel);
+            setStatus("No topic selected.");
+            return;
+        }
+
+        try {
+            var handle =
+                    OverlayService.<PdfWorksheetCreateController>open(
+                            topicNameLabel,
+                            "/com/commonplace/fxml/PdfWorksheetCreateView.fxml",
+                            760,
+                            680);
+
+            PdfWorksheetCreateController controller = handle.controller();
+            controller.setTopic(
+                    topic,
+                    parentModule,
+                    () -> {
+                        loadWorksheets();
+                        notifyDataChanged();
+                    });
+        } catch (IOException e) {
+            showError("Failed to add PDF worksheet", e.getMessage());
+        }
+    }
+
     private StackPane createWorksheetCard(Worksheet worksheet) {
         StackPane card = new StackPane();
         card.getStyleClass().addAll("entity-card", "clickable-card");
+        if (worksheet.isPdfWorksheet()) {
+            card.getStyleClass().add("pdf-worksheet-card");
+        }
         card.setOnMouseClicked(event -> openWorksheetDetail(worksheet));
 
         VBox textBox = new VBox(4);
@@ -188,13 +221,27 @@ public class TopicDetailController {
         title.getStyleClass().add("card-title");
         title.setWrapText(true);
 
+        HBox titleRow = new HBox(10);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+        if (worksheet.isPdfWorksheet()) {
+            Label pdfIcon = new Label("PDF");
+            pdfIcon.getStyleClass().add("pdf-worksheet-icon");
+            titleRow.getChildren().add(pdfIcon);
+        }
+        titleRow.getChildren().add(title);
+
         FlowPane meta = new FlowPane(8, 8);
         meta.getStyleClass().add("record-stat-grid");
         meta.getChildren()
                 .addAll(
                         LevelUi.createStatCell(
                                 "Difficulty", LevelUi.displayName(worksheet.difficulty())),
-                        LevelUi.createPriorityStat(worksheet.importance()),
+                        LevelUi.createPriorityStat(worksheet.importance()));
+        if (worksheet.isPdfWorksheet()) {
+            meta.getChildren().add(LevelUi.createStatCell("Format", "PDF • Pen and paper"));
+        }
+        meta.getChildren()
+                .add(
                         LevelUi.createStatCell(
                                 "Attempts", Integer.toString(worksheet.timesAttempted())));
         if (worksheet.latestScorePercent() != null) {
@@ -204,7 +251,7 @@ public class TopicDetailController {
                                     "Latest", formatScore(worksheet.latestScorePercent())));
         }
 
-        textBox.getChildren().addAll(title, meta);
+        textBox.getChildren().addAll(titleRow, meta);
 
         Button deleteButton = createDeleteButton();
         deleteButton.setOnMouseClicked(event -> event.consume());

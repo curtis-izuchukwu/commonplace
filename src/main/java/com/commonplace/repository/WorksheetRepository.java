@@ -26,11 +26,48 @@ public class WorksheetRepository {
             ImportanceLevel importance
     ) throws SQLException {
 
+        return create(topicId, title, description, difficulty, importance, "manual", null, null);
+    }
+
+    public Worksheet createPdf(
+            long topicId,
+            String title,
+            String description,
+            DifficultyLevel difficulty,
+            ImportanceLevel importance,
+            String pdfPath,
+            String markSchemePdfPath
+    ) throws SQLException {
+        if (pdfPath == null || pdfPath.isBlank()) {
+            throw new IllegalArgumentException("A PDF worksheet needs a stored PDF path.");
+        }
+        return create(
+                topicId,
+                title,
+                description,
+                difficulty,
+                importance,
+                "pdf",
+                pdfPath,
+                markSchemePdfPath);
+    }
+
+    private Worksheet create(
+            long topicId,
+            String title,
+            String description,
+            DifficultyLevel difficulty,
+            ImportanceLevel importance,
+            String source,
+            String pdfPath,
+            String markSchemePdfPath
+    ) throws SQLException {
         String sql = """
                 INSERT INTO worksheets
-                    (topic_id, title, description, difficulty, importance, source, created_at)
+                    (topic_id, title, description, difficulty, importance, source, pdf_path,
+                     mark_scheme_pdf_path, created_at)
                 VALUES
-                    (?, ?, ?, ?, ?, ?, ?);
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """;
 
         LocalDateTime now = DateUtils.now();
@@ -43,8 +80,10 @@ public class WorksheetRepository {
             stmt.setString(3, blankToNull(description));
             stmt.setString(4, difficulty.name());
             stmt.setString(5, importance.name());
-            stmt.setString(6, "manual");
-            stmt.setString(7, DateUtils.toDatabaseDateTime(now));
+            stmt.setString(6, source);
+            stmt.setString(7, blankToNull(pdfPath));
+            stmt.setString(8, blankToNull(markSchemePdfPath));
+            stmt.setString(9, DateUtils.toDatabaseDateTime(now));
 
             stmt.executeUpdate();
 
@@ -150,6 +189,49 @@ public class WorksheetRepository {
                 return rs.getInt("worksheet_count");
             }
         }
+    }
+
+    public Optional<String> findPdfPath(long worksheetId) throws SQLException {
+        return findOwnedPdfPath(worksheetId, "pdf_path");
+    }
+
+    public Optional<String> findMarkSchemePdfPath(long worksheetId) throws SQLException {
+        return findOwnedPdfPath(worksheetId, "mark_scheme_pdf_path");
+    }
+
+    private Optional<String> findOwnedPdfPath(long worksheetId, String columnName)
+            throws SQLException {
+        if (!"pdf_path".equals(columnName) && !"mark_scheme_pdf_path".equals(columnName)) {
+            throw new IllegalArgumentException("Unsupported worksheet PDF column.");
+        }
+
+        String sql = """
+                SELECT %s
+                FROM worksheets
+                WHERE id = ?
+                  AND source = 'pdf'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM topics t
+                      JOIN modules m ON m.id = t.module_id
+                      WHERE t.id = worksheets.topic_id
+                        AND m.user_id = ?
+                  );
+                """.formatted(columnName);
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, worksheetId);
+            stmt.setLong(2, AccountSession.currentUserId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.ofNullable(rs.getString(columnName));
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     public void deleteById(long id) throws SQLException {

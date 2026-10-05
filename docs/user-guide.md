@@ -107,15 +107,35 @@ Press can generate 1 to 10 short-answer or long-answer questions. Commonplace pr
 
 Generation can be stopped without discarding the current draft. Network, validation, rate-limit, and service errors appear in the editor so the worksheet can be retried or completed manually.
 
-### Import from PDF
+### Extract from PDF
 
-Choose **Import from PDF (Beta)** from a topic, select the PDF, and review the extracted worksheet before saving.
+Choose **Extract PDF (Beta)** from a topic, select the PDF, and review the extracted worksheet before saving.
 
 ![PDF import review](screenshots/pdf-import-review.png)
 
 The review screen allows the title, difficulty, priority, questions, mark schemes, marks, and image assignments to be corrected. Selectable text and images are extracted locally. Image-only documents use a local OCR engine when Tesseract or Windows OCR is available.
 
 PDF layouts vary considerably. Treat the imported result as a draft, especially when the source uses columns, scanned pages, complex diagrams, or unusual question numbering.
+
+### Add a PDF worksheet
+
+Choose **Add PDF Worksheet** from a topic when you want to complete the original document using
+pen and paper. Select the worksheet PDF and, optionally, a separate mark-scheme PDF. Both files
+are copied into Commonplace's local data and remain attached to that worksheet and topic.
+
+PDF worksheets have a PDF icon in the topic worksheet list. Opening one displays the original
+pages in the built-in viewer with page navigation and zoom controls. Normal zoom keeps one sheet
+centred; zooming out automatically adds as many complete sheets as the available width can hold.
+When a mark scheme was uploaded, it appears in its own **Mark scheme** tab next to the
+**Worksheet** tab. Choose
+**Full screen** for a distraction-free reading view; use the on-screen control or press **Esc**
+to return to the worksheet details.
+
+There are no question-by-question answer boxes or marking controls for PDF worksheets. You may
+optionally save one overall score and total mark after completing the paper. Viewing the document
+does not award XP; saving an overall mark records an attempt and can award practice XP. PDF
+worksheets are not used for adaptive recommendations because they have no saved question-level
+evidence.
 
 ## Worksheet details
 
@@ -206,7 +226,9 @@ Commonplace stores its database and copied images under `~/.commonplace/` by def
 - **Import Backup** replaces the current database and returns to sign-in.
 - **Clear Local Data** removes modules, topics, worksheets, attempts, mistakes, recommendation history, XP events, and study statistics for the signed-in account.
 
-Database export does not include the `~/.commonplace/images/` directory. Copy that directory separately when backing up worksheets that contain question images.
+Database export does not include the `~/.commonplace/images/` or `~/.commonplace/pdfs/`
+directories. Copy those directories separately when backing up worksheets that contain question
+images or attached PDFs.
 
 ## Troubleshooting
 

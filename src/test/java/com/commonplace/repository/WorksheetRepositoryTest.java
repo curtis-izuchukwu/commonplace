@@ -90,4 +90,50 @@ class WorksheetRepositoryTest {
             }
         }
     }
+
+    @Test
+    void canCreatePdfWorksheetWithSeparateMarkScheme() throws Exception {
+        ModuleRepository moduleRepository = new ModuleRepository();
+        TopicRepository topicRepository = new TopicRepository();
+        WorksheetRepository worksheetRepository = new WorksheetRepository();
+        StudyModule module = null;
+
+        try {
+            module =
+                    moduleRepository.create(
+                            "PDF Module " + UUID.randomUUID(),
+                            "Temporary test module",
+                            null,
+                            ImportanceLevel.MEDIUM);
+            Topic topic =
+                    topicRepository.create(
+                            module.id(),
+                            "Paper practice",
+                            "",
+                            ImportanceLevel.MEDIUM,
+                            ConfidenceLevel.MEDIUM);
+
+            Worksheet worksheet =
+                    worksheetRepository.createPdf(
+                            topic.id(),
+                            "Paper 1",
+                            "Complete on paper",
+                            DifficultyLevel.HARD,
+                            ImportanceLevel.HIGH,
+                            "pdfs/worksheet.pdf",
+                            "pdfs/mark-scheme.pdf");
+
+            assertTrue(worksheet.isPdfWorksheet());
+            assertEquals(
+                    "pdfs/worksheet.pdf",
+                    worksheetRepository.findPdfPath(worksheet.id()).orElseThrow());
+            assertEquals(
+                    "pdfs/mark-scheme.pdf",
+                    worksheetRepository.findMarkSchemePdfPath(worksheet.id()).orElseThrow());
+        } finally {
+            if (module != null) {
+                moduleRepository.deleteById(module.id());
+            }
+        }
+    }
 }

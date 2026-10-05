@@ -116,6 +116,54 @@ public class AttemptService {
                 });
     }
 
+    public SubmissionResult submitPdfScore(
+            long worksheetId, LocalDateTime startedAt, int score, int maxScore)
+            throws SQLException {
+        if (maxScore <= 0) {
+            throw new IllegalArgumentException("Total marks must be at least 1.");
+        }
+        if (score < 0 || score > maxScore) {
+            throw new IllegalArgumentException("Score must be between 0 and the total marks.");
+        }
+
+        return com.commonplace.repository.DatabaseManager.transaction(
+                () -> {
+                    var worksheet =
+                            new com.commonplace.repository.WorksheetRepository()
+                                    .findById(worksheetId)
+                                    .orElseThrow(
+                                            () ->
+                                                    new IllegalArgumentException(
+                                                            "Worksheet is not available in this"
+                                                                    + " account."));
+                    if (!worksheet.isPdfWorksheet()) {
+                        throw new IllegalArgumentException(
+                                "Overall scores are only available for PDF worksheets.");
+                    }
+
+                    LocalDateTime completedAt = DateUtils.now();
+                    double scorePercent = ((double) score / maxScore) * 100.0;
+                    WorksheetAttempt attempt =
+                            attemptRepository.create(
+                                    worksheetId,
+                                    startedAt == null ? completedAt : startedAt,
+                                    completedAt,
+                                    score,
+                                    maxScore,
+                                    scorePercent,
+                                    ConfidenceLevel.MEDIUM,
+                                    null,
+                                    null,
+                                    null);
+
+                    new ReflectionService().updateWorksheetStats(worksheet, attempt);
+                    new LearningService().refresh(worksheet.topicId());
+                    GamificationResult reward =
+                            new GamificationService().awardWorksheetCompletion(attempt);
+                    return new SubmissionResult(attempt, reward);
+                });
+    }
+
     private void validateAttempt(List<AnswerRepository.AnswerDraft> answerDrafts) {
         if (answerDrafts == null || answerDrafts.isEmpty()) {
             throw new IllegalArgumentException("Cannot submit an attempt with no answers.");

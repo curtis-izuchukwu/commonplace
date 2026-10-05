@@ -96,7 +96,7 @@ PRAGMA busy_timeout = 5000;
 | `user_stats` | XP, streak, last completion date, and recommendation interval |
 | `modules` | Account-owned modules |
 | `topics` | Topics belonging to modules |
-| `worksheets` | Worksheets, study scope, generation subject, and score summaries |
+| `worksheets` | Worksheets, source type, optional PDF and mark-scheme paths, study scope, generation subject, and score summaries |
 | `questions` | Prompts, mark schemes, order, tags, images, and assessed difficulty |
 | `worksheet_attempts` | Completed attempt summaries and optional reflection |
 | `answers` | Question-level answer, marks, mistake, assistance, timing, and evidence fields |
@@ -214,13 +214,16 @@ DashboardService
 
 ### Worksheet sources
 
-Manual creation, Press generation, and PDF import all converge on `WorksheetCreationService`. After saving, the source no longer changes the attempt, mastery, mistake, or recommendation workflows.
+Manual creation, Press generation, and extracted PDF import converge on the question-based path in
+`WorksheetCreationService`. PDF worksheets use a separate source type: they retain their original
+document, have no question rows, and accept only an optional overall marked attempt.
 
 | Source | Main boundary |
 | --- | --- |
 | Manual | `WorksheetCreateController` creates editable question drafts |
 | Press | `PressWorksheetGenerationService` calls `PressApiClient` and maps the response to editable drafts |
 | PDF | `PdfImportService` extracts and parses a local document before `ImportWorksheetController` presents the draft |
+| PDF worksheet | `PdfWorksheetStorage` copies the worksheet and optional mark scheme before `PdfDocumentView` renders either document locally |
 
 ## JavaFX UI
 
@@ -234,6 +237,7 @@ FXML declares screen structure while controllers own screen state and event hand
 | `TopicDetailView.fxml` | `TopicDetailController` | Mastery evidence and worksheet list |
 | `WorksheetCreateView.fxml` | `WorksheetCreateController` | Manual and Press worksheet authoring |
 | `ImportWorksheetView.fxml` | `ImportWorksheetController` | Local PDF selection and draft review |
+| `PdfWorksheetCreateView.fxml` | `PdfWorksheetCreateController` | Original PDF and optional mark-scheme attachment |
 | `WorksheetDetailView.fxml` | `WorksheetDetailController` | Worksheet record, recommendation explanation, and mark schemes |
 | `AttemptWorksheetView.fxml` | `AttemptWorksheetController` | Locked-answer self-marking flow |
 | `ReflectionView.fxml` | `ReflectionController` | Optional post-attempt reflection |
@@ -288,6 +292,10 @@ OCR and parsing stay local.
 
 Question images are copied into `<data-directory>/images/` and stored in SQLite as relative paths. Legacy absolute paths can still be resolved. PNG, JPG, and JPEG are supported. Missing files produce a UI fallback rather than aborting the worksheet view.
 
+PDF worksheets and mark schemes are validated and copied into `<data-directory>/pdfs/`. SQLite
+stores only managed relative paths. `PdfDocumentView` uses PDFBox to render one page at a time on a
+daemon task, keeping page navigation responsive without loading an entire paper into memory.
+
 ## Testing
 
 Tests are organised alongside the production packages and cover repositories, migrations, learning calculations, XP safeguards, selection behaviour, Press transport and parsing, PDF parsing/OCR boundaries, and JavaFX controllers.
@@ -325,4 +333,4 @@ mvn test "-Dcommonplace.docs.screenshots=true" "-Dtest=DocumentationScreenshotTe
 - Account-owned data must be checked through the module ownership chain.
 - Multi-record study workflows must use `DatabaseManager.transaction()`.
 - External content always enters as an editable draft.
-- Database backups and image backups remain separate until a bundled backup format is introduced.
+- Database backups and file backups (`images/` and `pdfs/`) remain separate until a bundled backup format is introduced.

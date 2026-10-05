@@ -13,6 +13,7 @@ import com.commonplace.service.AccountSession;
 import com.commonplace.service.PressWorksheetGenerationService;
 import com.commonplace.service.WorksheetCreationService;
 import com.commonplace.ui.LevelUi;
+import com.commonplace.ui.PdfDocumentView;
 
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -82,6 +83,210 @@ class WorksheetCreateControllerTest {
                     assertFalse(root.lookupAll(".topic-mastery-card").isEmpty());
                     return null;
                 });
+    }
+
+    @Test
+    void pdfWorksheetCreationAndViewerLayoutsLoad() throws Exception {
+        fx(
+                () -> {
+                    FXMLLoader creationLoader =
+                            new FXMLLoader(
+                                    getClass()
+                                            .getResource(
+                                                    "/com/commonplace/fxml/"
+                                                            + "PdfWorksheetCreateView.fxml"));
+                    Parent creationRoot = creationLoader.load();
+                    Scene creationScene = new Scene(creationRoot, 760, 680);
+                    creationScene
+                            .getStylesheets()
+                            .add(
+                                    getClass()
+                                            .getResource("/com/commonplace/css/app.css")
+                                            .toExternalForm());
+                    creationRoot.applyCss();
+                    creationRoot.layout();
+                    assertNotNull(creationLoader.getNamespace().get("worksheetPdfField"));
+                    assertNotNull(creationLoader.getNamespace().get("markSchemePdfField"));
+
+                    FXMLLoader detailLoader =
+                            new FXMLLoader(
+                                    getClass()
+                                            .getResource(
+                                                    "/com/commonplace/fxml/"
+                                                            + "WorksheetDetailView.fxml"));
+                    Parent detailRoot = detailLoader.load();
+                    Scene detailScene = new Scene(detailRoot, 900, 780);
+                    detailScene
+                            .getStylesheets()
+                            .add(
+                                    getClass()
+                                            .getResource("/com/commonplace/css/app.css")
+                                            .toExternalForm());
+                    detailRoot.applyCss();
+                    detailRoot.layout();
+                    assertNotNull(detailLoader.getNamespace().get("pdfTabPane"));
+                    assertNotNull(detailLoader.getNamespace().get("pdfScoreSpinner"));
+                    assertNotNull(detailLoader.getNamespace().get("pdfMaxScoreSpinner"));
+                    assertNotNull(detailLoader.getNamespace().get("pdfFullScreenButton"));
+                    assertTrue(
+                            ((TabPane) detailLoader.getNamespace().get("pdfTabPane"))
+                                    .getStyleClass()
+                                    .contains("pdf-tab-pane"));
+                    return null;
+                });
+    }
+
+    @Test
+    void pdfWorksheetDetailUsesSeparateWorksheetAndMarkSchemeTabs() throws Exception {
+        UserRepository users = new UserRepository();
+        User user = users.create("pdf-ui-" + UUID.randomUUID(), "hash", "salt");
+        users.ensureStatsRow(user.id());
+        AccountSession.signIn(user);
+        StudyModule module =
+                new ModuleRepository()
+                        .create("PDF practice", "", null, ImportanceLevel.MEDIUM);
+        Topic topic =
+                new TopicRepository()
+                        .create(
+                                module.id(),
+                                "Past papers",
+                                "",
+                                ImportanceLevel.HIGH,
+                                ConfidenceLevel.MEDIUM);
+        java.nio.file.Path worksheetPdf = java.nio.file.Files.createTempFile("paper-", ".pdf");
+        java.nio.file.Path markSchemePdf =
+                java.nio.file.Files.createTempFile("mark-scheme-", ".pdf");
+        for (java.nio.file.Path path : List.of(worksheetPdf, markSchemePdf)) {
+            try (org.apache.pdfbox.pdmodel.PDDocument document =
+                    new org.apache.pdfbox.pdmodel.PDDocument()) {
+                document.addPage(new org.apache.pdfbox.pdmodel.PDPage());
+                document.save(path.toFile());
+            }
+        }
+        WorksheetCreationService service = new WorksheetCreationService();
+        Worksheet worksheet =
+                service.createPdfWorksheet(
+                        topic.id(),
+                        "Paper 1",
+                        "Complete on paper",
+                        DifficultyLevel.HARD,
+                        ImportanceLevel.HIGH,
+                        worksheetPdf,
+                        markSchemePdf);
+
+        try {
+            fx(
+                    () -> {
+                        FXMLLoader loader =
+                                new FXMLLoader(
+                                        getClass()
+                                                .getResource(
+                                                        "/com/commonplace/fxml/"
+                                                                + "WorksheetDetailView.fxml"));
+                        Parent root = loader.load();
+                        loader.<WorksheetDetailController>getController()
+                                .setWorksheet(worksheet, topic);
+                        Scene scene = new Scene(root, 900, 780);
+                        scene.getStylesheets()
+                                .add(
+                                        getClass()
+                                                .getResource("/com/commonplace/css/app.css")
+                                                .toExternalForm());
+                        root.applyCss();
+                        root.layout();
+
+                        TabPane tabs = (TabPane) loader.getNamespace().get("pdfTabPane");
+                        assertEquals(List.of("Worksheet", "Mark scheme"),
+                                tabs.getTabs().stream().map(Tab::getText).toList());
+                        assertFalse(
+                                ((Button) loader.getNamespace().get("startAttemptButton"))
+                                        .isManaged());
+                        assertTrue(
+                                ((Label) loader.getNamespace().get("worksheetTypeIcon"))
+                                        .isVisible());
+
+                        Button fullScreenButton =
+                                (Button) loader.getNamespace().get("pdfFullScreenButton");
+                        VBox detailRoot = (VBox) loader.getNamespace().get("worksheetDetailRoot");
+                        VBox scorePanel = (VBox) loader.getNamespace().get("pdfScorePanel");
+                        fullScreenButton.fire();
+                        assertEquals("Exit full screen", fullScreenButton.getText());
+                        assertTrue(detailRoot.getStyleClass().contains("pdf-fullscreen-mode"));
+                        assertFalse(scorePanel.isManaged());
+                        fullScreenButton.fire();
+                        assertEquals("Full screen", fullScreenButton.getText());
+                        assertFalse(detailRoot.getStyleClass().contains("pdf-fullscreen-mode"));
+                        assertTrue(scorePanel.isManaged());
+                        return null;
+                    });
+        } finally {
+            service.deleteWorksheet(worksheet.id());
+            new ModuleRepository().deleteById(module.id());
+            try (var connection = DatabaseManager.connect();
+                    var statement = connection.prepareStatement("DELETE FROM users WHERE id=?")) {
+                statement.setLong(1, user.id());
+                statement.executeUpdate();
+            }
+            AccountSession.signOut();
+            java.nio.file.Files.deleteIfExists(worksheetPdf);
+            java.nio.file.Files.deleteIfExists(markSchemePdf);
+        }
+    }
+
+    @Test
+    void pdfViewerAddsCompletePagesAsFullScreenWidthIsZoomedOut() throws Exception {
+        java.nio.file.Path pdf = java.nio.file.Files.createTempFile("multi-page-viewer-", ".pdf");
+        try (org.apache.pdfbox.pdmodel.PDDocument document =
+                new org.apache.pdfbox.pdmodel.PDDocument()) {
+            for (int page = 0; page < 8; page++) {
+                document.addPage(new org.apache.pdfbox.pdmodel.PDPage());
+            }
+            document.save(pdf.toFile());
+        }
+
+        AtomicReference<PdfDocumentView> viewReference = new AtomicReference<>();
+        try {
+            fx(
+                    () -> {
+                        PdfDocumentView view = new PdfDocumentView(pdf);
+                        Scene scene = new Scene(view, 1920, 1000);
+                        scene.getStylesheets()
+                                .add(
+                                        getClass()
+                                                .getResource("/com/commonplace/css/app.css")
+                                                .toExternalForm());
+                        view.applyCss();
+                        view.layout();
+                        viewReference.set(view);
+                        return null;
+                    });
+
+            awaitVisiblePdfPages(viewReference.get(), 1);
+            firePdfZoomOut(viewReference.get());
+            awaitVisiblePdfPages(viewReference.get(), 2);
+            firePdfZoomOut(viewReference.get());
+            awaitVisiblePdfPages(viewReference.get(), 3);
+
+            assertTrue(
+                    fx(
+                            () ->
+                                    viewReference.get().lookupAll(".pdf-toolbar-readout").stream()
+                                            .filter(Label.class::isInstance)
+                                            .map(Label.class::cast)
+                                            .anyMatch(
+                                                    label ->
+                                                            "Pages 1-3 of 8"
+                                                                    .equals(label.getText()))));
+        } finally {
+            if (viewReference.get() != null) {
+                fx(
+                        () -> {
+                            viewReference.get().dispose();
+                            return null;
+                        });
+            }
+            java.nio.file.Files.deleteIfExists(pdf);
+        }
     }
 
     @Test
@@ -788,6 +993,32 @@ class WorksheetCreateControllerTest {
                     return null;
                 });
         idle.get(5, TimeUnit.SECONDS);
+    }
+
+    private static void firePdfZoomOut(PdfDocumentView view) throws Exception {
+        fx(
+                () -> {
+                    view.lookupAll(".pdf-icon-button").stream()
+                            .filter(Button.class::isInstance)
+                            .map(Button.class::cast)
+                            .filter(button -> "-".equals(button.getText()))
+                            .findFirst()
+                            .orElseThrow()
+                            .fire();
+                    return null;
+                });
+    }
+
+    private static void awaitVisiblePdfPages(PdfDocumentView view, int expected) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (System.nanoTime() < deadline) {
+            int visiblePages = fx(() -> view.lookupAll(".pdf-page-sheet").size());
+            if (visiblePages == expected) {
+                return;
+            }
+            Thread.sleep(25);
+        }
+        fail("Timed out waiting for " + expected + " visible PDF pages.");
     }
 
     private static <T> T fx(Callable<T> action) throws Exception {

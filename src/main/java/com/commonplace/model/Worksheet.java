@@ -17,4 +17,7 @@ public record Worksheet(
         Double averageScorePercent,
         int failureStreak
 ) {
+    public boolean isPdfWorksheet() {
+        return "pdf".equalsIgnoreCase(source);
+    }
 }

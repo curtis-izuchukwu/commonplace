@@ -5,12 +5,15 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TabPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
+<VBox fx:id="worksheetDetailRoot"
+      xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.commonplace.ui.controller.WorksheetDetailController"
       spacing="14"
       styleClass="app-root,topic-detail-root">
@@ -19,16 +22,24 @@
         <Insets top="24" right="24" bottom="24" left="24"/>
     </padding>
 
-    <HBox spacing="12">
+    <HBox fx:id="detailHeader" spacing="12" styleClass="pdf-detail-context">
         <VBox HBox.hgrow="ALWAYS">
-            <Label fx:id="worksheetTitleLabel" text="Worksheet" styleClass="page-title"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label fx:id="worksheetTypeIcon"
+                       text="PDF"
+                       visible="false"
+                       managed="false"
+                       styleClass="pdf-worksheet-icon"/>
+                <Label fx:id="worksheetTitleLabel" text="Worksheet" styleClass="page-title"/>
+            </HBox>
             <Label fx:id="worksheetMetaLabel"
                    text="Topic"
                    styleClass="app-subtitle"
                    wrapText="true"/>
         </VBox>
 
-        <Button text="Start Attempt"
+        <Button fx:id="startAttemptButton"
+                text="Start Attempt"
                 onAction="#handleStartAttempt"
                 styleClass="primary-button"/>
 
@@ -39,13 +50,16 @@
     <FlowPane fx:id="worksheetMetaBox"
               hgap="8"
               vgap="8"
-              styleClass="record-stat-grid"/>
+              styleClass="record-stat-grid,pdf-detail-context"/>
 
-    <Label fx:id="worksheetDescriptionLabel" text="Description" wrapText="true" styleClass="muted-text"/>
+    <Label fx:id="worksheetDescriptionLabel"
+           text="Description"
+           wrapText="true"
+           styleClass="muted-text,pdf-detail-context"/>
 
     <VBox fx:id="recommendationDetailsPanel"
           spacing="8"
-          styleClass="recommendation-detail-panel"
+          styleClass="recommendation-detail-panel,pdf-detail-context"
           visible="false"
           managed="false">
         <Label text="Why this was recommended" styleClass="section-title"/>
@@ -55,13 +69,63 @@
                styleClass="muted-text"/>
     </VBox>
 
-    <Separator/>
+    <Separator fx:id="detailSeparator" styleClass="pdf-detail-context"/>
 
-    <Label text="Questions and Mark Schemes" styleClass="section-title"/>
+    <Label fx:id="questionsHeading"
+           text="Questions and Mark Schemes"
+           styleClass="section-title"/>
 
-    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+    <ScrollPane fx:id="questionsScrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
         <content>
             <VBox fx:id="questionsList" spacing="12"/>
         </content>
     </ScrollPane>
+
+    <VBox fx:id="pdfViewerPanel"
+          spacing="10"
+          visible="false"
+          managed="false"
+          VBox.vgrow="ALWAYS">
+        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="pdf-viewer-heading">
+            <VBox spacing="3" HBox.hgrow="ALWAYS">
+                <Label text="PDF worksheet" styleClass="section-title"/>
+                <Label fx:id="pdfViewerIntro"
+                       text="Work through the document on paper. Use the Mark scheme tab when one is attached."
+                       styleClass="muted-text,pdf-fullscreen-hide"
+                       wrapText="true"/>
+            </VBox>
+            <Button fx:id="pdfFullScreenButton"
+                    text="Full screen"
+                    onAction="#handleTogglePdfFullScreen"
+                    styleClass="pdf-fullscreen-button"/>
+        </HBox>
+
+        <TabPane fx:id="pdfTabPane"
+                 styleClass="pdf-tab-pane"
+                 tabClosingPolicy="UNAVAILABLE"
+                 VBox.vgrow="ALWAYS"/>
+
+        <VBox fx:id="pdfScorePanel"
+              spacing="8"
+              styleClass="pdf-score-panel,pdf-fullscreen-hide">
+            <Label text="Store an overall mark (optional)" styleClass="card-title"/>
+            <Label text="Opening the PDF does not award XP. Saving a mark records a completed attempt and can award XP."
+                   styleClass="muted-text"
+                   wrapText="true"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Score" styleClass="small-label"/>
+                <Spinner fx:id="pdfScoreSpinner" prefWidth="110"/>
+                <Label text="out of" styleClass="muted-text"/>
+                <Spinner fx:id="pdfMaxScoreSpinner" prefWidth="110"/>
+                <Button fx:id="savePdfScoreButton"
+                        text="Save Mark"
+                        onAction="#handleSavePdfScore"
+                        styleClass="primary-button"/>
+            </HBox>
+            <Label fx:id="pdfScoreStatusLabel"
+                   text=""
+                   styleClass="status-text"
+                   wrapText="true"/>
+        </VBox>
+    </VBox>
 </VBox>
