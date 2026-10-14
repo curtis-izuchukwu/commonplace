@@ -6,6 +6,8 @@ import com.commonplace.model.Worksheet;
 import com.commonplace.service.WorksheetCreationService;
 import com.commonplace.ui.AppIcon;
 import com.commonplace.ui.LevelUi;
+import com.commonplace.ui.NotesWindowManager;
+import com.commonplace.model.NoteKey;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.UiAnimations;
 
@@ -112,6 +114,16 @@ public class TopicDetailController {
 
         } catch (IOException e) {
             showError("Failed to open worksheet creation", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleOpenNotes() {
+        if (topic == null) { setStatus("No topic selected."); return; }
+        try {
+            NotesWindowManager.open(topicNameLabel, NoteKey.topic(topic.moduleId(), topic.id()));
+        } catch (IOException | SQLException | IllegalStateException e) {
+            showError("Failed to open notes", e.getMessage());
         }
     }
 

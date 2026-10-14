@@ -31,6 +31,7 @@
                    wrapText="true"/>
         </VBox>
 
+        <Button text="Open Notes" onAction="#handleOpenNotes"/>
         <Button text="Close" onAction="#handleClose" styleClass="primary-button"/>
     </HBox>
 

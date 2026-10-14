@@ -42,12 +42,19 @@
                             styleClass="nav-button"
                             onAction="#handleOpenMistakeBank"/>
 
+                    <Button fx:id="notebookButton"
+                            text="Notebook"
+                            styleClass="nav-button"
+                            accessibleText="Open module notebooks"
+                            onAction="#handleOpenNotes"/>
+
                     <MenuButton fx:id="accountMenuButton"
                                 text=""
                                 styleClass="account-menu-button">
                         <items>
                             <MenuItem fx:id="accountNameItem" text="Signed in"/>
                             <MenuItem text="Settings" onAction="#handleOpenSettings"/>
+                            <MenuItem text="Notes" onAction="#handleOpenNotes"/>
                             <MenuItem text="Change Password" onAction="#handleChangePassword"/>
                             <MenuItem text="Switch Account" onAction="#handleSwitchAccount"/>
                         </items>

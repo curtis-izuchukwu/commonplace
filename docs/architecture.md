@@ -96,6 +96,8 @@ PRAGMA busy_timeout = 5000;
 | `user_stats` | XP, streak, last completion date, and recommendation interval |
 | `modules` | Account-owned modules |
 | `topics` | Topics belonging to modules |
+| `module_notes` | One independently saved Overview document per module |
+| `topic_notes` | One independently saved document per topic |
 | `worksheets` | Worksheets, source type, optional PDF and mark-scheme paths, study scope, generation subject, and score summaries |
 | `questions` | Prompts, mark schemes, order, tags, images, and assessed difficulty |
 | `worksheet_attempts` | Completed attempt summaries and optional reflection |
@@ -109,6 +111,60 @@ PRAGMA busy_timeout = 5000;
 | `learning_schema` | Applied learning-schema versions |
 
 Foreign-key cascades remove dependent topics, worksheets, questions, attempts, answers, mistakes, and review evidence when their owning structure is deleted.
+
+### Module notebooks
+
+`NoteSchema` adds `module_notes` and `topic_notes` with `CREATE TABLE IF NOT EXISTS`. Their parent
+ID is the primary key and a cascading foreign key. Each row stores `content`, `plain_text`,
+`format_version`, `created_at`, and `updated_at`. Empty sections remain logical notes without
+rows; removing all text deletes an existing row. Deliberate whitespace and line breaks persist.
+Ownership is checked by joining to modules for both reads and writes, including validating the
+topic's requested parent module. `NoteRepository` captures its account ID at construction, so
+queued background work cannot follow a subsequent sign-in.
+
+`NoteDocument` is an immutable list of paragraphs containing a block type and text spans.
+`NoteDocumentCodec` stores version-1 UTF-8 XML, independent of Java serialization or RichTextFX
+internals. Block types are NORMAL, HEADING_1, HEADING_2, BULLET, and NUMBERED. Span `marks` are a
+bit mask: bold=1, italic=2, underline=4, code=8. XML escaping preserves technical text; spans with
+control characters use an explicit `utf16-base64` encoding attribute for lossless restoration. The parser
+disables DTDs/external entities and refuses unsupported versions or corrupt documents without
+replacing their rows. A derived plain-text column supports local, Unicode-aware substring search.
+
+`NoteService` owns document encoding and repository orchestration. `NoteWorkspace` retains
+per-section drafts and revisions, coalesces edits over 900 ms, and serializes all IO through one
+scheduled executor. A completed save acknowledges only the captured revision. Newer edits stay
+dirty. Navigation queues a flush and reads from the draft cache; search overlays drafts on saved
+records. Failed writes retain drafts and prevent closing. An explicit recovery ZIP records all
+unsaved documents and original IDs; closing with recovery checks that it contains the latest revisions.
+
+`NoteEditor` adapts RichTextFX 0.11.7 for theme-aware paragraph/span styling and formatting controls.
+The library supplies editing, rich clipboard operations, wrapping, scrolling, and undo/redo.
+`NotesWindowController` handles the sidebar, async navigation/search, open tabs, status, and recovery UI.
+Tabs are independent notebook views, created before selecting sections. Section navigation replaces
+the active tab's content; the **+** button duplicates its current section and view position.
+Each tab caches its visited editors, preserving selection and undo history during navigation.
+Views of the same section synchronize through the account's shared drafts, including cached editors,
+so returning to an older view cannot overwrite newer text. Navigation generations belong to each tab.
+Tab closure flushes pending notes and retains the tab on failure; closing the last tab creates a blank view.
+Generation counters reject outdated asynchronous results. All control mutations and editor
+snapshots stay on the FX thread; encoding and SQLite writes stay on the workspace executor.
+
+`NotesWindowManager` creates one independent nonmodal stage, uses `AppChrome`, `AppIcon`, and
+`AppPreferences`, remembers the last section for this process, and disposes timers, editor
+subscriptions, and the IO worker on close. Close-request filters save before either Notes or
+the main application closes. Account transitions flush/close first; a session hook prevents
+direct account changes from discarding pending drafts. Settings broadcasts appearance updates,
+flushes before exporting, and closes Notes before replacing or clearing the database.
+
+Database exports use `VACUUM INTO` for a consistent snapshot. Imports validate and migrate a
+temporary candidate before replacement, keep `appdata.before-import.db`, and leave the source
+backup intact. The Windows runtime includes `java.xml` for the document codec; the packaging
+script copies RichTextFX and its transitive runtime dependencies through Maven.
+
+New automated coverage lives in `NoteRepositoryTest`, `NoteDocumentCodecTest`, `NoteWorkspaceTest`,
+and the opt-in `NotesWindowTest` (`-Dcommonplace.uiTest=true`). UI tests exercise real stages,
+formatting, clipboard/history, search, entry points, themes, resizing, save failures, and account/main-window lifecycle.
+Recovery import, FTS indexing, and persistent tabs/last-section/window geometry are deferred.
 
 ### Account isolation
 
