@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.commonplace.ui.controller.NotesWindowController"
+            styleClass="notes-root">
+    <center>
+        <SplitPane fx:id="splitPane" dividerPositions="0.25" styleClass="notes-split">
+            <items>
+                <VBox fx:id="sidebar" spacing="12" minWidth="150" prefWidth="245" styleClass="notes-sidebar">
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <Label text="NOTEBOOKS" styleClass="section-eyebrow" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="↻" onAction="#handleRefresh" accessibleText="Refresh notebooks" styleClass="notes-refresh"/>
+                    </HBox>
+                    <TextField fx:id="searchField" promptText="Search notes…" accessibleText="Search this account's notes"/>
+                    <StackPane VBox.vgrow="ALWAYS" minHeight="0">
+                        <TreeView fx:id="notebookTree" showRoot="false" styleClass="notebook-tree" accessibleText="Modules and topic sections"/>
+                        <ListView fx:id="searchResults" visible="false" managed="false" styleClass="note-search-results"
+                                  accessibleText="Note search results"/>
+                    </StackPane>
+                    <Label fx:id="navigationHint" text="Create modules and topics in Commonplace." styleClass="muted-text" wrapText="true"/>
+                </VBox>
+                <StackPane fx:id="writingPane" minWidth="240" styleClass="notes-writing-pane">
+                    <Region styleClass="notes-tabbar-base" mouseTransparent="true" StackPane.alignment="TOP_CENTER"/>
+                    <TabPane fx:id="noteTabs" tabClosingPolicy="ALL_TABS"
+                             styleClass="notes-tabs" accessibleText="Notebook tabs">
+                        <StackPane.margin><Insets right="54"/></StackPane.margin>
+                    </TabPane>
+                    <Button fx:id="newTabButton" text="+" onAction="#handleNewTab" styleClass="notes-new-tab"
+                            accessibleText="New tab: duplicate the current notebook view (Ctrl+T)"
+                            StackPane.alignment="TOP_RIGHT">
+                        <StackPane.margin><Insets top="8" right="10"/></StackPane.margin>
+                    </Button>
+                </StackPane>
+            </items>
+        </SplitPane>
+    </center>
+    <bottom>
+        <VBox spacing="6" styleClass="notes-status-bar">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label fx:id="saveStatus" text="Saved locally" styleClass="muted-text"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="savedAtLabel" text="" styleClass="muted-text"/>
+                <Button text="Save" onAction="#handleSave" accessibleText="Save all pending notes (Ctrl+S)"/>
+                <Button fx:id="retryButton" text="Retry" onAction="#handleSave" visible="false" managed="false"/>
+            </HBox>
+            <Label fx:id="errorLabel" text="" wrapText="true" styleClass="notes-error" visible="false" managed="false"/>
+            <Button fx:id="recoveryButton" text="Save recovery copy and close" onAction="#handleRecovery"
+                    visible="false" managed="false" accessibleText="Save all unsaved notes to a recovery ZIP, then close"/>
+        </VBox>
+    </bottom>
+</BorderPane>

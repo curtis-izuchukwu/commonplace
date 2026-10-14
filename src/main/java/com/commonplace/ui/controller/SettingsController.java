@@ -15,6 +15,7 @@ import com.commonplace.service.DataManagementService;
 import com.commonplace.service.UserSettingsService;
 import com.commonplace.ui.AppIcon;
 import com.commonplace.ui.AppPreferences;
+import com.commonplace.ui.NotesWindowManager;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.UiAnimations;
 
@@ -130,6 +131,7 @@ public class SettingsController {
 
             userStatsRepository.updateWorksheetIntervalDays(intervalDaysSpinner.getValue());
             AppPreferences.apply(settingsRoot.getScene(), savedSettings);
+            NotesWindowManager.applyPreferences(savedSettings);
 
             if (onSettingsSaved != null) {
                 onSettingsSaved.run();
@@ -209,12 +211,14 @@ public class SettingsController {
             return;
         }
 
-        try {
-            dataManagementService.exportDatabase(file.toPath());
-            statusLabel.setText("Backup exported to " + file.getName() + ".");
-        } catch (IOException e) {
-            statusLabel.setText("Export failed: " + e.getMessage());
-        }
+        NotesWindowManager.withSavedNotes(false, () -> {
+            try {
+                dataManagementService.exportDatabase(file.toPath());
+                statusLabel.setText("Backup exported to " + file.getName() + ".");
+            } catch (IOException e) {
+                statusLabel.setText("Export failed: " + e.getMessage());
+            }
+        });
     }
 
     @FXML
@@ -233,27 +237,31 @@ public class SettingsController {
             return;
         }
 
-        try {
-            dataManagementService.importDatabase(Path.of(file.toURI()));
-            handleSwitchAccount();
-        } catch (IOException e) {
-            statusLabel.setText("Import failed: " + e.getMessage());
-        }
+        NotesWindowManager.withSavedNotes(true, () -> {
+            try {
+                dataManagementService.importDatabase(Path.of(file.toURI()));
+                handleSwitchAccount();
+            } catch (IOException e) {
+                statusLabel.setText("Import failed: " + e.getMessage());
+            }
+        });
     }
 
     @FXML
     private void handleClearLocalData() {
-        if (!confirm("Clear this account's local data?", "Modules, topics, worksheets, attempts, and mistakes for this account will be removed.")) {
+        if (!confirm("Clear this account's local data?", "Modules, topics, notes, worksheets, attempts, and mistakes for this account will be removed.")) {
             return;
         }
 
-        try {
-            dataManagementService.clearCurrentAccountData();
-            runSavedCallback();
-            statusLabel.setText("Local data cleared for this account.");
-        } catch (SQLException e) {
-            statusLabel.setText("Clear local data failed: " + e.getMessage());
-        }
+        NotesWindowManager.withSavedNotes(true, () -> {
+            try {
+                dataManagementService.clearCurrentAccountData();
+                runSavedCallback();
+                statusLabel.setText("Local data cleared for this account.");
+            } catch (SQLException e) {
+                statusLabel.setText("Clear local data failed: " + e.getMessage());
+            }
+        });
     }
 
     @FXML

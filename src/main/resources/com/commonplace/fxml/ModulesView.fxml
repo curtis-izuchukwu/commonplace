@@ -93,9 +93,11 @@
                     </VBox>
 
                     <Separator/>
-                    <Label fx:id="selectedModuleTitle"
-                           text="Select a module"
-                           styleClass="section-title"/>
+                    <HBox spacing="12" alignment="CENTER_LEFT">
+                        <Label fx:id="selectedModuleTitle" text="Select a module" styleClass="section-title"
+                               wrapText="true" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button fx:id="openNotebookButton" text="Open Notebook" disable="true" onAction="#handleOpenNotebook"/>
+                    </HBox>
 
                     <FlowPane fx:id="selectedModuleMeta"
                               hgap="8"

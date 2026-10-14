@@ -13,6 +13,8 @@ import com.commonplace.service.UserSettingsService;
 import com.commonplace.service.WorksheetRecommendation;
 import com.commonplace.ui.AppIcon;
 import com.commonplace.ui.LevelUi;
+import com.commonplace.ui.NotesWindowManager;
+import com.commonplace.model.NoteKey;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.UiAnimations;
 
@@ -56,6 +58,7 @@ public class ModulesController {
     @FXML private Button openRecommendationButton;
 
     @FXML private Label selectedModuleTitle;
+    @FXML private Button openNotebookButton;
     @FXML private FlowPane selectedModuleMeta;
 
     @FXML private TextField topicNameField;
@@ -157,6 +160,16 @@ public class ModulesController {
     private void handleRefreshRecommendation() {
         UiAnimations.animateRecommendationRefresh(
                 recommendationTitleLabel.getParent(), this::refreshRecommendation);
+    }
+
+    @FXML
+    private void handleOpenNotebook() {
+        if (selectedModule == null) return;
+        try {
+            NotesWindowManager.open(selectedModuleTitle, NoteKey.overview(selectedModule.id()));
+        } catch (IOException | SQLException | IllegalStateException e) {
+            showError("Failed to open notebook", e.getMessage());
+        }
     }
 
     @FXML
@@ -292,6 +305,7 @@ public class ModulesController {
 
     private void loadModules() {
         modulesList.getChildren().clear();
+        NotesWindowManager.refreshOpenWindow();
 
         try {
             List<StudyModule> modules = service.getAllModules();
@@ -314,6 +328,7 @@ public class ModulesController {
 
     private void selectModule(StudyModule module) {
         selectedModule = module;
+        openNotebookButton.setDisable(false);
 
         selectedModuleTitle.setText(module.name());
 
@@ -345,6 +360,7 @@ public class ModulesController {
 
     private void loadTopicsForSelectedModule() {
         topicsList.getChildren().clear();
+        NotesWindowManager.refreshOpenWindow();
 
         if (selectedModule == null) {
             Label emptyLabel = new Label("Select a module to view topics.");
@@ -523,6 +539,7 @@ public class ModulesController {
                     () -> {
                         if (selectedModule != null && selectedModule.id() == module.id()) {
                             selectedModule = null;
+                            openNotebookButton.setDisable(true);
                             selectedModuleTitle.setText("Select a module");
                             Label prompt =
                                     new Label(

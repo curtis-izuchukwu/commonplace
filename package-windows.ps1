@@ -72,7 +72,7 @@ try {
         "--app-version", $appVersion
         "--vendor", "Commonplace"
         "--description", "Commonplace"
-        "--add-modules", "java.base,java.desktop,java.logging,java.net.http,java.scripting,java.sql,jdk.crypto.ec,jdk.jfr,jdk.unsupported"
+        "--add-modules", "java.base,java.desktop,java.logging,java.net.http,java.scripting,java.sql,java.xml,jdk.crypto.ec,jdk.jfr,jdk.unsupported"
         "--java-options", "-Dfile.encoding=UTF-8"
     )
     & jpackage @jpackageArguments

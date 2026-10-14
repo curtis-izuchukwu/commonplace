@@ -82,11 +82,16 @@ class DocumentationScreenshotTest {
     @BeforeAll
     static void startToolkit() throws Exception {
         CountDownLatch ready = new CountDownLatch(1);
-        Platform.startup(
+        Runnable onReady =
                 () -> {
                     Platform.setImplicitExit(false);
                     ready.countDown();
-                });
+                };
+        try {
+            Platform.startup(onReady);
+        } catch (IllegalStateException alreadyStarted) {
+            Platform.runLater(onReady);
+        }
         assertTrue(ready.await(10, TimeUnit.SECONDS));
     }
 

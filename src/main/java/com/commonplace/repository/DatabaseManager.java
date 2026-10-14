@@ -391,6 +391,7 @@ public final class DatabaseManager {
         migrateUserStatsTableIfNeeded(conn);
         backfillDailyRecommendationHistory(conn);
         LearningSchema.migrate(conn);
+        NoteSchema.migrate(conn);
     }
 
     private static void backfillDailyRecommendationHistory(Connection conn) throws SQLException {

@@ -219,6 +219,120 @@
     -app-action-text: #F3EBDD;
 }
 
+/* The startup window keeps its own compact card, before the full app shell appears. */
+.startup-root {
+    -fx-background-color: transparent;
+    -fx-padding: 20;
+}
+
+.startup-card {
+    -fx-background-color: linear-gradient(to bottom right, -app-panel, -app-charcoal);
+    -fx-background-radius: 20;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 18, 0.12, 0, 5);
+}
+
+.startup-content {
+    -fx-padding: 28 32;
+}
+
+.startup-root .label.startup-title {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 32px;
+    -fx-font-weight: normal;
+    -fx-text-fill: -app-text;
+}
+
+.startup-root .startup-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -app-paper;
+}
+
+.startup-root .startup-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: -app-muted;
+    -fx-text-alignment: center;
+}
+
+.startup-root .startup-progress {
+    -fx-min-height: 3;
+    -fx-pref-height: 3;
+    -fx-max-height: 3;
+    -fx-indeterminate-bar-length: 75;
+    -fx-indeterminate-bar-animation-time: 1.8;
+}
+
+.startup-root .startup-progress > .track {
+    -fx-background-color: -app-border;
+    -fx-background-radius: 3;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+}
+
+.startup-root .startup-progress > .bar {
+    -fx-background-color: linear-gradient(to right, -app-accent, -app-accent-light);
+    -fx-background-radius: 3;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.startup-root .startup-close {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8;
+    -fx-text-fill: -app-muted;
+    -fx-font-size: 18px;
+    -fx-padding: 0;
+    -fx-min-width: 26;
+    -fx-pref-width: 26;
+    -fx-min-height: 26;
+    -fx-pref-height: 26;
+    -fx-effect: none;
+}
+
+.startup-root .startup-close:hover,
+.startup-root .startup-close:focused {
+    -fx-background-color: -app-hover;
+    -fx-text-fill: -app-text;
+}
+
+.startup-root .startup-retry {
+    -fx-font-size: 12px;
+    -fx-padding: 7 18;
+}
+
+.startup-root.font-large .startup-title {
+    -fx-font-size: 34px;
+}
+
+.startup-root.larger-controls .startup-close {
+    -fx-padding: 0;
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+}
+
+.startup-root.larger-controls .startup-retry {
+    -fx-padding: 9 18;
+    -fx-min-height: 40;
+}
+
+.startup-failed .startup-status {
+    -fx-text-fill: -app-error-text;
+}
+
+.high-contrast .startup-card {
+    -fx-border-color: -app-border-emphasis;
+}
+
+.high-contrast .startup-status {
+    -fx-text-fill: -app-paper;
+}
+
 .app-root {
     -fx-background-color: linear-gradient(to right, -app-ink 0%, -app-olive-black 46%, -app-charcoal 100%),
     linear-gradient(from 0px 0px to 7px 0px, repeat, transparent 0%, rgba(243, 235, 221, 0.015) 18%, transparent 32%, transparent 71%, rgba(243, 235, 221, 0.015) 84%, transparent 100%);
@@ -1995,7 +2109,7 @@
 }
 
 .record-ledger {
-    -fx-background-color: rgba(37, 43, 39, 0.42);
+    -fx-background-color: -app-field;
     -fx-background-radius: 4;
     -fx-border-color: transparent transparent transparent -app-accent-border-soft;
     -fx-border-width: 0 0 0 2;
@@ -2573,3 +2687,167 @@
     -fx-min-height: 48;
     -fx-pref-height: 48;
 }
+
+/* Module notebooks: quiet writing surfaces inherit the account's semantic palette. */
+.notes-root { -fx-background-color: -app-charcoal; }
+.notes-split { -fx-background-color: transparent; -fx-padding: 0; }
+.notes-split > .split-pane-divider {
+    -fx-background-color: -app-border;
+    -fx-padding: 0 2;
+}
+.notes-sidebar { -fx-background-color: -app-olive-black; -fx-padding: 22 14 16 18; }
+.notes-writing-pane { -fx-background-color: -app-panel; }
+.notes-tab-page { -fx-padding: 24 24 16 24; }
+.notes-tabs {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-tab-min-height: 38;
+    -fx-tab-max-height: 38;
+    -fx-tab-min-width: 100;
+    -fx-tab-max-width: 240;
+    -fx-open-tab-animation: none;
+    -fx-close-tab-animation: none;
+}
+.notes-tabbar-base {
+    -fx-background-color: -app-olive-black;
+    -fx-border-color: -app-border;
+    -fx-border-width: 0 0 1 0;
+    -fx-min-height: 46;
+    -fx-pref-height: 46;
+    -fx-max-height: 46;
+}
+.larger-controls .notes-tabbar-base { -fx-min-height: 52; -fx-pref-height: 52; -fx-max-height: 52; }
+.notes-tabs > .tab-header-area { -fx-padding: 8 12 0 12; }
+.notes-tabs > .tab-header-area > .tab-header-background {
+    -fx-background-color: -app-olive-black;
+    -fx-border-color: -app-border;
+    -fx-border-width: 0 0 1 0;
+}
+.notes-tabs .tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 5 5 0 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-padding: 0 12;
+}
+.notes-tabs .tab:hover { -fx-background-color: -app-hover; }
+.notes-tabs .tab:selected {
+    -fx-background-color: -app-panel;
+    -fx-border-color: -app-accent;
+}
+.notes-tabs .tab .tab-label { -fx-text-fill: -app-muted; }
+.notes-tabs .tab:selected .tab-label { -fx-text-fill: -app-text; }
+.notes-tabs .tab .tab-close-button { -fx-background-color: -app-muted; }
+.notes-tabs .tab .tab-close-button:hover { -fx-background-color: -app-text; }
+.notes-tabs > .tab-content-area { -fx-background-color: -app-panel; }
+.larger-controls .notes-tabs { -fx-tab-min-height: 44; -fx-tab-max-height: 44; }
+.notes-new-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: -app-paper;
+    -fx-border-color: transparent;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-font-size: 20px;
+    -fx-padding: 0;
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-max-height: 38;
+}
+.notes-new-tab:hover { -fx-background-color: -app-hover; -fx-text-fill: -app-text; }
+.notes-new-tab:focused { -fx-border-color: -app-accent; }
+.larger-controls .notes-new-tab {
+    -fx-padding: 0;
+    -fx-font-size: 20px;
+    -fx-min-width: 44; -fx-pref-width: 44; -fx-max-width: 44;
+    -fx-min-height: 44; -fx-pref-height: 44; -fx-max-height: 44;
+}
+.notes-status-bar {
+    -fx-background-color: -app-charcoal;
+    -fx-border-color: -app-border;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 18;
+}
+.notes-error { -fx-text-fill: -app-error-text; }
+.notebook-tree, .note-search-results {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.notebook-tree .tree-cell, .note-search-results .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -app-paper;
+    -fx-padding: 9 6;
+    -fx-font-size: 1em;
+}
+.notebook-tree .tree-cell.notebook-module { -fx-font-weight: bold; -fx-text-fill: -app-text; }
+.notebook-tree .tree-cell:selected, .note-search-results .list-cell:selected {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-text-fill: -app-text;
+    -fx-border-color: -app-accent;
+    -fx-border-width: 0 0 0 2;
+}
+.notebook-tree .tree-cell:hover, .note-search-results .list-cell:hover { -fx-background-color: -app-hover; }
+.notebook-tree .tree-disclosure-node > .arrow { -fx-background-color: -app-muted; }
+.note-result-title { -fx-text-fill: -app-text; -fx-font-weight: bold; }
+.note-editor { -fx-background-color: -app-panel; }
+.note-editor-area {
+    -fx-background-color: -app-panel;
+    -fx-padding: 18 10 24 0;
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 15px;
+    -fx-highlight-fill: -app-accent-bg-subtle;
+    -fx-highlight-text-fill: -app-text;
+}
+.note-editor-area .note-text { -fx-fill: -app-text; }
+.note-editor-area .caret { -fx-stroke: -app-text; }
+.note-editor-area .selection { -fx-fill: -app-accent-bg-subtle; }
+.note-paragraph { -fx-padding: 3 0 7 0; -fx-line-spacing: 3; }
+.note-editor-area .note-block-heading_1 .note-text { -fx-font-size: 1.65em; -fx-font-weight: bold; }
+.note-editor-area .note-block-heading_2 .note-text { -fx-font-size: 1.3em; -fx-font-weight: bold; }
+.note-editor-area .note-bold { -fx-font-weight: bold; }
+.note-editor-area .note-italic { -fx-font-style: italic; }
+.note-editor-area .note-underline { -fx-underline: true; }
+.note-editor-area .note-code { -fx-font-family: "Consolas"; }
+.note-list-marker {
+    -fx-text-fill: -app-muted;
+    -fx-min-width: 32;
+    -fx-padding: 3 9 0 0;
+    -fx-font-size: 1em;
+}
+.note-toolbar {
+    -fx-padding: 8 0;
+    -fx-border-color: -app-border;
+    -fx-border-width: 1 0;
+}
+.note-toolbar .note-format-button, .notes-refresh {
+    -fx-background-color: transparent;
+    -fx-text-fill: -app-paper;
+    -fx-border-color: transparent;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-padding: 6 9;
+    -fx-min-width: 34;
+    -fx-min-height: 32;
+}
+.note-toolbar .note-format-button:hover, .notes-refresh:hover { -fx-background-color: -app-hover; }
+.note-toolbar .note-format-button:selected {
+    -fx-background-color: -app-accent-bg-subtle;
+    -fx-border-color: -app-accent-border;
+    -fx-text-fill: -app-accent-text;
+}
+.note-editor:disabled, .note-editor-area:disabled { -fx-opacity: 1; }
+.compact-layout .notes-sidebar { -fx-padding: 14 10; }
+.compact-layout .notes-tab-page { -fx-padding: 16; }
+.font-small .note-editor-area { -fx-font-size: 13px; }
+.font-large .note-editor-area { -fx-font-size: 18px; }
+.font-small .notebook-tree .tree-cell { -fx-font-size: 11px; }
+.font-large .notebook-tree .tree-cell { -fx-font-size: 15px; }
+.larger-controls .note-toolbar .note-format-button, .larger-controls .notes-refresh {
+    -fx-min-width: 44; -fx-min-height: 44; -fx-padding: 10;
+}
+.high-contrast .note-toolbar { -fx-border-color: -app-border-strong; }
+.high-contrast .note-editor-area .selection { -fx-fill: -app-accent-border-soft; }

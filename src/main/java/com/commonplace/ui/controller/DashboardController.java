@@ -15,6 +15,7 @@ import com.commonplace.service.WorksheetRecommendation;
 import com.commonplace.ui.AppChrome;
 import com.commonplace.ui.AppIcon;
 import com.commonplace.ui.AppPreferences;
+import com.commonplace.ui.NotesWindowManager;
 import com.commonplace.ui.LevelUi;
 import com.commonplace.ui.OverlayService;
 import com.commonplace.ui.UiAnimations;
@@ -186,7 +187,16 @@ public class DashboardController {
 
     @FXML
     private void handleSwitchAccount() {
-        switchToLogin();
+        NotesWindowManager.withSavedNotes(true, this::switchToLogin);
+    }
+
+    @FXML
+    private void handleOpenNotes() {
+        try {
+            NotesWindowManager.open(accountMenuButton, null);
+        } catch (IOException | SQLException | IllegalStateException e) {
+            showError("Failed to open notes", e.getMessage());
+        }
     }
 
     @FXML
@@ -902,6 +912,9 @@ public class DashboardController {
                                 "Review unresolved and resolved mistakes.",
                                 "mistakes review errors corrections",
                                 this::handleOpenMistakeBank),
+                        new AppChrome.Command(
+                                "Notes", "Open your module notebooks in a writing window.",
+                                "notebook notes writing topics", this::handleOpenNotes),
                         new AppChrome.Command(
                                 "Open Recommended Worksheet",
                                 "Open the current daily worksheet recommendation.",

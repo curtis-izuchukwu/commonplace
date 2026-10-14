@@ -27,6 +27,7 @@ Commonplace deliberately keeps mastery, XP, and recommendations separate:
 
 - Local accounts, remembered sessions, password changes, and account switching.
 - Modules and topics with exam dates, importance, confidence, and evidence-based mastery.
+- Offline module notebooks in a dedicated Notes window, with rich text, topic sections, content search, and autosave.
 - Manual worksheet creation with question-level marks, difficulty, mark schemes, and optional images.
 - Press generation for editable short-answer or long-answer worksheet drafts.
 - Local PDF import with text extraction, image extraction, and optional local OCR.
@@ -89,6 +90,17 @@ the executable uses the adjacent `app` and `runtime` directories.
 
 To keep Commonplace on the taskbar, open `Commonplace.exe`, right-click its
 taskbar icon, and choose **Pin to taskbar**.
+
+## Module notebooks
+
+Click **Notebook** in the main navigation bar, select a module and click **Open Notebook**,
+or click **Open Notes** in Topic Detail. **Notes**
+in the account menu or command palette opens the same standalone writing window. Each module has
+an Overview and one section per existing topic. Topic selections update the current tab.
+Use **+** to duplicate the current notebook view and navigate topics independently in each tab.
+Rich formatting and edits save locally after
+900 ms of inactivity. See the [notes guide](docs/user-guide.md#notes-and-module-notebooks)
+for shortcuts, search, backup, and recovery behaviour.
 
 ## Worksheet creation
 

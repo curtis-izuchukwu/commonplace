@@ -33,6 +33,7 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.stage.WindowEvent;
 
 public class AppChrome extends StackPane {
 
@@ -228,7 +229,8 @@ public class AppChrome extends StackPane {
         controls.getChildren().addAll(
                 createWindowButton(createMinimizeIcon(), "Minimize", () -> stage.setIconified(true)),
                 maximizeButton,
-                createWindowButton(createCloseIcon(), "Close", stage::close)
+                createWindowButton(createCloseIcon(), "Close", () ->
+                        stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST)))
         );
 
         HBox utilities = new HBox(6, dailyChipLabel, commandButton);

@@ -57,7 +57,74 @@ For each topic, enter a name, optional description, priority, and current confid
 
 Module cards use a compact study ledger for exam date, topic count, mastery, and priority. Topic cards show stable record values in stat cells. A mastery cell fills proportionally to its percentage.
 
-Deleting a module also removes its topics, worksheets, attempts, mistakes, and related evidence. Deleting a topic removes the same records beneath that topic.
+Deleting a module also removes its Overview, topics, topic notes, worksheets, attempts, mistakes, and related evidence. Deleting a topic removes its notes and the same study records beneath that topic.
+
+## Notes and module notebooks
+
+Click **Notebook** beside Dashboard, Manage Modules, and Mistake Bank in the main navigation bar.
+You can also choose **Open Notebook** for the selected module, **Open Notes** in Topic Detail, or **Notes**
+in the account menu or command palette. Notes opens in its own movable, resizable window.
+You can keep it open while working elsewhere in Commonplace. Opening Notes again focuses the
+existing window and navigates to the requested section.
+
+![Commonplace Notes](screenshots/notes.png)
+
+Expand a module in the sidebar to choose its **Overview** or a topic section. The Overview is
+for module-wide ideas; topic sections refer to the existing topics and keep their descriptions
+separate. Notes follow module/topic IDs, so renaming a topic does not disconnect its notes.
+All of your modules appear, including modules hidden by the archive preference elsewhere.
+
+The window starts with a notebook tab, before you choose any topics. Clicking an Overview,
+topic, or search result changes the selected tab. Click **+** or press **Ctrl+T** to duplicate
+the current view, including its topic, selection, scroll position, and search query. Each tab
+can then navigate topics independently. Tabs show their current module and section names.
+Two tabs viewing the same section share its notes; edits appear in both views.
+
+Close a tab with its **×** button or **Ctrl+W**; pending notes save before it closes.
+Closing a tab leaves the notes in your notebook. Closing the last tab leaves a blank notebook
+tab, ready to choose another section.
+
+The toolbar supports bold, italic, underline, monospaced code, normal paragraphs, two heading
+levels, bulleted lists, numbered lists, undo, and redo. Select text to format it, or turn on an
+inline style before typing. Paragraph controls apply to every selected paragraph. Enter after
+a heading starts a normal paragraph. Enter continues
+a list; Enter on an empty list item returns to a normal paragraph. Copy, cut, paste, selection,
+line wrapping, and scrolling work in the editor. Each tab keeps selection and undo history
+for the topics it has visited. A duplicate starts with fresh history, and edits from another
+view of the same note refresh that note's history.
+
+| Shortcut | Action |
+| --- | --- |
+| Ctrl+B / Ctrl+I / Ctrl+U | Bold / italic / underline |
+| Ctrl+E | Monospaced code |
+| Ctrl+Alt+0 / 1 / 2 | Normal / Heading 1 / Heading 2 |
+| Ctrl+Shift+7 / 8 | Bulleted / numbered list |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+| Ctrl+S | Save all pending edits immediately |
+| Ctrl+F | Search this account's notes |
+| Ctrl+T | Duplicate the current notebook tab |
+| Ctrl+Tab / Ctrl+Shift+Tab | Next / previous open note tab |
+| Ctrl+W | Save and close the current note tab |
+
+Search finds content and saved section names, identifies the module and topic, and includes edits
+that have not yet saved. Selecting a content match selects that text in the editor. Use the refresh
+button after structure changes; the sidebar also refreshes when the window gains focus and when
+modules/topics change through their management screen. The sidebar and editor scroll independently,
+and their divider is adjustable.
+
+Notes save after **900 ms** of inactivity, when switching sections, and before closing, signing
+out, exporting a backup, or importing/clearing data. The status bar shows **Unsaved changes**,
+**Saving…**, **Saved locally**, or **Save failed**. A failed save keeps the draft in this window,
+including when you switch to another section. Click **Retry** after resolving the problem.
+Closing remains blocked until notes save. If saving remains impossible, choose **Save recovery
+copy and close** to preserve every unsaved document and its formatting in a local ZIP file.
+Recovery-copy restoration is currently manual; keep the ZIP until its notes have been recovered.
+If you delete a topic while writing in it, its draft can still be preserved this way.
+
+Appearance and accessibility preferences apply to Notes and update when Settings is saved.
+Backups include notes in SQLite. Account switching closes the editor after saving, and the next
+account receives its own notebooks. Writing notes awards no XP and does not change mastery or
+worksheet recommendations. Notes work entirely offline.
 
 ## Topic details and mastery
 
