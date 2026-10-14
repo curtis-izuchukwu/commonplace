@@ -219,6 +219,120 @@
     -app-action-text: #F3EBDD;
 }
 
+/* The startup window keeps its own compact card, before the full app shell appears. */
+.startup-root {
+    -fx-background-color: transparent;
+    -fx-padding: 20;
+}
+
+.startup-card {
+    -fx-background-color: linear-gradient(to bottom right, -app-panel, -app-charcoal);
+    -fx-background-radius: 20;
+    -fx-border-color: -app-accent-border-soft;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 18, 0.12, 0, 5);
+}
+
+.startup-content {
+    -fx-padding: 28 32;
+}
+
+.startup-root .label.startup-title {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 32px;
+    -fx-font-weight: normal;
+    -fx-text-fill: -app-text;
+}
+
+.startup-root .startup-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -app-paper;
+}
+
+.startup-root .startup-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: -app-muted;
+    -fx-text-alignment: center;
+}
+
+.startup-root .startup-progress {
+    -fx-min-height: 3;
+    -fx-pref-height: 3;
+    -fx-max-height: 3;
+    -fx-indeterminate-bar-length: 75;
+    -fx-indeterminate-bar-animation-time: 1.8;
+}
+
+.startup-root .startup-progress > .track {
+    -fx-background-color: -app-border;
+    -fx-background-radius: 3;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+}
+
+.startup-root .startup-progress > .bar {
+    -fx-background-color: linear-gradient(to right, -app-accent, -app-accent-light);
+    -fx-background-radius: 3;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.startup-root .startup-close {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8;
+    -fx-text-fill: -app-muted;
+    -fx-font-size: 18px;
+    -fx-padding: 0;
+    -fx-min-width: 26;
+    -fx-pref-width: 26;
+    -fx-min-height: 26;
+    -fx-pref-height: 26;
+    -fx-effect: none;
+}
+
+.startup-root .startup-close:hover,
+.startup-root .startup-close:focused {
+    -fx-background-color: -app-hover;
+    -fx-text-fill: -app-text;
+}
+
+.startup-root .startup-retry {
+    -fx-font-size: 12px;
+    -fx-padding: 7 18;
+}
+
+.startup-root.font-large .startup-title {
+    -fx-font-size: 34px;
+}
+
+.startup-root.larger-controls .startup-close {
+    -fx-padding: 0;
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+}
+
+.startup-root.larger-controls .startup-retry {
+    -fx-padding: 9 18;
+    -fx-min-height: 40;
+}
+
+.startup-failed .startup-status {
+    -fx-text-fill: -app-error-text;
+}
+
+.high-contrast .startup-card {
+    -fx-border-color: -app-border-emphasis;
+}
+
+.high-contrast .startup-status {
+    -fx-text-fill: -app-paper;
+}
+
 .app-root {
     -fx-background-color: linear-gradient(to right, -app-ink 0%, -app-olive-black 46%, -app-charcoal 100%),
     linear-gradient(from 0px 0px to 7px 0px, repeat, transparent 0%, rgba(243, 235, 221, 0.015) 18%, transparent 32%, transparent 71%, rgba(243, 235, 221, 0.015) 84%, transparent 100%);
