@@ -151,13 +151,14 @@ responsive multi-page spread as the user zooms out.
 PDF worksheets do not contain per-question answer fields or marking controls. Recording an
 overall mark is optional. Merely opening or viewing a PDF awards no XP; saving an overall mark
 creates a completed attempt and can award practice XP. Because they contain no saved questions,
-PDF worksheets are not included in adaptive worksheet recommendations.
+PDF worksheets participate in adaptive recommendations alongside question-based worksheets.
+Saved overall marks inform the same learning, retention, and review signals.
 
 ## Learning and recommendations
 
 Commonplace estimates mastery from question-level evidence rather than a single worksheet score. Marks, assessed difficulty, independent recall, assistance, active time, prompt repetition, spacing, retention, consistency, and breadth all influence the estimate. Repeating the same prompts on the same day contributes very little new evidence.
 
-The recommendation engine considers only saved worksheets that contain questions and fall within the configured difficulty range. Completing a worksheet removes it from the recommendation pool for the rest of that day. Once the daily worksheet goal is met, the dashboard shows the next refresh countdown; manually opened worksheets remain available.
+The recommendation engine considers saved worksheets with questions or an attached PDF that fall within the configured difficulty range. Both formats share the same ranking and refresh cycle. Completing a worksheet removes it from the recommendation pool for the rest of that day. Once the daily worksheet goal is met, the dashboard shows the next refresh countdown; manually opened worksheets remain available.
 
 See [Automatic mastery, XP, and recommendations](docs/learning-model.md) for the complete model and its safeguards.
 

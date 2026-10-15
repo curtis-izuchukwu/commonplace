@@ -93,5 +93,14 @@ class PdfWorksheetAttemptTest {
         Worksheet reloaded = new WorksheetRepository().findById(worksheet.id()).orElseThrow();
         assertEquals(1, reloaded.timesAttempted());
         assertEquals(70, reloaded.latestScorePercent());
+
+        var estimate = new LearningService().worksheet(worksheet.id());
+        assertEquals(70, estimate.performance(), .001);
+        assertEquals(result.attempt().completedAt(), estimate.lastAt());
+        assertTrue(estimate.mastery() > 0);
+        assertEquals(
+                estimate.mastery(),
+                new TopicRepository().findById(worksheet.topicId()).orElseThrow().masteryScore(),
+                .001);
     }
 }

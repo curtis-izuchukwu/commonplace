@@ -26,6 +26,13 @@ Each submitted answer records:
 
 Successful and unsuccessful active-recall reviews from the mistake bank become later evidence for the same question fingerprint.
 
+When an attempt records an overall mark without individual answers, as with a PDF worksheet,
+that mark enters the same learning model as self-reported evidence. It uses the worksheet's
+difficulty, scope, and completion time. Each worksheet has one stable overall-evidence identity,
+so repeated marks follow the existing novelty discounts and evidence caps without inventing
+per-question results. Attempts with individual answers use those answers alone to avoid counting
+the overall mark twice.
+
 ## Scope and breadth
 
 Every question prompt is normalised into a fingerprint by lowercasing it, removing punctuation, and collapsing non-alphanumeric separators. This allows copied or lightly reformatted prompts to be recognised as the same underlying question.
@@ -153,12 +160,16 @@ The daily goal counts distinct worksheets completed on a date. Repeating one wor
 A worksheet is eligible only when it:
 
 - belongs to the signed-in account;
-- has at least one saved question;
+- has at least one saved question or an attached worksheet PDF;
 - falls within the configured minimum and maximum difficulty;
 - is not inside a past-exam module when completed-module archiving is enabled;
 - has not already been completed today.
 
 Press is never inserted into the recommendation list. Generation remains a deliberate action in the worksheet editor.
+
+PDF and question-based worksheets share one ranked pool, recommendation history, and refresh
+cycle. Overall marks supply the same performance, weakness, retention, trend, and review-date
+signals used by question-based attempts.
 
 ## Recommendation signals
 

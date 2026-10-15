@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Persistence for automatic question-level learning evidence. */
+/** Persistence for automatic question and overall worksheet learning evidence. */
 public class LearningRepository {
 
     public record TopicInfo(
@@ -136,6 +136,46 @@ public class LearningRepository {
                                     rs.getBoolean("marked_as_mistake"),
                                     rs.getString("evidence_mode"),
                                     rs.getInt("active_seconds"),
+                                    rs.getString("study_scope")));
+                }
+            }
+        }
+
+        // Overall marks supply evidence when no individual answers were recorded. Keep one stable
+        // identity per worksheet so repeated scores use the same novelty and evidence caps.
+        String overallSql =
+                """
+                SELECT wa.*, w.difficulty,
+                       COALESCE(NULLIF(w.study_scope, ''), w.title) AS study_scope
+                FROM worksheet_attempts wa
+                JOIN worksheets w ON w.id = wa.worksheet_id
+                JOIN topics t ON t.id = w.topic_id
+                JOIN modules m ON m.id = t.module_id
+                WHERE %s AND m.user_id = ? AND wa.max_score > 0
+                  AND NOT EXISTS (SELECT 1 FROM answers a WHERE a.attempt_id = wa.id)
+                ORDER BY wa.completed_at, wa.id;
+                """
+                        .formatted(filter);
+
+        try (Connection conn = DatabaseManager.connect();
+                PreparedStatement stmt = conn.prepareStatement(overallSql)) {
+            stmt.setLong(1, id);
+            stmt.setLong(2, AccountSession.currentUserId());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(
+                            new LearningModel.Evidence(
+                                    rs.getLong("id"),
+                                    rs.getLong("worksheet_id"),
+                                    "worksheet:" + rs.getLong("worksheet_id"),
+                                    DateUtils.fromDatabaseDateTime(rs.getString("completed_at")),
+                                    rs.getDouble("score"),
+                                    rs.getDouble("max_score"),
+                                    rs.getString("difficulty"),
+                                    false,
+                                    false,
+                                    "SELF",
+                                    0,
                                     rs.getString("study_scope")));
                 }
             }

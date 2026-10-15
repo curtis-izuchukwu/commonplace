@@ -273,6 +273,9 @@ DashboardService
 Manual creation, Press generation, and extracted PDF import converge on the question-based path in
 `WorksheetCreationService`. PDF worksheets use a separate source type: they retain their original
 document, have no question rows, and accept only an optional overall marked attempt.
+All sources share `WorksheetSelectionService` and its ranking, history, and completion rules.
+`LearningRepository` feeds overall marks into the common learning model when an attempt has no
+individual answers, without double counting attempts that already have question evidence.
 
 | Source | Main boundary |
 | --- | --- |

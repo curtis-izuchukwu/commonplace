@@ -201,8 +201,9 @@ to return to the worksheet details.
 There are no question-by-question answer boxes or marking controls for PDF worksheets. You may
 optionally save one overall score and total mark after completing the paper. Viewing the document
 does not award XP; saving an overall mark records an attempt and can award practice XP. PDF
-worksheets are not used for adaptive recommendations because they have no saved question-level
-evidence.
+worksheets share adaptive recommendations with question-based worksheets. Saved overall marks
+inform their learning and review signals, and completing a PDF worksheet counts toward the same
+daily goal and excludes it from recommendations for the rest of that day.
 
 ## Worksheet details
 

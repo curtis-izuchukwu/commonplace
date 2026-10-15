@@ -173,12 +173,14 @@ public class WorksheetSelectionService {
             List<Worksheet> relevant =
                     allWorksheets.stream()
                             .filter(worksheet -> worksheet.topicId() == topicId)
-                            .filter(worksheet -> !worksheet.isPdfWorksheet())
                             .toList();
 
             for (Worksheet worksheet : relevant) {
                 if (!withinDifficultyPreference(worksheet, config)
-                        || new QuestionRepository().findByWorksheetId(worksheet.id()).isEmpty()) {
+                        || (!worksheet.isPdfWorksheet()
+                                && new QuestionRepository()
+                                        .findByWorksheetId(worksheet.id())
+                                        .isEmpty())) {
                     continue;
                 }
 
