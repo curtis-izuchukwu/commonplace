@@ -57,6 +57,8 @@ For each topic, enter a name, optional description, priority, and current confid
 
 Module cards use a compact study ledger for exam date, topic count, mastery, and priority. Topic cards show stable record values in stat cells. A mastery cell fills proportionally to its percentage.
 
+To change an exam date, select the module under **Your Modules**, choose a date in its **Exam date** field, and click **Save date**. To remove the date, click **Clear**, then **Save date**. Changes are saved locally and used by the exam calendar and recommendation urgency.
+
 Deleting a module also removes its Overview, topics, topic notes, worksheets, attempts, mistakes, and related evidence. Deleting a topic removes its notes and the same study records beneath that topic.
 
 ## Notes and module notebooks

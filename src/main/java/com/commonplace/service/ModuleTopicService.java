@@ -61,6 +61,25 @@ public class ModuleTopicService {
                 .toList();
     }
 
+    public StudyModule updateModuleExamDate(long moduleId, LocalDate examDate) throws SQLException {
+        StudyModule module =
+                moduleRepository.findById(moduleId)
+                        .orElseThrow(() -> new IllegalArgumentException("Module not found."));
+
+        moduleRepository.update(
+                new StudyModule(
+                        module.id(),
+                        module.name(),
+                        module.description(),
+                        examDate,
+                        module.importance(),
+                        module.createdAt(),
+                        module.updatedAt()));
+
+        return moduleRepository.findById(moduleId)
+                .orElseThrow(() -> new SQLException("Updated module could not be reloaded."));
+    }
+
     public void deleteModule(long moduleId) throws SQLException {
         moduleRepository.deleteById(moduleId);
     }

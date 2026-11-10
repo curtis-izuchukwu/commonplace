@@ -108,6 +108,17 @@
                                wrapText="true"/>
                     </FlowPane>
 
+                    <HBox fx:id="moduleExamDateEditor" spacing="10" alignment="CENTER_LEFT"
+                          visible="false" managed="false">
+                        <Label text="Exam date" labelFor="${selectedModuleExamDatePicker}"
+                               styleClass="small-label"/>
+                        <DatePicker fx:id="selectedModuleExamDatePicker" promptText="No exam date"/>
+                        <Button fx:id="clearModuleExamDateButton" text="Clear"
+                                onAction="#handleClearModuleExamDate"/>
+                        <Button fx:id="saveModuleExamDateButton" text="Save date"
+                                onAction="#handleSaveModuleExamDate"/>
+                    </HBox>
+
                     <HBox spacing="20" VBox.vgrow="ALWAYS">
                         <VBox spacing="12"
                               styleClass="topic-form-panel"

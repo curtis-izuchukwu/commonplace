@@ -36,6 +36,7 @@ import javafx.scene.layout.VBox;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -60,6 +61,8 @@ public class ModulesController {
     @FXML private Label selectedModuleTitle;
     @FXML private Button openNotebookButton;
     @FXML private FlowPane selectedModuleMeta;
+    @FXML private HBox moduleExamDateEditor;
+    @FXML private DatePicker selectedModuleExamDatePicker;
 
     @FXML private TextField topicNameField;
     @FXML private TextArea topicDescriptionArea;
@@ -121,6 +124,39 @@ public class ModulesController {
         } catch (SQLException e) {
             showError("Failed to create module", e.getMessage());
         }
+    }
+
+    @FXML
+    private void handleSaveModuleExamDate() {
+        if (selectedModule == null) {
+            return;
+        }
+
+        try {
+            selectedModuleExamDatePicker.commitValue();
+            selectedModule =
+                    service.updateModuleExamDate(
+                            selectedModule.id(), selectedModuleExamDatePicker.getValue());
+            UiAnimations.validationSuccess(selectedModuleExamDatePicker);
+            refreshSelectedModuleData();
+            setStatus(
+                    selectedModule.examDate() == null
+                            ? "Exam date removed for " + selectedModule.name() + "."
+                            : "Exam date updated for " + selectedModule.name() + ".");
+        } catch (DateTimeException e) {
+            UiAnimations.validationError(selectedModuleExamDatePicker);
+            setStatus("Enter a valid exam date or clear the field to remove it.");
+        } catch (IllegalArgumentException e) {
+            setStatus(e.getMessage());
+        } catch (SQLException e) {
+            showError("Failed to update exam date", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleClearModuleExamDate() {
+        selectedModuleExamDatePicker.setValue(null);
+        selectedModuleExamDatePicker.getEditor().clear();
     }
 
     @FXML
@@ -329,6 +365,10 @@ public class ModulesController {
     private void selectModule(StudyModule module) {
         selectedModule = module;
         openNotebookButton.setDisable(false);
+        selectedModuleExamDatePicker.setValue(module.examDate());
+        selectedModuleExamDatePicker.cancelEdit();
+        moduleExamDateEditor.setVisible(true);
+        moduleExamDateEditor.setManaged(true);
 
         selectedModuleTitle.setText(module.name());
 
@@ -339,14 +379,6 @@ public class ModulesController {
             selectedModuleMeta
                     .getChildren()
                     .setAll(
-                            LevelUi.createStatCell(
-                                    "Exam",
-                                    module.examDate() == null
-                                            ? "Not set"
-                                            : module.examDate()
-                                                    .format(
-                                                            DateTimeFormatter.ofPattern(
-                                                                    "d MMM uuuu"))),
                             LevelUi.createStatCell("Topics", Integer.toString(topicCount)),
                             LevelUi.createMasteryStatCell(moduleMastery),
                             LevelUi.createPriorityStat(module.importance()));
@@ -540,6 +572,9 @@ public class ModulesController {
                         if (selectedModule != null && selectedModule.id() == module.id()) {
                             selectedModule = null;
                             openNotebookButton.setDisable(true);
+                            selectedModuleExamDatePicker.setValue(null);
+                            moduleExamDateEditor.setVisible(false);
+                            moduleExamDateEditor.setManaged(false);
                             selectedModuleTitle.setText("Select a module");
                             Label prompt =
                                     new Label(
